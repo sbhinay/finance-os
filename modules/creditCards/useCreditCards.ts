@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CreditCard, CardType } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 
 export function useCreditCards() {
-  const [cards, setCards] = useState<CreditCard[]>(() => creditCardRepository.getAll());
+  const [cards, setCards] = useState<CreditCard[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCards(creditCardRepository.getAll());
+  }, []);
 
   const load = useCallback(() => {
     setCards(creditCardRepository.getAll());

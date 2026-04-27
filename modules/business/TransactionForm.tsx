@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
@@ -96,7 +96,6 @@ function Btn({ children, onClick, variant = "primary", disabled }: {
   return <button onClick={onClick} disabled={disabled} style={{ padding: "8px 16px", fontSize: 13, fontWeight: 600, borderRadius: 8, border: "none", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color }}>{children}</button>;
 }
 function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
-function Grid3({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>{children}</div>; }
 function Alert({ type, children }: { type: "warning" | "error" | "info"; children: React.ReactNode }) {
   const s = {
     warning: { bg: "#fef3c7", border: "#fde68a", color: "#a05c00" },
@@ -153,9 +152,39 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   };
 
   const [form, setForm] = useState(emptyForm);
-  const [autoDetectedCat, setAutoDetectedCat] = useState<string | undefined>();
-  const [warnings, setWarnings] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+
+  const autoDetectedCat = useMemo(() => {
+    if (!form.description) return undefined;
+    return detectCategory(form.description.toLowerCase().trim());
+  }, [form.description]);
+
+  const warnings = useMemo(() => {
+    const w: string[] = [];
+    const amt = Number(form.amount);
+
+    if ((form.type === "income" || form.type === "dividend") && cards.some((c) => c.id === form.sourceId)) {
+      w.push("Income to a credit card is unusual. Did you mean a transfer?");
+    }
+    if (scheduledAmount && amt > 0 && amt !== scheduledAmount) {
+      w.push(`Amount differs from scheduled ${fmtCAD(scheduledAmount)} by ${fmtCAD(toFixed2(Math.abs(amt - scheduledAmount)))}.`);
+    }
+    if (! (form.categoryId || autoDetectedCat) && amt > 0 && isExpenseReportable(form.type as TransactionType)) {
+      w.push("No category — this will appear as uncategorized in reports.");
+    }
+    if (requiresSubType(form.type as TransactionType) && !form.subType) {
+      w.push("Please select a sub-type for accurate reporting.");
+    }
+    if (requiresDestination(form.type as TransactionType) && !form.destinationId) {
+      w.push("Please select a destination account.");
+    }
+    if (form.type === "loan_payment" && Number(form.interestAmount) + Number(form.principalAmount) !== amt && amt > 0) {
+      const split = toFixed2(Number(form.interestAmount) + Number(form.principalAmount));
+      if (split > 0) w.push(`Interest + Principal (${fmtCAD(split)}) does not equal total amount (${fmtCAD(amt)}).`);
+    }
+
+    return w;
+  }, [form, scheduledAmount, cards, autoDetectedCat]);
 
   // Pre-fill when modal opens
   useEffect(() => {
@@ -196,48 +225,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     } else {
       setForm(emptyForm);
     }
-    setWarnings([]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrors([]);
-    setAutoDetectedCat(undefined);
-  }, [open, initial]);
-
-  // Auto-detect category from description
-  useEffect(() => {
-    if (!form.description) { setAutoDetectedCat(undefined); return; }
-    const detected = detectCategory(form.description.toLowerCase().trim());
-    setAutoDetectedCat(detected);
-    if (detected && !form.categoryId) {
-      setForm((p) => ({ ...p, categoryId: detected }));
-    }
-  }, [form.description]);
-
-  // Live warnings
-  useEffect(() => {
-    const w: string[] = [];
-    const amt = Number(form.amount);
-
-    if ((form.type === "income" || form.type === "dividend") && cards.some((c) => c.id === form.sourceId)) {
-      w.push("Income to a credit card is unusual. Did you mean a transfer?");
-    }
-    if (scheduledAmount && amt > 0 && amt !== scheduledAmount) {
-      w.push(`Amount differs from scheduled ${fmtCAD(scheduledAmount)} by ${fmtCAD(toFixed2(Math.abs(amt - scheduledAmount)))}.`);
-    }
-    if (!form.categoryId && amt > 0 && isExpenseReportable(form.type as TransactionType)) {
-      w.push("No category — this will appear as uncategorized in reports.");
-    }
-    if (requiresSubType(form.type as TransactionType) && !form.subType) {
-      w.push("Please select a sub-type for accurate reporting.");
-    }
-    if (requiresDestination(form.type as TransactionType) && !form.destinationId) {
-      w.push("Please select a destination account.");
-    }
-    if (form.type === "loan_payment" && Number(form.interestAmount) + Number(form.principalAmount) !== amt && amt > 0) {
-      const split = toFixed2(Number(form.interestAmount) + Number(form.principalAmount));
-      if (split > 0) w.push(`Interest + Principal (${fmtCAD(split)}) does not equal total amount (${fmtCAD(amt)}).`);
-    }
-
-    setWarnings(w);
-  }, [form, scheduledAmount, cards]);
+  }, [open, initial, emptyForm, todayLocal]);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -251,8 +241,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     : (c.type === "expense" || c.type === "both")
   );
   const selectedCat = activeCats.find((c) => c.id === form.categoryId);
-  const isVehicleCat = (selectedCat as any)?.vehicleLinked;
-  const isPropertyCat = (selectedCat as any)?.propertyLinked;
+  const isVehicleCat = selectedCat?.vehicleLinked;
+  const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
   const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
   const showLoanSplit = txType === "loan_payment";
@@ -284,10 +274,12 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     const desc = form.description.toLowerCase().trim();
     const isEditing = !!form.id;
 
-    if (form.categoryId && form.description) {
-      learnedRulesRepository.add({ id: uid(), description: desc, categoryId: form.categoryId });
+    const categoryId = form.categoryId || autoDetectedCat;
+
+    if (categoryId && form.description) {
+      learnedRulesRepository.add({ id: uid(), description: desc, categoryId });
       uncategorizedRepository.remove(desc);
-    } else if (!form.categoryId && form.description && showCategory) {
+    } else if (!categoryId && form.description && showCategory) {
       uncategorizedRepository.add(desc);
     }
 
@@ -304,7 +296,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       notes:           form.notes || undefined,
       sourceId:        form.sourceId,
       destinationId:   form.destinationId || undefined,
-      categoryId:      form.categoryId || undefined,
+      categoryId:      categoryId || undefined,
       tag:             form.tag,
       mode:            form.mode as TransactionMode,
       currency:        "CAD",

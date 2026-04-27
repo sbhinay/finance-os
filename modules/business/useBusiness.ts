@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Business,
   Invoice,
@@ -127,20 +127,74 @@ function applyArrearsBalance(
   };
 }
 
+const EMPTY_BUSINESS: Business = {
+  clientName: "",
+  contracts: [],
+  invoices: [],
+  hstRemittances: [],
+  corporateInstalments: [],
+  payrollRemittances: [],
+  arrearsHST: 0,
+  arrearsCorp: 0,
+  arrearsPayments: [],
+  rateSettings: {
+    hstRate: [],
+    quickMethodRate: [],
+    payrollDraw: [],
+    corpTaxInstalment: [],
+  },
+};
+
+function normalizeBusiness(biz?: Partial<Business> | null): Business {
+  return {
+    ...EMPTY_BUSINESS,
+    ...(biz ?? {}),
+    contracts: biz?.contracts ?? [],
+    invoices: biz?.invoices ?? [],
+    hstRemittances: biz?.hstRemittances ?? [],
+    corporateInstalments: biz?.corporateInstalments ?? [],
+    payrollRemittances: biz?.payrollRemittances ?? [],
+    arrearsPayments: biz?.arrearsPayments ?? [],
+    rateSettings: {
+      ...EMPTY_BUSINESS.rateSettings,
+      ...(biz?.rateSettings ?? {}),
+      hstRate: biz?.rateSettings?.hstRate ?? [],
+      quickMethodRate: biz?.rateSettings?.quickMethodRate ?? [],
+      payrollDraw: biz?.rateSettings?.payrollDraw ?? [],
+      corpTaxInstalment: biz?.rateSettings?.corpTaxInstalment ?? [],
+    },
+  };
+}
+
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useBusiness() {
-  const [business, setBusiness] = useState<Business>(() => businessRepository.get());
+  const [business, setBusiness] = useState<Business>(EMPTY_BUSINESS);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => setBusiness(businessRepository.get()), []);
+  const getBusiness = useCallback((): Business => {
+    return normalizeBusiness(businessRepository.get());
+  }, []);
+
+
+  const load = useCallback(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBusiness(getBusiness());
+  }, [getBusiness]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Persist + update local state atomically
-  const commit = useCallback((biz: Business) => {
-    businessRepository.save(biz);
-    setBusiness(biz);
+    const commit = useCallback((biz: Business) => {
+    const normalized = normalizeBusiness(biz);
+    businessRepository.save(normalized);
+    setBusiness(normalized);
     setError(null);
   }, []);
+
 
   // ── Accounts helper (read-only inside this hook) ──
   const getAccounts = (): Account[] => accountRepository.getAll();
@@ -183,7 +237,7 @@ export function useBusiness() {
 
   const addContract = useCallback(
     (fields: Omit<Contract, "id" | "rateHistory" | "hoursAllocations">) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const contract: Contract = {
         ...fields,
         id: uid(),
@@ -204,7 +258,7 @@ export function useBusiness() {
 
   const updateContract = useCallback(
     (updated: Contract) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         contracts: biz.contracts.map((c) =>
@@ -217,7 +271,7 @@ export function useBusiness() {
 
   const deleteContract = useCallback(
     (contractId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         contracts: biz.contracts.filter((c) => c.id !== contractId),
@@ -229,7 +283,7 @@ export function useBusiness() {
 
   const addContractRate = useCallback(
     (contractId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const rate: ContractRateHistory = {
         id: uid(),
         rate: 0,
@@ -255,7 +309,7 @@ export function useBusiness() {
       field: keyof ContractRateHistory,
       value: string | number
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         contracts: biz.contracts.map((c) =>
@@ -277,7 +331,7 @@ export function useBusiness() {
 
   const deleteContractRate = useCallback(
     (contractId: string, rateId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const contract = biz.contracts.find((c) => c.id === contractId);
       if (!contract || contract.rateHistory.length <= 1) {
         setError("Cannot delete the last rate entry.");
@@ -297,7 +351,7 @@ export function useBusiness() {
 
   const addHoursAllocation = useCallback(
     (contractId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const now = new Date();
       const fy = now.getMonth() >= 3 ? now.getFullYear() + 1 : now.getFullYear();
       const alloc: HoursAllocation = { id: uid(), fiscalYear: fy, totalHours: 2000 };
@@ -320,7 +374,7 @@ export function useBusiness() {
       field: "fiscalYear" | "totalHours",
       value: number
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         contracts: biz.contracts.map((c) =>
@@ -340,7 +394,7 @@ export function useBusiness() {
 
   const deleteHoursAllocation = useCallback(
     (contractId: string, allocId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         contracts: biz.contracts.map((c) =>
@@ -420,7 +474,7 @@ export function useBusiness() {
 
   const getNextInvoiceNumber = useCallback(
     (workYear: number): string => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const prefix = `INV-${workYear}-`;
       const nums = biz.invoices
         .map((i) => i.invoiceNumber)
@@ -449,7 +503,7 @@ export function useBusiness() {
         | "fiscalYear"
       > & { id?: string }
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const rs = biz.rateSettings;
 
       const derived = calcInvoiceFields(
@@ -516,7 +570,7 @@ export function useBusiness() {
 
   const deleteInvoice = useCallback(
     (invoiceId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const inv = biz.invoices.find((x) => x.id === invoiceId);
       if (!inv) return;
 
@@ -553,7 +607,7 @@ export function useBusiness() {
 
   const addHSTRemittance = useCallback(
     (fields: Omit<HSTRemittance, "id" | "paid" | "paidDate" | "txnId">) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       // Auto-fill amount from invoices
       const autoAmt = calcHSTFromInvoices(fields.quarter, biz.invoices);
       const remittance: HSTRemittance = {
@@ -571,7 +625,7 @@ export function useBusiness() {
 
   const updateHSTRemittance = useCallback(
     (updated: Partial<HSTRemittance> & { id: string }) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         hstRemittances: biz.hstRemittances.map((r) =>
@@ -584,7 +638,7 @@ export function useBusiness() {
 
   const deleteHSTRemittance = useCallback(
     (id: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         hstRemittances: biz.hstRemittances.filter((r) => r.id !== id),
@@ -612,7 +666,7 @@ export function useBusiness() {
       label: string
     ) => {
       if (!accountId) { setError("Select an account to pay from."); return; }
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const txnId = uid();
 
       // Update obligation
@@ -656,7 +710,7 @@ export function useBusiness() {
       type: "HST" | "Corp Tax" | "Payroll",
       txnId: string | null | undefined
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
 
       const newBiz = { ...biz };
       if (type === "HST") {
@@ -695,7 +749,7 @@ export function useBusiness() {
       type: "HST" | "Corp Tax" | "Payroll",
       date: string
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const newBiz = { ...biz };
       if (type === "HST") {
         newBiz.hstRemittances = biz.hstRemittances.map((r) =>
@@ -721,7 +775,7 @@ export function useBusiness() {
       type: "HST" | "Corp Tax" | "Payroll",
       amount: number
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const newBiz = { ...biz };
       if (type === "HST") {
         newBiz.hstRemittances = biz.hstRemittances.map((r) =>
@@ -751,7 +805,7 @@ export function useBusiness() {
    */
   const addCorpTaxYear = useCallback(
     (year: number, amountPerQuarter: number) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       if (biz.corporateInstalments.some((i) => i.year === year)) {
         setError(`Corp tax year ${year} already exists.`);
         return;
@@ -791,7 +845,7 @@ export function useBusiness() {
   const addPayrollMonth = useCallback(
     (month: string, amount: number) => {
       // month format: "YYYY-MM"
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const id = `pr${month.replace("-", "")}`;
       if (biz.payrollRemittances.find((p) => p.id === id)) {
         setError("Payroll month already exists.");
@@ -824,7 +878,7 @@ export function useBusiness() {
 
   const setArrearsOpeningBalances = useCallback(
     (arrearsHST: number, arrearsCorp: number) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         arrearsHST: toFixed2(arrearsHST),
@@ -844,7 +898,7 @@ export function useBusiness() {
       fields: Pick<ArrearsPayment, "amount" | "date" | "type" | "note">,
       accountId?: string
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const txnId = accountId ? uid() : null;
       const payment: ArrearsPayment = {
         ...fields,
@@ -886,7 +940,7 @@ export function useBusiness() {
       fields: Pick<ArrearsPayment, "amount" | "date" | "type" | "note">,
       accountId?: string
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const old = biz.arrearsPayments.find((p) => p.id === paymentId);
       if (!old) return;
 
@@ -934,7 +988,7 @@ export function useBusiness() {
    */
   const deleteArrearsPayment = useCallback(
     (paymentId: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const p = biz.arrearsPayments.find((x) => x.id === paymentId);
       if (!p) return;
 
@@ -958,7 +1012,7 @@ export function useBusiness() {
 
   const updateRateSettings = useCallback(
     (key: keyof RateSettings, entries: RateEntry[] | PayrollDrawEntry[]) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         rateSettings: { ...biz.rateSettings, [key]: entries },
@@ -969,7 +1023,7 @@ export function useBusiness() {
 
   const addRateEntry = useCallback(
     (key: "hstRate" | "quickMethodRate" | "corpTaxInstalment", entry: Omit<RateEntry, "id">) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const arr = (biz.rateSettings[key] ?? []) as RateEntry[];
       const newEntry: RateEntry = { ...entry, id: uid() };
       commit({
@@ -985,7 +1039,7 @@ export function useBusiness() {
       key: "hstRate" | "quickMethodRate" | "corpTaxInstalment",
       updated: RateEntry
     ) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const arr = (biz.rateSettings[key] ?? []) as RateEntry[];
       commit({
         ...biz,
@@ -1000,7 +1054,7 @@ export function useBusiness() {
 
   const deleteRateEntry = useCallback(
     (key: "hstRate" | "quickMethodRate" | "corpTaxInstalment", id: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const arr = (biz.rateSettings[key] ?? []) as RateEntry[];
       if (arr.length <= 1) { setError("Cannot delete the last rate entry."); return; }
       commit({
@@ -1016,7 +1070,7 @@ export function useBusiness() {
 
   const addPayrollDrawEntry = useCallback(
     (entry: Omit<PayrollDrawEntry, "id">) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const arr = biz.rateSettings.payrollDraw ?? [];
       commit({
         ...biz,
@@ -1031,7 +1085,7 @@ export function useBusiness() {
 
   const updatePayrollDrawEntry = useCallback(
     (updated: PayrollDrawEntry) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       commit({
         ...biz,
         rateSettings: {
@@ -1047,7 +1101,7 @@ export function useBusiness() {
 
   const deletePayrollDrawEntry = useCallback(
     (id: string) => {
-      const biz = businessRepository.get();
+      const biz = getBusiness();
       const arr = biz.rateSettings.payrollDraw;
       if (arr.length <= 1) { setError("Cannot delete the last entry."); return; }
       commit({

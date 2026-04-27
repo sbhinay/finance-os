@@ -8,7 +8,7 @@ import { useCategories } from "@/modules/categories/useCategories";
 import { useVehicles, useHouseLoans } from "./useAssets";
 import { useFixedPayments } from "./useFixedPayments";
 import { useBusiness } from "./useBusiness";
-import { fmtCAD, fmtDate, toFixed2, toMonthly, getRateOnDate } from "@/utils/finance";
+import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { useEffect } from "react";
 
@@ -31,16 +31,6 @@ function Card({ title, children, accent }: { title?: string; children: React.Rea
       {children}
     </div>
   );
-}
-
-function Pill({ color, children }: { color: string; children: React.ReactNode }) {
-  const m: Record<string, { bg: string; fg: string }> = {
-    green: { bg: "#dcfce7", fg: "#1a7f3c" }, red: { bg: "#fee2e2", fg: "#a31515" },
-    blue: { bg: "#dbeafe", fg: "#1a5fa8" }, purple: { bg: "#ede9fe", fg: "#4a3ab5" },
-    amber: { bg: "#fef3c7", fg: "#a05c00" }, gray: { bg: "#f3f4f6", fg: "#6b7280" },
-  };
-  const c = m[color] ?? m.gray;
-  return <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: c.bg, color: c.fg }}>{children}</span>;
 }
 
 function Btn({ children, onClick, variant = "primary", small }: {
@@ -81,16 +71,36 @@ function buildEvents(
   const events: ProjectionEvent[] = [];
   const end = new Date(today.getTime() + days * 86400000);
 
-  const schedDays: Record<string, number> = { Weekly: 7, "Bi-weekly": 14, "Semi-monthly": 15, Monthly: 30, Annual: 365 };
+  const schedDays: Record<string, number> = {
+    Weekly: 7,
+    "Bi-weekly": 14,
+    "Semi-monthly": 15,
+    Monthly: 30,
+    Annual: 365,
+  };
+
+  const payrollRemittances = business.payrollRemittances ?? [];
+  const corporateInstalments = business.corporateInstalments ?? [];
+  const hstRemittances = business.hstRemittances ?? [];
+  const invoices = business.invoices ?? [];
 
   // Vehicles
   vehicles.forEach((v) => {
     if (!v.payment) return;
     const interval = schedDays[v.schedule] ?? 30;
-    let d = v.nextPaymentDate ? new Date(v.nextPaymentDate + "T12:00:00") : new Date(today.getTime() + interval * 86400000);
+    let d = v.nextPaymentDate
+      ? new Date(v.nextPaymentDate + "T12:00:00")
+      : new Date(today.getTime() + interval * 86400000);
+
     while (d < today) d = new Date(d.getTime() + interval * 86400000);
     while (d <= end) {
-      events.push({ date: new Date(d), label: `${v.name} payment`, amount: -v.payment, type: "vehicle", account: v.source });
+      events.push({
+        date: new Date(d),
+        label: `${v.name} payment`,
+        amount: -v.payment,
+        type: "vehicle",
+        account: v.source,
+      });
       d = new Date(d.getTime() + interval * 86400000);
     }
   });
@@ -99,10 +109,19 @@ function buildEvents(
   houseLoans.forEach((l) => {
     if (!l.payment) return;
     const interval = schedDays[l.schedule] ?? 30;
-    let d = l.nextPaymentDate ? new Date(l.nextPaymentDate + "T12:00:00") : new Date(today.getTime() + interval * 86400000);
+    let d = l.nextPaymentDate
+      ? new Date(l.nextPaymentDate + "T12:00:00")
+      : new Date(today.getTime() + interval * 86400000);
+
     while (d < today) d = new Date(d.getTime() + interval * 86400000);
     while (d <= end) {
-      events.push({ date: new Date(d), label: `${l.name} payment`, amount: -l.payment, type: "loan", account: l.source });
+      events.push({
+        date: new Date(d),
+        label: `${l.name} payment`,
+        amount: -l.payment,
+        type: "loan",
+        account: l.source,
+      });
       d = new Date(d.getTime() + interval * 86400000);
     }
   });
@@ -111,70 +130,140 @@ function buildEvents(
   fixedPayments.forEach((p) => {
     if (!p.amount) return;
     if (p.endDate && new Date(p.endDate + "T12:00:00") < today) return;
+
     if (p.schedule === "One-time") {
       const d = new Date(p.date + "T12:00:00");
-      if (d >= today && d <= end) events.push({ date: d, label: p.name, amount: -p.amount, type: "fixed", account: p.source });
+      if (d >= today && d <= end) {
+        events.push({
+          date: d,
+          label: p.name,
+          amount: -p.amount,
+          type: "fixed",
+          account: p.source,
+        });
+      }
       return;
     }
+
     const interval = schedDays[p.schedule] ?? 30;
     let d = new Date(p.date + "T12:00:00");
+
     while (d <= end) {
-      if (d >= today && (!p.endDate || new Date(p.endDate + "T12:00:00") >= d))
-        events.push({ date: new Date(d), label: p.name, amount: -p.amount, type: "fixed", account: p.source });
+      if (d >= today && (!p.endDate || new Date(p.endDate + "T12:00:00") >= d)) {
+        events.push({
+          date: new Date(d),
+          label: p.name,
+          amount: -p.amount,
+          type: "fixed",
+          account: p.source,
+        });
+      }
       d = new Date(d.getTime() + interval * 86400000);
     }
   });
 
   // CRA payroll
-  business.payrollRemittances.filter((r) => !r.paid).forEach((r) => {
-    const dateStr = r.plannedDate ?? r.dueDate;
-    const d = new Date(dateStr + "T12:00:00");
-    if (d >= today && d <= end)
-      events.push({ date: d, label: `CRA Payroll — ${r.month}`, amount: -r.amount, type: "cra" });
-  });
+  payrollRemittances
+    .filter((r) => !r.paid)
+    .forEach((r) => {
+      const dateStr = r.plannedDate ?? r.dueDate;
+      const d = new Date(dateStr + "T12:00:00");
+      if (d >= today && d <= end) {
+        events.push({
+          date: d,
+          label: `CRA Payroll — ${r.month}`,
+          amount: -r.amount,
+          type: "cra",
+        });
+      }
+    });
 
   // CRA corp tax
-  business.corporateInstalments.filter((i) => !i.paid).forEach((i) => {
-    const dateStr = i.plannedDate ?? i.dueDate;
-    const d = new Date(dateStr + "T12:00:00");
-    if (d >= today && d <= end)
-      events.push({ date: d, label: `Corp Tax ${i.year} ${i.quarter}`, amount: -i.amount, type: "cra" });
-  });
+  corporateInstalments
+    .filter((i) => !i.paid)
+    .forEach((i) => {
+      const dateStr = i.plannedDate ?? i.dueDate;
+      const d = new Date(dateStr + "T12:00:00");
+      if (d >= today && d <= end) {
+        events.push({
+          date: d,
+          label: `Corp Tax ${i.year} ${i.quarter}`,
+          amount: -i.amount,
+          type: "cra",
+        });
+      }
+    });
 
   // CRA HST
-  business.hstRemittances.filter((h) => !h.paid && h.amount > 0).forEach((h) => {
-    const dateStr = h.plannedDate ?? h.dueDate;
-    const d = new Date(dateStr + "T12:00:00");
-    if (d >= today && d <= end)
-      events.push({ date: d, label: `HST ${h.quarter}`, amount: -h.amount, type: "cra" });
-  });
+  hstRemittances
+    .filter((h) => !h.paid && h.amount > 0)
+    .forEach((h) => {
+      const dateStr = h.plannedDate ?? h.dueDate;
+      const d = new Date(dateStr + "T12:00:00");
+      if (d >= today && d <= end) {
+        events.push({
+          date: d,
+          label: `HST ${h.quarter}`,
+          amount: -h.amount,
+          type: "cra",
+        });
+      }
+    });
 
-  // Expected invoice income (unpaid invoices, estimated 15th)
-  business.invoices.filter((i) => !i.paymentDate && i.total > 0).forEach((i) => {
-    const estimatedDate = new Date(Number(i.workYear || new Date().getFullYear()), Number(i.workMonth || new Date().getMonth() + 1), 15);
-    if (estimatedDate >= today && estimatedDate <= end)
-      events.push({ date: estimatedDate, label: `Invoice ${i.invoiceNumber} (expected)`, amount: i.total, type: "invoice" });
-  });
+  // Expected invoice income
+  invoices
+    .filter((i) => !i.paymentDate && i.total > 0)
+    .forEach((i) => {
+      const estimatedDate = new Date(
+        Number(i.workYear || new Date().getFullYear()),
+        Number(i.workMonth || new Date().getMonth() + 1),
+        15
+      );
+      if (estimatedDate >= today && estimatedDate <= end) {
+        events.push({
+          date: estimatedDate,
+          label: `Invoice ${i.invoiceNumber} (expected)`,
+          amount: i.total,
+          type: "invoice",
+        });
+      }
+    });
 
   // Income sources
   incomes.forEach((inc) => {
     if (!inc.amount || !inc.date) return;
+
     if (inc.schedule === "One-time") {
       const d = new Date(inc.date + "T12:00:00");
-      if (d >= today && d <= end) events.push({ date: d, label: `${inc.source}`, amount: inc.amount, type: "income" });
+      if (d >= today && d <= end) {
+        events.push({
+          date: d,
+          label: inc.source,
+          amount: inc.amount,
+          type: "income",
+        });
+      }
       return;
     }
+
     const interval = schedDays[inc.schedule] ?? 30;
     let d = new Date(inc.date + "T12:00:00");
+
     while (d < today) d = new Date(d.getTime() + interval * 86400000);
     while (d <= end) {
-      events.push({ date: new Date(d), label: inc.source, amount: inc.amount, type: "income" });
+      events.push({
+        date: new Date(d),
+        label: inc.source,
+        amount: inc.amount,
+        type: "income",
+      });
       d = new Date(d.getTime() + interval * 86400000);
     }
   });
 
   return events.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
+
 
 const TYPE_COLORS: Record<string, string> = {
   vehicle: "#a05c00", loan: "#a31515", fixed: "#6b7280",
@@ -193,6 +282,9 @@ export function DashboardSection() {
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
   const { business } = useBusiness();
+  const hstRemittances = business.hstRemittances ?? [];
+  const corporateInstalments = business.corporateInstalments ?? [];
+  const payrollRemittances = business.payrollRemittances ?? [];
 
   useAutoReload(reloadAccounts);
 
@@ -212,7 +304,6 @@ export function DashboardSection() {
   const netWorth = toFixed2(totalAssets - totalDebt);
 
   // Monthly commitments
-  const propertyTaxMonthly = toFixed2(0); // no RRSP/TFSA/income yet
   const monthlyFixed = toFixed2(
     houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0) +
     vehicles.reduce((s, v) => s + toMonthly(v.payment, v.schedule), 0)
@@ -220,14 +311,26 @@ export function DashboardSection() {
 
   // CRA due within 30 days
   const upcomingCRA = [
-    ...business.hstRemittances.map((h) => ({ ...h, typeName: "HST", label: `HST ${h.quarter}` })),
-    ...business.corporateInstalments.map((i) => ({ ...i, typeName: "Corp Tax", label: `Corp Tax ${i.year} ${i.quarter}` })),
-    ...business.payrollRemittances.map((p) => ({ ...p, typeName: "Payroll", label: `Payroll — ${p.month}` })),
-  ].filter((p) => {
-    if (p.paid) return false;
-    const d = new Date(((p as any).plannedDate ?? p.dueDate) + "T12:00:00");
-    return d <= in30 && d >= today;
-  });
+  ...hstRemittances.map((h) => ({
+    ...h,
+    typeName: "HST",
+    label: `HST ${h.quarter}`,
+  })),
+  ...corporateInstalments.map((i) => ({
+    ...i,
+    typeName: "Corp Tax",
+    label: `Corp Tax ${i.year} ${i.quarter}`,
+  })),
+  ...payrollRemittances.map((p) => ({
+    ...p,
+    typeName: "Payroll",
+    label: `Payroll — ${p.month}`,
+  })),
+].filter((p) => {
+  if (p.paid) return false;
+  const d = new Date((p.plannedDate ?? p.dueDate) + "T12:00:00");
+  return d <= in30 && d >= today;
+});
 
   // Leases ending soon
   const leasesEndingSoon = vehicles.filter((v) => {
@@ -274,8 +377,11 @@ export function DashboardSection() {
               <div style={{ fontWeight: 600, fontSize: 13, color: "#a05c00", marginBottom: 8 }}>⚠ CRA Payments Due Within 30 Days</div>
               {upcomingCRA.map((p) => (
                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid #fef3e2" }}>
-                  <span>{(p as any).label}</span>
-                  <span style={{ fontWeight: 600, color: "#a05c00" }}>{fmtCAD(p.amount)} · {fmtDate((p as any).plannedDate ?? p.dueDate)}</span>
+                  <span>{p.label}</span>
+<span style={{ fontWeight: 600, color: "#a05c00" }}>
+  {fmtCAD(p.amount)} · {fmtDate(p.plannedDate ?? p.dueDate)}
+</span>
+
                 </div>
               ))}
             </>
@@ -388,17 +494,17 @@ export function ProjectionSection() {
   const [threshold, setThreshold] = useState(0);
   const [whatIf, setWhatIf] = useState(false);
   const [wiAmount, setWiAmount] = useState(0);
-  const [wiDate, setWiDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]);
+  const [wiDate, setWiDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]);
   const [wiType, setWiType] = useState<"income" | "expense">("income");
 
   // Monthly view state — past 6 / future 6
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const [selectedMonth, setSelectedMonth] = useState(() => now.toISOString().slice(0, 7));
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const totalBankNow = toFixed2(accounts.reduce((s, a) => s + a.openingBalance, 0));
 
-  const incomes: any[] = []; // will be populated when income module is built
+  const incomes = useMemo(() => [], []); // will be populated when income module is built
 
   // 30-day events
   const events30 = useMemo(() => {
@@ -439,7 +545,7 @@ export function ProjectionSection() {
       opts.push({ value: d.toISOString().slice(0, 7), label: d.toLocaleString("en-CA", { month: "long", year: "numeric" }) });
     }
     return opts;
-  }, []);
+  }, [now]);
 
   const monthlyData = useMemo(() => {
     const [yr, mo] = selectedMonth.split("-").map(Number);
@@ -515,7 +621,7 @@ export function ProjectionSection() {
     }
 
     return { isPast, isFuture, totalIn, totalOut, projIn, projOut, craTx, topCats, allDays, runBal };
-  }, [selectedMonth, transactions, vehicles, houseLoans, fixedPayments, business, today, totalBankNow]);
+  }, [selectedMonth, transactions, vehicles, houseLoans, fixedPayments, business, incomes, today, totalBankNow]);
 
   const catName = (id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "";
 

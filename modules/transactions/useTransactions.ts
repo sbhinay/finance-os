@@ -10,8 +10,13 @@ import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 
 export function useTransactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>(() => transactionRepository.getAll());
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTransactions(transactionRepository.getAll());
+  }, []);
 
   const load = useCallback(() => setTransactions(transactionRepository.getAll()), []);
 

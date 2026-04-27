@@ -141,7 +141,7 @@ export function CorporationIncomeSection({ transactions }: { transactions: Trans
 
     const bizExp = toFixed2(
       (transactions ?? [])
-        .filter((t) => t.tag === "Business" && t.type === "expense" && ((t as any).date ?? t.createdAt?.slice(0,10) ?? "").startsWith(key))
+        .filter((t) => t.tag === "Business" && t.type === "expense" && (t.date ?? t.createdAt?.slice(0,10) ?? "").startsWith(key))
         .reduce((s, t) => s + t.amount, 0)
     );
     const netRetained = toFixed2(netRev - draw - hstToRemit - reserve - bizExp);

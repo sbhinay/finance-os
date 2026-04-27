@@ -2,15 +2,11 @@
 import { TransactionForm } from "./TransactionForm";
 
 import { useState } from "react";
-import { Vehicle, HouseLoan, PropertyTax, PaymentSchedule } from "@/types/domain";
+import { Vehicle, HouseLoan, PaymentSchedule } from "@/types/domain";
 import { Account } from "@/types/account";
 import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCategories } from "@/modules/categories/useCategories";
-import { uid } from "@/utils/finance";
-import { notifyDataChanged } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
-import { Transaction } from "@/types/transaction";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -283,8 +279,8 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
                   <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
                     <div>
                       <span style={{ fontWeight: 500 }}>{t.description || t.categoryId || "—"}</span>
-                      <span style={{ color: "#6b7280", fontSize: 11 }}> · {fmtDate(((t as any).date ?? t.createdAt ?? "").slice(0, 10))}</span>
-                      {(t as any).odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> · {Number((t as any).odometer).toLocaleString()} km</span>}
+                      <span style={{ color: "#6b7280", fontSize: 11 }}> · {fmtDate((t.date ?? t.createdAt ?? "").slice(0, 10))}</span>
+                      {t.odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> · {Number(t.odometer).toLocaleString()} km</span>}
                     </div>
                     <Pill color="red">{fmtCAD(t.amount)}</Pill>
                   </div>
@@ -429,8 +425,6 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
 
 export function PropertyTaxSection() {
   const { propertyTaxes, addProperty, updateProperty, deleteProperty, addPayment, deletePayment, markPaid } = usePropertyTax();
-  const { accounts } = useAccounts();
-  const { categories } = useCategories();
 
   const [showPropForm, setShowPropForm] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
@@ -438,7 +432,7 @@ export function PropertyTaxSection() {
   const [payForm, setPayForm] = useState({ propertyId: "", amount: 0, date: new Date().toISOString().split("T")[0], note: "" });
   const [markingPaid, setMarkingPaid] = useState<{ propId: string; payId: string; amount: number; propName: string } | null>(null);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<any>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
 
   const allPayments = propertyTaxes.flatMap((p) =>
     (p.payments ?? []).map((pay) => ({ ...pay, propertyName: p.name }))
@@ -555,7 +549,7 @@ export function PropertyTaxSection() {
         title={markingPaid ? `Mark Paid — ${markingPaid.propName}` : "Mark Paid"}
         onSaved={(txn) => {
           if (markingPaid) {
-            markPaid(markingPaid.propId, markingPaid.payId, true, (txn as any).date ?? new Date().toISOString().split("T")[0]);
+            markPaid(markingPaid.propId, markingPaid.payId, true, txn.date ?? new Date().toISOString().split("T")[0]);
           }
           setTxFormOpen(false);
           setMarkingPaid(null);

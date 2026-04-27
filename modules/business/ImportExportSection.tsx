@@ -71,7 +71,7 @@ export function ImportExportSection() {
 
       // Import vehicles, house loans, property taxes, fixed payments from raw data
       // Resolve account/card names -> IDs for source fields
-      const raw = pendingData as any;
+      const raw = pendingData as unknown;
       const allAccounts = result.accounts;
       const allCards = result.creditCards;
 
@@ -87,22 +87,22 @@ export function ImportExportSection() {
         return byName ? byName.id : nameOrId;
       }
 
-      if (raw.vehicles?.length) {
-        vehicleRepository.saveAll(raw.vehicles.map((v: any) => ({
-          ...v, source: resolveSourceId(v.source ?? ""),
+      if ((raw as any)?.vehicles?.length) {
+        vehicleRepository.saveAll((raw as any).vehicles.map((v: unknown) => ({
+          ...v, source: resolveSourceId((v as any).source ?? ""),
         })));
       }
-      if (raw.houseLoans?.length) {
-        houseLoanRepository.saveAll(raw.houseLoans.map((l: any) => ({
-          ...l, source: resolveSourceId(l.source ?? ""),
+      if ((raw as any)?.houseLoans?.length) {
+        houseLoanRepository.saveAll((raw as any).houseLoans.map((l: unknown) => ({
+          ...l, source: resolveSourceId((l as any).source ?? ""),
         })));
       }
-      if (raw.propertyTaxes?.length) {
-        propertyTaxRepository.saveAll(raw.propertyTaxes);
+      if ((raw as any)?.propertyTaxes?.length) {
+        propertyTaxRepository.saveAll((raw as any).propertyTaxes);
       }
-      if (raw.futurePayments?.length) {
-        fixedPaymentRepository.saveAll(raw.futurePayments.map((p: any) => ({
-          ...p, source: resolveSourceId(p.source ?? ""),
+      if ((raw as any)?.futurePayments?.length) {
+        fixedPaymentRepository.saveAll((raw as any).futurePayments.map((p: unknown) => ({
+          ...p, source: resolveSourceId((p as any).source ?? ""),
         })));
       }
 

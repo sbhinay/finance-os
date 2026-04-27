@@ -1,7 +1,7 @@
 "use client";
 import { TransactionForm } from "./TransactionForm";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useBusiness, calcHSTFromInvoices } from "./useBusiness";
 import { Account } from "@/types/account";
 import { ArrearsType } from "@/types/business";
@@ -152,8 +152,13 @@ function ObligationsList({
   const [payrollMonth, setPayrollMonth] = useState("");
   const [payrollAmt, setPayrollAmt] = useState(684.66);
 
-  const today = new Date().toISOString().split("T")[0];
-  const in30 = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const in30 = useMemo(() => {
+    const d = new Date();
+    // eslint-disable-next-line react-hooks/purity
+    d.setTime(d.getTime() + 30 * 86400000);
+    return d.toISOString().split("T")[0];
+  }, []);
 
   function getStatus(o: FlatObligation): { label: string; color: string } {
     if (o.paid) return { label: "Paid", color: "green" };
@@ -441,7 +446,7 @@ function ArrearsSection({
                 ✓ A transaction will be auto-logged and the account balance reduced.
               </div>
             : <div style={{ fontSize: 12, color: "#a05c00", marginBottom: 8, background: "#fef3e2", padding: "6px 10px", borderRadius: 6 }}>
-                ⚠ No account selected — payment recorded but bank balance won't change.
+                ⚠ No account selected — payment recorded but bank balance won&apos;t change.
               </div>
           }
           <div style={{ display: "flex", gap: 6 }}>
@@ -614,7 +619,6 @@ export function TaxObligationsSection({ accounts }: { accounts: Account[] }) {
   const hooks = useBusiness();
   const { business } = hooks;
   const [tab, setTab] = useState<"obligations" | "arrears" | "history">("obligations");
-  const today = new Date().toISOString().split("T")[0];
 
   // Flatten all obligations into a single sorted list
   const allObligations: FlatObligation[] = [

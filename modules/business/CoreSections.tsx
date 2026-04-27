@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { TransactionForm } from "./TransactionForm";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
@@ -10,13 +10,9 @@ import { useVehicles, useHouseLoans } from "./useAssets";
 import { useFixedPayments } from "./useFixedPayments";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
-import { Transaction } from "@/types/transaction";
-import { accountRepository } from "@/repositories/accountRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
-import { transactionRepository } from "@/repositories/transactionRepository";
-import { fmtCAD, fmtDate, toFixed2, uid, getNextOccurrence } from "@/utils/finance";
+import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -76,7 +72,6 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
   );
 }
 function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
-function Grid3({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>{children}</div>; }
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div style={{ flex: 1, minWidth: 110, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
@@ -325,7 +320,7 @@ export function CreditCardsSection() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<any>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
   const [pendingPayCard, setPendingPayCard] = useState<CreditCard | null>(null);
 
   const f = (k: keyof typeof form) =>
@@ -492,7 +487,7 @@ export function TransactionHistorySection() {
   const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer">("all");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("");
-  const [editTx, setEditTx] = useState<any>(undefined);
+  const [editTx, setEditTx] = useState<unknown>(undefined);
   const [txFormOpen, setTxFormOpen] = useState(false);
 
   const filtered = useMemo(() => {
@@ -622,12 +617,12 @@ export function TransactionHistorySection() {
                 <button onClick={() => {
                   setEditTx({
                     id: t.id, type: t.type, amount: t.amount,
-                    date: (t as any).date ?? t.createdAt?.slice(0, 10),
+                    date: t.date ?? t.createdAt?.slice(0, 10),
                     createdAt: t.createdAt,
                     description: t.description, sourceId: t.sourceId,
                     categoryId: t.categoryId, tag: t.tag, mode: t.mode,
                     linkedVehicleId: t.linkedVehicleId, linkedPropertyId: t.linkedPropertyId,
-                    odometer: (t as any).odometer,
+                    odometer: t.odometer,
                   });
                   setTxFormOpen(true);
                 }} style={{ padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 6, border: "none", cursor: "pointer", background: "#f3f4f6", color: "#374151" }}>

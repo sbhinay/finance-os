@@ -229,7 +229,7 @@ export function FixedPaymentsSection() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<any>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
   const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
 
   // Backfill state

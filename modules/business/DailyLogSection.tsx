@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { TransactionForm } from "./TransactionForm";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
@@ -109,7 +109,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 export function DailyLogSection() {
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
-  const { transactions, reloadTransactions } = useTransactions();
+  const { transactions } = useTransactions();
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
@@ -139,28 +139,21 @@ export function DailyLogSection() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<any>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
   const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
   const [search, setSearch] = useState("");
   const [viewDate, setViewDate] = useState(todayStr);
   const [showAll, setShowAll] = useState(false);
   const [addToFixed, setAddToFixed] = useState<Transaction | null>(null);
-  const [autoDetectedCat, setAutoDetectedCat] = useState<string | undefined>(undefined);
+
+  const autoDetectedCat = useMemo(() => {
+    if (!form.description) return undefined;
+    return detectCategory(form.description.toLowerCase().trim());
+  }, [form.description]);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
-
-  // Auto-detect category from description
-  useEffect(() => {
-    if (!form.description) { setAutoDetectedCat(undefined); return; }
-    const detected = detectCategory(form.description.toLowerCase().trim());
-    setAutoDetectedCat(detected);
-    // Only auto-fill if user hasn't manually chosen one
-    if (detected && !form.categoryId) {
-      setForm((p) => ({ ...p, categoryId: detected }));
-    }
-  }, [form.description]);
 
   // Category lists
   const activeCats = categories.filter((c) => !c.archived);
@@ -169,8 +162,8 @@ export function DailyLogSection() {
       : c.type === "income" || c.type === "both"
   );
   const selectedCat = activeCats.find((c) => c.id === form.categoryId);
-  const isVehicleCat = (selectedCat as any)?.vehicleLinked;
-  const isPropertyCat = (selectedCat as any)?.propertyLinked;
+  const isVehicleCat = selectedCat?.vehicleLinked;
+  const isPropertyCat = selectedCat?.propertyLinked;
 
   // Payment sources
   const paymentSources = buildSourceOptions(accounts, cards);
@@ -184,11 +177,13 @@ export function DailyLogSection() {
     const amount = toFixed2(Number(form.amount));
     const desc = form.description.toLowerCase().trim();
 
+    const categoryId = form.categoryId || autoDetectedCat;
+
     // Learn category rule if user explicitly chose one
-    if (form.categoryId && form.description) {
-      learnedRulesRepository.add({ id: uid(), description: desc, categoryId: form.categoryId });
+    if (categoryId && form.description) {
+      learnedRulesRepository.add({ id: uid(), description: desc, categoryId });
       uncategorizedRepository.remove(desc);
-    } else if (!form.categoryId && form.description) {
+    } else if (!categoryId && form.description) {
       uncategorizedRepository.add(desc);
     }
 
@@ -202,11 +197,11 @@ export function DailyLogSection() {
       createdAt: typeof form.date === "string" && form.date.length >= 16
         ? form.date.slice(0, 16) + ":00"
         : new Date().toISOString(),
-      // @ts-ignore
+      // @ts-expect-error Transaction type may not include currency in some contexts
       currency: "CAD",
       status: "cleared" as const,
       date: form.date.slice(0, 10),
-      categoryId: form.categoryId || undefined,
+      categoryId: categoryId || undefined,
       tag: form.tag,
       mode: form.mode,
       linkedVehicleId: form.linkedVehicleId || undefined,
@@ -226,17 +221,16 @@ export function DailyLogSection() {
     notifyDataChanged("transactions");
     setForm(emptyForm);
     setEditId(null);
-    setAutoDetectedCat(undefined);
   }
 
   function startEdit(t: Transaction) {
-    console.log('startEdit createdAt:', t.createdAt, 'date:', (t as any).date);
+    console.log('startEdit createdAt:', t.createdAt, 'date:', t.date);
 
     // Use universal TransactionForm for editing
     setTxFormInitial({
       id: t.id,
       amount: t.amount,
-      date: (t as any).date ?? t.createdAt?.slice(0, 10),
+      date: t.date ?? t.createdAt?.slice(0, 10),
       createdAt: t.createdAt,
       type: t.type,
       mode: t.mode ?? "Debit",
@@ -246,7 +240,7 @@ export function DailyLogSection() {
       tag: t.tag ?? "Personal",
       linkedVehicleId: t.linkedVehicleId ?? "",
       linkedPropertyId: t.linkedPropertyId ?? "",
-      odometer: (t as any).odometer ?? "",
+      odometer: t.odometer ?? "",
     });
     setTxFormOpen(true);
   }
@@ -504,7 +498,7 @@ function QuickAddFixed({
   txn: Transaction;
   accounts: Account[];
   cards: CreditCard[];
-  onSave: (fp: any) => void;
+  onSave: (fp: unknown) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Vehicle, HouseLoan, PropertyTax, PropertyTaxPayment } from "@/types/domain";
 import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { uid, toFixed2 } from "@/utils/finance";
@@ -10,7 +10,12 @@ import { uid, toFixed2 } from "@/utils/finance";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function useVehicles() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => vehicleRepository.getAll());
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVehicles(vehicleRepository.getAll());
+  }, []);
 
   const load = useCallback(() => setVehicles(vehicleRepository.getAll()), []);
 
@@ -52,7 +57,12 @@ export function useVehicles() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function useHouseLoans() {
-  const [houseLoans, setHouseLoans] = useState<HouseLoan[]>(() => houseLoanRepository.getAll());
+  const [houseLoans, setHouseLoans] = useState<HouseLoan[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHouseLoans(houseLoanRepository.getAll());
+  }, []);
 
   const load = useCallback(() => setHouseLoans(houseLoanRepository.getAll()), []);
 
@@ -93,7 +103,12 @@ export function useHouseLoans() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function usePropertyTax() {
-  const [propertyTaxes, setPropertyTaxes] = useState<PropertyTax[]>(() => propertyTaxRepository.getAll());
+  const [propertyTaxes, setPropertyTaxes] = useState<PropertyTax[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPropertyTaxes(propertyTaxRepository.getAll());
+  }, []);
 
   const load = useCallback(() => setPropertyTaxes(propertyTaxRepository.getAll()), []);
 

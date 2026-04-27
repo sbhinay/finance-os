@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Account, AccountType } from "@/types/account";
 import { accountRepository } from "@/repositories/accountRepository";
 import { validateNewAccount } from "@/rules/accountRules";
 
 export function useAccounts() {
-  const [accounts, setAccounts] = useState<Account[]>(() => accountRepository.getAll());
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAccounts(accountRepository.getAll());
+  }, []);
 
   const load = useCallback(() => {
     setAccounts(accountRepository.getAll());

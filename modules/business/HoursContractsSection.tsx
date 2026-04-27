@@ -334,7 +334,7 @@ function ContractsManager({
     if (c.status === "Ended") return "Ended";
     if (c.endDate && new Date(c.endDate + "T12:00:00") < new Date()) return "Ended";
     if (c.endDate) {
-      const days = (new Date(c.endDate + "T12:00:00").getTime() - Date.now()) / 86400000;
+      const days = (new Date(c.endDate + "T12:00:00").getTime() - new Date().getTime()) / 86400000;
       if (days <= 90) return "Ending Soon";
     }
     return c.status ?? "Active";
@@ -354,7 +354,7 @@ function ContractsManager({
         fontSize: 12, color: "#6b7280", marginBottom: 12,
         background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd",
       }}>
-        💡 One contract per client engagement. Add rate history entries when your rate changes — don't
+        💡 One contract per client engagement. Add rate history entries when your rate changes — don&apos;t
         create a new contract. Annual Hours Allocation sets the billable cap per fiscal year (Apr–Mar).
       </div>
 
@@ -692,7 +692,7 @@ function InvoiceLog({
       Number(form.workYear),
       rs
     );
-  }, [form.hours, form.hourlyRate, form.invoiceDate, form.paymentDate, form.workMonth, form.workYear, rs]);
+  }, [form.hours, form.hourlyRate, form.invoiceDate, form.paymentDate, form.workMonth, form.workYear, rs, hooks]);
 
   function openNew() {
     setForm({

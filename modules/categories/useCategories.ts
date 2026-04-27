@@ -8,15 +8,20 @@ import { seedDefaultCategories } from "@/utils/defaultCategories";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>(() => {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
     const cats = categoryRepository.getAll();
     if (cats.length === 0) {
       const seeded = seedDefaultCategories();
       categoryRepository.saveAll(seeded);
-      return seeded;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategories(seeded);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategories(cats);
     }
-    return cats;
-  });
+  }, []);
 
   const load = useCallback(() => {
     const cats = categoryRepository.getAll();
