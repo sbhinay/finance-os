@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import { Account, AccountType } from "@/types/account";
 import { accountRepository } from "@/repositories/accountRepository";
 import { validateNewAccount } from "@/rules/accountRules";
 
 export function useAccounts() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>(() => accountRepository.getAll());
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => {
+  const load = useCallback(() => {
     setAccounts(accountRepository.getAll());
-  };
-
-  useEffect(() => {
-    load();
   }, []);
 
   const addAccount = (

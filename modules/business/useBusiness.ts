@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Business,
   Invoice,
@@ -8,7 +8,6 @@ import {
   ContractRateHistory,
   HoursAllocation,
   HSTRemittance,
-  CorporateInstalment,
   PayrollRemittance,
   ArrearsPayment,
   ArrearsType,
@@ -131,13 +130,10 @@ function applyArrearsBalance(
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useBusiness() {
-  const [business, setBusiness] = useState<Business>(
-    businessRepository.get()
-  );
+  const [business, setBusiness] = useState<Business>(() => businessRepository.get());
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => setBusiness(businessRepository.get()), []);
-  useEffect(() => { load(); }, [load]);
 
   // Persist + update local state atomically
   const commit = useCallback((biz: Business) => {
@@ -620,7 +616,7 @@ export function useBusiness() {
       const txnId = uid();
 
       // Update obligation
-      let newBiz = { ...biz };
+      const newBiz = { ...biz };
       if (type === "HST") {
         newBiz.hstRemittances = biz.hstRemittances.map((r) =>
           r.id === obligationId ? { ...r, paid: true, paidDate, txnId } : r
@@ -662,7 +658,7 @@ export function useBusiness() {
     ) => {
       const biz = businessRepository.get();
 
-      let newBiz = { ...biz };
+      const newBiz = { ...biz };
       if (type === "HST") {
         newBiz.hstRemittances = biz.hstRemittances.map((r) =>
           r.id === obligationId
@@ -700,7 +696,7 @@ export function useBusiness() {
       date: string
     ) => {
       const biz = businessRepository.get();
-      let newBiz = { ...biz };
+      const newBiz = { ...biz };
       if (type === "HST") {
         newBiz.hstRemittances = biz.hstRemittances.map((r) =>
           r.id === obligationId ? { ...r, plannedDate: date } : r
@@ -726,7 +722,7 @@ export function useBusiness() {
       amount: number
     ) => {
       const biz = businessRepository.get();
-      let newBiz = { ...biz };
+      const newBiz = { ...biz };
       if (type === "HST") {
         newBiz.hstRemittances = biz.hstRemittances.map((r) =>
           r.id === obligationId ? { ...r, amount: toFixed2(amount) } : r
@@ -858,7 +854,7 @@ export function useBusiness() {
         txnId,
       };
 
-      let newBiz = applyArrearsBalance(
+      const newBiz = applyArrearsBalance(
         { ...biz, arrearsPayments: [...biz.arrearsPayments, payment] },
         payment.type,
         payment.amount,

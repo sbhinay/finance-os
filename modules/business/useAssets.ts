@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Vehicle, HouseLoan, PropertyTax, PropertyTaxPayment, PaymentSchedule } from "@/types/domain";
+import { useState, useCallback } from "react";
+import { Vehicle, HouseLoan, PropertyTax, PropertyTaxPayment } from "@/types/domain";
 import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { uid, toFixed2 } from "@/utils/finance";
 
@@ -10,10 +10,9 @@ import { uid, toFixed2 } from "@/utils/finance";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function useVehicles() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => vehicleRepository.getAll());
 
   const load = useCallback(() => setVehicles(vehicleRepository.getAll()), []);
-  useEffect(() => { load(); }, [load]);
 
   const addVehicle = useCallback((fields: Omit<Vehicle, "id">) => {
     const all = vehicleRepository.getAll();
@@ -53,10 +52,9 @@ export function useVehicles() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function useHouseLoans() {
-  const [houseLoans, setHouseLoans] = useState<HouseLoan[]>([]);
+  const [houseLoans, setHouseLoans] = useState<HouseLoan[]>(() => houseLoanRepository.getAll());
 
   const load = useCallback(() => setHouseLoans(houseLoanRepository.getAll()), []);
-  useEffect(() => { load(); }, [load]);
 
   const addHouseLoan = useCallback((fields: Omit<HouseLoan, "id">) => {
     const l: HouseLoan = {
@@ -95,10 +93,9 @@ export function useHouseLoans() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function usePropertyTax() {
-  const [propertyTaxes, setPropertyTaxes] = useState<PropertyTax[]>([]);
+  const [propertyTaxes, setPropertyTaxes] = useState<PropertyTax[]>(() => propertyTaxRepository.getAll());
 
   const load = useCallback(() => setPropertyTaxes(propertyTaxRepository.getAll()), []);
-  useEffect(() => { load(); }, [load]);
 
   const commit = useCallback((data: PropertyTax[]) => {
     propertyTaxRepository.saveAll(data);

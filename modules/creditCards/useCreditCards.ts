@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import { CreditCard, CardType } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 
 export function useCreditCards() {
-  const [cards, setCards] = useState<CreditCard[]>([]);
+  const [cards, setCards] = useState<CreditCard[]>(() => creditCardRepository.getAll());
 
-  const load = () => {
+  const load = useCallback(() => {
     setCards(creditCardRepository.getAll());
-  };
-
-  useEffect(() => {
-    load();
   }, []);
 
   const addCard = (

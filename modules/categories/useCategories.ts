@@ -8,19 +8,26 @@ import { seedDefaultCategories } from "@/utils/defaultCategories";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const cats = categoryRepository.getAll();
+    if (cats.length === 0) {
+      const seeded = seedDefaultCategories();
+      categoryRepository.saveAll(seeded);
+      return seeded;
+    }
+    return cats;
+  });
 
   const load = useCallback(() => {
-    let cats = categoryRepository.getAll();
-    // Seed defaults on first run only
+    const cats = categoryRepository.getAll();
     if (cats.length === 0) {
-      cats = seedDefaultCategories();
-      categoryRepository.saveAll(cats);
+      const seeded = seedDefaultCategories();
+      categoryRepository.saveAll(seeded);
+      setCategories(seeded);
+      return;
     }
     setCategories(cats);
   }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     const handler = () => load();

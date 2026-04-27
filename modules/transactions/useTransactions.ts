@@ -10,12 +10,10 @@ import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 
 export function useTransactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => transactionRepository.getAll());
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => setTransactions(transactionRepository.getAll()), []);
-
-  useEffect(() => { load(); }, [load]);
 
   // Re-load whenever any domain writes data
   useEffect(() => {
