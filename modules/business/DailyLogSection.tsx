@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { TransactionForm } from "./TransactionForm";
+import type { FixedPayment } from "@/types/domain";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useTransactions } from "@/modules/transactions/useTransactions";
@@ -20,6 +21,7 @@ import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
+type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
@@ -139,7 +141,7 @@ export function DailyLogSection() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
   const [search, setSearch] = useState("");
   const [viewDate, setViewDate] = useState(todayStr);
@@ -197,7 +199,6 @@ export function DailyLogSection() {
       createdAt: typeof form.date === "string" && form.date.length >= 16
         ? form.date.slice(0, 16) + ":00"
         : new Date().toISOString(),
-      // @ts-expect-error Transaction type may not include currency in some contexts
       currency: "CAD",
       status: "cleared" as const,
       date: form.date.slice(0, 10),
@@ -498,7 +499,7 @@ function QuickAddFixed({
   txn: Transaction;
   accounts: Account[];
   cards: CreditCard[];
-  onSave: (fp: unknown) => void;
+  onSave: (fp: Omit<FixedPayment, "id">) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({

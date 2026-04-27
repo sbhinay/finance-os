@@ -131,7 +131,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const now = new Date();
   const todayLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
-  const emptyForm = {
+    const emptyForm = useMemo(() => ({
     id:              undefined as string | undefined,
     type:            "expense" as TransactionType,
     subType:         "" as string,
@@ -146,10 +146,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     categoryId:      "",
     tag:             "Personal" as "Personal" | "Business",
     mode:            "Debit" as string,
-    linkedVehicleId:  "",
+    linkedVehicleId: "",
     linkedPropertyId: "",
-    odometer:         "",
-  };
+    odometer:        "",
+  }), [todayLocal]);
 
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<string[]>([]);
@@ -187,22 +187,24 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   }, [form, scheduledAmount, cards, autoDetectedCat]);
 
   // Pre-fill when modal opens
-  useEffect(() => {
+    useEffect(() => {
     if (!open) return;
+
     if (initial) {
-      const raw = initial.createdAt ?? initial.date;
+      const raw = initial.date ?? initial.createdAt;
       let dateVal = todayLocal;
+
       if (raw) {
         if (raw.endsWith("Z") || raw.endsWith("z")) {
           const d = new Date(raw);
           const pad = (n: number) => String(n).padStart(2, "0");
-          dateVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-        } else if (raw.includes("T")) {
-          dateVal = raw.slice(0, 10);
+          dateVal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         } else {
           dateVal = raw.slice(0, 10);
         }
       }
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         id:              initial.id,
         type:            initial.type ?? "expense",
@@ -218,16 +220,18 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         categoryId:      initial.categoryId ?? "",
         tag:             initial.tag ?? "Personal",
         mode:            initial.mode ?? "Debit",
-        linkedVehicleId:  initial.linkedVehicleId ?? "",
+        linkedVehicleId: initial.linkedVehicleId ?? "",
         linkedPropertyId: initial.linkedPropertyId ?? "",
-        odometer:         initial.odometer ?? "",
+        odometer:        initial.odometer ?? "",
       });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(emptyForm);
     }
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrors([]);
-  }, [open, initial, emptyForm, todayLocal]);
+  }, [open, initial?.id, emptyForm, todayLocal]);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -291,7 +295,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       interestAmount:  showLoanSplit && Number(form.interestAmount) > 0 ? toFixed2(Number(form.interestAmount)) : undefined,
       principalAmount: showLoanSplit && Number(form.principalAmount) > 0 ? toFixed2(Number(form.principalAmount)) : undefined,
       date:            form.date.slice(0, 10),
-      createdAt:       new Date().toISOString(),
+      createdAt:       initial?.createdAt ?? new Date().toISOString(),
       description:     form.description,
       notes:           form.notes || undefined,
       sourceId:        form.sourceId,

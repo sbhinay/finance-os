@@ -13,6 +13,7 @@ import { CreditCard } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
+type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -320,7 +321,7 @@ export function CreditCardsSection() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [pendingPayCard, setPendingPayCard] = useState<CreditCard | null>(null);
 
   const f = (k: keyof typeof form) =>
@@ -487,7 +488,7 @@ export function TransactionHistorySection() {
   const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer">("all");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("");
-  const [editTx, setEditTx] = useState<unknown>(undefined);
+  const [editTx, setEditTx] = useState<TransactionFormInitial>(undefined);
   const [txFormOpen, setTxFormOpen] = useState(false);
 
   const filtered = useMemo(() => {

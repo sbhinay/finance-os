@@ -10,6 +10,7 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2 } from "@/utils/finance";
+type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
@@ -229,7 +230,7 @@ export function FixedPaymentsSection() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<unknown>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
 
   // Backfill state
@@ -279,7 +280,7 @@ export function FixedPaymentsSection() {
       sourceId: fp.source ?? "",
       categoryId: fp.categoryId ?? "",
       mode: fp.mode ?? "Debit",
-      tag: fp.tag ?? "Personal",
+      tag: (form.tag as "Personal" | "Business") ?? "Personal",
       description: fp.name,
     });
     setTxScheduledAmount(fp.amount);

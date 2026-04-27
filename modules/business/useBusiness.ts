@@ -253,7 +253,7 @@ export function useBusiness() {
       };
       commit({ ...biz, contracts: [...biz.contracts, contract] });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updateContract = useCallback(
@@ -266,7 +266,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const deleteContract = useCallback(
@@ -278,7 +278,7 @@ export function useBusiness() {
         // Invoices keep their data but lose the contract link
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const addContractRate = useCallback(
@@ -299,7 +299,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updateContractRate = useCallback(
@@ -326,7 +326,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const deleteContractRate = useCallback(
@@ -346,7 +346,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const addHoursAllocation = useCallback(
@@ -364,7 +364,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updateHoursAllocation = useCallback(
@@ -389,7 +389,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const deleteHoursAllocation = useCallback(
@@ -409,7 +409,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -565,7 +565,7 @@ export function useBusiness() {
         }
       }
     },
-    [commit, calcInvoiceFields, getNextInvoiceNumber]
+    [commit, calcInvoiceFields, getNextInvoiceNumber, getBusiness]
   );
 
   const deleteInvoice = useCallback(
@@ -598,7 +598,7 @@ export function useBusiness() {
         accountRepository.saveAll(updated);
       }
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -620,7 +620,7 @@ export function useBusiness() {
       };
       commit({ ...biz, hstRemittances: [...biz.hstRemittances, remittance] });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updateHSTRemittance = useCallback(
@@ -633,7 +633,7 @@ export function useBusiness() {
         ),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const deleteHSTRemittance = useCallback(
@@ -644,7 +644,7 @@ export function useBusiness() {
         hstRemittances: biz.hstRemittances.filter((r) => r.id !== id),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -766,7 +766,7 @@ export function useBusiness() {
       }
       commit(newBiz);
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updateObligationAmount = useCallback(
@@ -792,7 +792,7 @@ export function useBusiness() {
       }
       commit(newBiz);
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -831,7 +831,7 @@ export function useBusiness() {
         corporateInstalments: [...biz.corporateInstalments, ...newInsts],
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -869,7 +869,7 @@ export function useBusiness() {
         payrollRemittances: [...biz.payrollRemittances, p],
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -885,7 +885,7 @@ export function useBusiness() {
         arrearsCorp: toFixed2(arrearsCorp),
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   /**
@@ -1018,7 +1018,7 @@ export function useBusiness() {
         rateSettings: { ...biz.rateSettings, [key]: entries },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const addRateEntry = useCallback(
@@ -1031,7 +1031,7 @@ export function useBusiness() {
         rateSettings: { ...biz.rateSettings, [key]: [...arr, newEntry] },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updateRateEntry = useCallback(
@@ -1049,7 +1049,7 @@ export function useBusiness() {
         },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const deleteRateEntry = useCallback(
@@ -1065,7 +1065,7 @@ export function useBusiness() {
         },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const addPayrollDrawEntry = useCallback(
@@ -1080,7 +1080,7 @@ export function useBusiness() {
         },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const updatePayrollDrawEntry = useCallback(
@@ -1096,7 +1096,7 @@ export function useBusiness() {
         },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   const deletePayrollDrawEntry = useCallback(
@@ -1112,7 +1112,7 @@ export function useBusiness() {
         },
       });
     },
-    [commit]
+    [commit, getBusiness]
   );
 
   // ─── Return ────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Vehicle, HouseLoan, PropertyTax, FixedPayment } from "@/types/domain";
 import { useState, useRef } from "react";
 import { migrateFromPrototype } from "@/utils/migrationService";
 import { accountRepository } from "@/repositories/accountRepository";
@@ -10,6 +11,16 @@ import { businessRepository } from "@/repositories/businessRepository";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
 import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { notifyDataChanged } from "@/utils/events";
+
+type RawObject = Record<string, unknown>;
+
+function asObject(value: unknown): RawObject {
+  return value && typeof value === "object" ? (value as RawObject) : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
 
 function Btn({ children, onClick, variant = "primary", disabled }: {
   children: React.ReactNode; onClick?: () => void;
@@ -71,39 +82,52 @@ export function ImportExportSection() {
 
       // Import vehicles, house loans, property taxes, fixed payments from raw data
       // Resolve account/card names -> IDs for source fields
-      const raw = pendingData as unknown;
+      const raw = asObject(pendingData);
       const allAccounts = result.accounts;
       const allCards = result.creditCards;
 
       function resolveSourceId(nameOrId: string): string {
         if (!nameOrId) return "";
-        // Already an ID? Check directly
         const byId = [...allAccounts, ...allCards].find((x) => x.id === nameOrId);
         if (byId) return byId.id;
-        // Try name match (prototype stores names)
+
         const byName = [...allAccounts, ...allCards].find(
           (x) => x.name.toLowerCase() === String(nameOrId).toLowerCase()
         );
         return byName ? byName.id : nameOrId;
       }
 
-      if ((raw as any)?.vehicles?.length) {
-        vehicleRepository.saveAll((raw as any).vehicles.map((v: unknown) => ({
-          ...v, source: resolveSourceId((v as any).source ?? ""),
-        })));
+            const rawHouseLoans = asArray(raw.houseLoans);
+      if (rawHouseLoans.length > 0) {
+        houseLoanRepository.saveAll(
+          rawHouseLoans.map((l) => {
+            const loan = asObject(l);
+            return {
+              ...loan,
+              source: resolveSourceId(String(loan.source ?? "")),
+            } as unknown as HouseLoan;
+          })
+        );
       }
-      if ((raw as any)?.houseLoans?.length) {
-        houseLoanRepository.saveAll((raw as any).houseLoans.map((l: unknown) => ({
-          ...l, source: resolveSourceId((l as any).source ?? ""),
-        })));
+
+            const rawPropertyTaxes = asArray(raw.propertyTaxes);
+      if (rawPropertyTaxes.length > 0) {
+        propertyTaxRepository.saveAll(
+          rawPropertyTaxes as unknown as PropertyTax[]
+        );
       }
-      if ((raw as any)?.propertyTaxes?.length) {
-        propertyTaxRepository.saveAll((raw as any).propertyTaxes);
-      }
-      if ((raw as any)?.futurePayments?.length) {
-        fixedPaymentRepository.saveAll((raw as any).futurePayments.map((p: unknown) => ({
-          ...p, source: resolveSourceId((p as any).source ?? ""),
-        })));
+
+            const rawFuturePayments = asArray(raw.futurePayments);
+      if (rawFuturePayments.length > 0) {
+        fixedPaymentRepository.saveAll(
+          rawFuturePayments.map((p) => {
+            const payment = asObject(p);
+            return {
+              ...payment,
+              source: resolveSourceId(String(payment.source ?? "")),
+            } as unknown as FixedPayment;
+          })
+        );
       }
 
       // Notify all hooks to reload
