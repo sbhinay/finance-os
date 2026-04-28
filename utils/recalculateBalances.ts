@@ -9,8 +9,9 @@ type BalanceFields = {
   balanceBase?: number;
 };
 
-function getReplayBase<T extends { openingBalance: number }>(
-  item: T & BalanceFields
+function getReplayBase<T extends { id: string; openingBalance: number }>(
+  item: T & BalanceFields,
+  transactions: Transaction[]
 ): number {
   if (typeof item.reconciledBalance === "number") {
     return item.reconciledBalance;
@@ -20,8 +21,19 @@ function getReplayBase<T extends { openingBalance: number }>(
     return item.balanceBase;
   }
 
-  item.balanceBase = toFixed2(item.openingBalance ?? 0);
-  return item.balanceBase;
+  const hasRelatedTransactions = transactions.some(
+    (t) => t.sourceId === item.id || t.destinationId === item.id
+  );
+
+  if (hasRelatedTransactions) {
+    return 0;
+  }
+
+  return toFixed2(item.openingBalance ?? 0);
+}
+
+function shouldApplyTransaction(item: { reconciledDate?: string | null }, txDate: string) {
+  return !item.reconciledDate || txDate > item.reconciledDate;
 }
 
 export function recalculateBalances(transactions: Transaction[]) {
@@ -34,19 +46,19 @@ export function recalculateBalances(transactions: Transaction[]) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Reset every account/card to a stable replay base before applying transactions.
   accounts.forEach((a) => {
-    a.openingBalance = toFixed2(getReplayBase(a));
+    a.openingBalance = toFixed2(getReplayBase(a, transactions));
   });
 
   cards.forEach((c) => {
-    c.openingBalance = toFixed2(getReplayBase(c));
+    c.openingBalance = toFixed2(getReplayBase(c, transactions));
   });
 
   const sorted = [...transactions].sort((a, b) => {
     const da = a.date ?? a.createdAt?.slice(0, 10) ?? "";
     const db = b.date ?? b.createdAt?.slice(0, 10) ?? "";
-    return da < db ? -1 : da > db ? 1 : 0;
+    if (da !== db) return da < db ? -1 : 1;
+    return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
   });
 
   for (const t of sorted) {
@@ -55,52 +67,46 @@ export function recalculateBalances(transactions: Transaction[]) {
     const txDate = t.date ?? t.createdAt?.slice(0, 10) ?? "";
     if (txDate > today) continue;
 
-    const src =
-      accounts.find((a) => a.id === t.sourceId) ??
-      cards.find((c) => c.id === t.sourceId);
-    const reconDate = src?.reconciledDate ?? null;
-    if (reconDate && txDate < reconDate) continue;
+    const srcAcc = accounts.find((a) => a.id === t.sourceId);
+    const srcCard = cards.find((c) => c.id === t.sourceId);
+    const toAcc = t.destinationId ? accounts.find((a) => a.id === t.destinationId) : undefined;
+    const toCard = t.destinationId ? cards.find((c) => c.id === t.destinationId) : undefined;
 
-    const acc = accounts.find((a) => a.id === t.sourceId);
-    const card = cards.find((c) => c.id === t.sourceId);
+    const applySrcAcc = srcAcc && shouldApplyTransaction(srcAcc, txDate);
+    const applySrcCard = srcCard && shouldApplyTransaction(srcCard, txDate);
+    const applyToAcc = toAcc && shouldApplyTransaction(toAcc, txDate);
+    const applyToCard = toCard && shouldApplyTransaction(toCard, txDate);
 
     switch (t.type) {
       case "expense":
       case "tax_payment":
       case "loan_payment":
       case "withdrawal":
-        if (acc) acc.openingBalance = toFixed2(acc.openingBalance - t.amount);
-        if (card) card.openingBalance = toFixed2(card.openingBalance + t.amount);
+        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance - t.amount);
+        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance + t.amount);
         break;
 
       case "income":
       case "refund":
       case "dividend":
       case "loan_receipt":
-        if (acc) acc.openingBalance = toFixed2(acc.openingBalance + t.amount);
-        if (card) card.openingBalance = toFixed2(card.openingBalance - t.amount);
+        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance + t.amount);
+        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance - t.amount);
         break;
 
       case "transfer":
-        if (t.destinationId) {
-          const toAcc = accounts.find((a) => a.id === t.destinationId);
-          const toCard = cards.find((c) => c.id === t.destinationId);
-          if (acc) acc.openingBalance = toFixed2(acc.openingBalance - t.amount);
-          if (card) card.openingBalance = toFixed2(card.openingBalance - t.amount);
-          if (toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance + t.amount);
-          if (toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
-        }
+      case "credit_card_payment":
+        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance - t.amount);
+        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance - t.amount);
+        if (applyToAcc && toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance + t.amount);
+        if (applyToCard && toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
         break;
 
       case "adjustment":
-        if (t.destinationId) {
-          const toAcc = accounts.find((a) => a.id === t.destinationId);
-          const toCard = cards.find((c) => c.id === t.destinationId);
-          if (acc) acc.openingBalance = toFixed2(acc.openingBalance + t.amount);
-          if (card) card.openingBalance = toFixed2(card.openingBalance + t.amount);
-          if (toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance - t.amount);
-          if (toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
-        }
+        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance + t.amount);
+        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance + t.amount);
+        if (applyToAcc && toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance - t.amount);
+        if (applyToCard && toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
         break;
     }
   }

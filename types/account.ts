@@ -6,6 +6,9 @@ export interface Account {
   type: AccountType;
   currency: string;
   openingBalance: number;
+  balanceBase?: number;
+  reconciledBalance?: number;
+  reconciledDate?: string;
   active: boolean;
   createdAt: string;
   primary?: boolean;

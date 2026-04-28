@@ -272,6 +272,7 @@ export function DailyLogSection() {
         const hay = `${t.description}${t.sourceId}${t.categoryId ?? ""}`.toLowerCase();
         if (!hay.includes(search.toLowerCase())) return false;
       }
+      if (t.type === "adjustment") return false; // Exclude reconciliation adjustments from normal transaction history
       return true;
     }).sort((a, b) => {
       const da = a.createdAt ?? a.date ?? "";

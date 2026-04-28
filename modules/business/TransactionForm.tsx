@@ -107,16 +107,17 @@ function Alert({ type, children }: { type: "warning" | "error" | "info"; childre
 
 // ─── Type colour coding ───────────────────────────────────────────────────────
 const TYPE_COLORS: Partial<Record<TransactionType, string>> = {
-  expense:      "#a31515",
-  income:       "#1a7f3c",
-  transfer:     "#1a5fa8",
-  refund:       "#065f46",
-  dividend:     "#4a3ab5",
-  tax_payment:  "#a05c00",
-  loan_receipt: "#0369a1",
-  loan_payment: "#7c3aed",
-  withdrawal:   "#c2410c",
-  adjustment:   "#6b7280",
+  expense:              "#a31515",
+  income:               "#1a7f3c",
+  transfer:             "#1a5fa8",
+  credit_card_payment:  "#1a5fa8",
+  refund:               "#065f46",
+  dividend:             "#4a3ab5",
+  tax_payment:          "#a05c00",
+  loan_receipt:         "#0369a1",
+  loan_payment:         "#7c3aed",
+  withdrawal:           "#c2410c",
+  adjustment:           "#6b7280",
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -165,6 +166,14 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
     if ((form.type === "income" || form.type === "dividend") && cards.some((c) => c.id === form.sourceId)) {
       w.push("Income to a credit card is unusual. Did you mean a transfer?");
+    }
+    if (form.type === "credit_card_payment") {
+      if (cards.some((c) => c.id === form.sourceId)) {
+        w.push("Source should be a bank account for a credit card payment.");
+      }
+      if (form.destinationId && !cards.some((c) => c.id === form.destinationId)) {
+        w.push("Destination should be a credit card for a credit card payment.");
+      }
     }
     if (scheduledAmount && amt > 0 && amt !== scheduledAmount) {
       w.push(`Amount differs from scheduled ${fmtCAD(scheduledAmount)} by ${fmtCAD(toFixed2(Math.abs(amt - scheduledAmount)))}.`);
@@ -248,7 +257,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const isVehicleCat = selectedCat?.vehicleLinked;
   const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
-  const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
+  const showDestination = txType === "transfer" || txType === "credit_card_payment" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
   const showLoanSplit = txType === "loan_payment";
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
 
@@ -266,6 +275,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (!Number(form.amount) || Number(form.amount) <= 0) errs.push("Amount must be greater than zero.");
     if (!form.sourceId) errs.push("Please select an account or card.");
     if (requiresDestination(txType) && !form.destinationId) errs.push("Please select a destination account.");
+    if (txType === "credit_card_payment" && form.destinationId && form.sourceId === form.destinationId) {
+      errs.push("Source and destination cannot be the same for a credit card payment.");
+    }
     return errs;
   }
 

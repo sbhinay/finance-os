@@ -126,6 +126,9 @@ export function migrateFromPrototype(
     type: (a.type ?? "bank") as Account["type"],
     currency: (a.currency as string) ?? "CAD",
     openingBalance: toFixed2(Number(a.balance ?? a.openingBalance ?? 0)),
+    balanceBase: toFixed2(Number(a.balance ?? a.openingBalance ?? 0)),
+    reconciledBalance: a.reconciledBalance != null ? toFixed2(Number(a.reconciledBalance)) : undefined,
+    reconciledDate: (a.reconciledDate as string | undefined) ?? undefined,
     active: Boolean(a.active ?? true),
     createdAt:
       (a.createdAt as string) ?? new Date().toISOString(),
@@ -141,6 +144,9 @@ export function migrateFromPrototype(
     type: ((c.type ?? "personal") as CreditCard["type"]),
     limitAmount: toFixed2(Number(c.limit ?? c.limitAmount ?? 0)),
     openingBalance: toFixed2(Number(c.balance ?? c.openingBalance ?? 0)),
+    balanceBase: toFixed2(Number(c.balance ?? c.openingBalance ?? 0)),
+    reconciledBalance: c.reconciledBalance != null ? toFixed2(Number(c.reconciledBalance)) : undefined,
+    reconciledDate: (c.reconciledDate as string | undefined) ?? undefined,
     active: Boolean(c.active ?? true),
     createdAt: (c.createdAt as string) ?? new Date().toISOString(),
   })) as CreditCard[];
@@ -274,7 +280,7 @@ export function migrateFromPrototype(
     rawBiz.hstRemittances as Record<string, unknown>[]
   ) ?? [];
   const normalisedRemittances = rawRemittances.map((r) => {
-    let quarter = String(r.quarter ?? "");
+    const quarter = String(r.quarter ?? "");
     // Already correct format "Q1-2026" — leave alone
     return { ...r, quarter };
   });

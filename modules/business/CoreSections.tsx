@@ -11,8 +11,10 @@ import { useFixedPayments } from "./useFixedPayments";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
+import { transactionRepository } from "@/repositories/transactionRepository";
 import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
+import { syncBalances } from "@/utils/syncBalances";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -115,12 +117,16 @@ export function BankAccountsSection() {
 
   useAutoReload(reloadAccounts);
 
+  const now = new Date();
+  const todayLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
   const emptyForm = { id: "" as string | undefined, name: "", bank: "", type: "Chequing" as Account["type"], openingBalance: 0, accountNumber: "" };
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reconcile, setReconcile] = useState<Account | null>(null);
   const [reconAmt, setReconAmt] = useState(0);
+  const [reconDate, setReconDate] = useState(todayLocal);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -129,7 +135,18 @@ export function BankAccountsSection() {
   function save() {
     if (!form.name) return;
     if (form.id) {
-      updateAccount({ id: form.id!, name: form.name, type: form.type as Account["type"], openingBalance: toFixed2(Number(form.openingBalance)), active: true, currency: "CAD", createdAt: new Date().toISOString() });
+      updateAccount({
+        id: form.id!,
+        name: form.name,
+        type: form.type as Account["type"],
+        openingBalance: toFixed2(Number(form.openingBalance)),
+        balanceBase: toFixed2(Number(form.openingBalance)),
+        reconciledBalance: undefined,
+        reconciledDate: undefined,
+        active: true,
+        currency: "CAD",
+        createdAt: new Date().toISOString(),
+      });
     } else {
       addAccount(form.name, form.type as Account["type"], toFixed2(Number(form.openingBalance)));
     }
@@ -217,7 +234,7 @@ export function BankAccountsSection() {
                   <Btn variant="secondary" small onClick={() => setExpanded(expanded === a.id ? null : a.id)}>
                     {expanded === a.id ? "▲ Hide" : "▼ Outflows"}
                   </Btn>
-                  <Btn variant="secondary" small onClick={() => { setReconcile(a); setReconAmt(a.openingBalance); }}>Reconcile</Btn>
+                  <Btn variant="secondary" small onClick={() => { setReconcile(a); setReconAmt(a.openingBalance); setReconDate(a.reconciledDate ?? todayLocal); }}>Reconcile</Btn>
                   <button onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}
                     style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: a.primary ? "#1a7f3c" : "#f3f4f6", color: a.primary ? "#fff" : "#6b7280" }}>
                     {a.primary ? "★ Primary" : "☆ Primary"}
@@ -265,14 +282,51 @@ export function BankAccountsSection() {
       {reconcile && (
         <Modal title={`Reconcile — ${reconcile.name}`} onClose={() => setReconcile(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
-            Set the actual current balance from your bank statement. This overrides the calculated balance.
+            Set the actual current balance from your bank statement. This overrides the calculated balance baseline.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcile.openingBalance)}</strong></div>
-          <Inp label="Actual Balance from Statement ($)" type="number" value={reconAmt} onChange={(e) => setReconAmt(Number(e.target.value))} />
+          <Grid2>
+            <Inp label="Actual Balance from Statement ($)" type="number" value={reconAmt} onChange={(e) => setReconAmt(Number(e.target.value))} />
+            <Inp label="Statement Date" type="date" value={reconDate} onChange={(e) => setReconDate(e.target.value)} />
+          </Grid2>
+          {reconAmt === 0 && (
+            <div style={{ background: "#fef2f2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a31515" }}>
+              Warning: Setting balance to $0.00. This will reset the account balance to zero.
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setReconcile(null)}>Cancel</Btn>
             <Btn onClick={() => {
-              updateAccount({ ...reconcile, openingBalance: toFixed2(reconAmt) });
+              if (!reconcile) return;
+              const updated = {
+                ...reconcile,
+                openingBalance: toFixed2(reconAmt),
+                balanceBase: toFixed2(reconAmt),
+                reconciledBalance: toFixed2(reconAmt),
+                reconciledDate: reconDate,
+              };
+              updateAccount(updated);
+
+              const diff = toFixed2(reconAmt - reconcile.openingBalance);
+              if (diff !== 0) {
+                transactionRepository.add({
+                  id: Date.now().toString(),
+                  type: "adjustment",
+                  subType: "reconciliation",
+                  amount: Math.abs(diff),
+                  description: `Reconciliation — ${reconcile.name}`,
+                  sourceId: reconcile.id,
+                  destinationId: reconcile.id,
+                  date: reconDate,
+                  createdAt: new Date().toISOString(),
+                  currency: "CAD",
+                  status: "cleared",
+                  tag: "Personal",
+                  mode: "Bank Transfer",
+                });
+              }
+
+              syncBalances();
               notifyDataChanged("accounts");
               setReconcile(null);
             }}>Set Balance</Btn>
@@ -311,6 +365,9 @@ export function CreditCardsSection() {
   useAutoReload(reloadCards);
   useAutoReload(reloadAccounts);
 
+  const now = new Date();
+  const todayLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
   const emptyForm = {
     id: "" as string | undefined,
     name: "", issuer: "",
@@ -323,6 +380,9 @@ export function CreditCardsSection() {
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [pendingPayCard, setPendingPayCard] = useState<CreditCard | null>(null);
+  const [reconcileCard, setReconcileCard] = useState<CreditCard | null>(null);
+  const [cardReconAmt, setCardReconAmt] = useState(0);
+  const [cardReconDate, setCardReconDate] = useState(todayLocal);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -334,9 +394,15 @@ export function CreditCardsSection() {
       // update via repository directly
       const all = creditCardRepository.getAll();
       creditCardRepository.saveAll(all.map((c) => c.id === form.id ? {
-        ...c, name: form.name, issuer: form.issuer, type: form.type,
+        ...c,
+        name: form.name,
+        issuer: form.issuer,
+        type: form.type,
         limitAmount: toFixed2(Number(form.limitAmount)),
         openingBalance: toFixed2(Number(form.openingBalance)),
+        balanceBase: toFixed2(Number(form.openingBalance)),
+        reconciledBalance: undefined,
+        reconciledDate: undefined,
         linkedAccountId: form.linkedAccountId,
       } : c));
       reloadCards();
@@ -354,7 +420,7 @@ export function CreditCardsSection() {
 }
     setPendingPayCard(c);
     setTxFormInitial({
-      type: "transfer",
+      type: "credit_card_payment",
       amount: c.openingBalance > 0 ? toFixed2(c.openingBalance) : undefined,
       description: `Credit card payment — ${c.name}`,
       sourceId: c.linkedAccountId ?? "",
@@ -409,6 +475,7 @@ export function CreditCardsSection() {
                 <div style={{ fontSize: 12, color: "#6b7280" }}>Limit: {fmtCAD(c.limitAmount)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <Btn variant="green" small onClick={() => openPayCard(c)}>Pay</Btn>
+                  <Btn variant="secondary" small onClick={() => { setReconcileCard(c); setCardReconAmt(c.openingBalance); setCardReconDate(c.reconciledDate ?? todayLocal); }}>Reconcile</Btn>
                   <button onClick={() => {
                     const all = creditCardRepository.getAll();
                     creditCardRepository.saveAll(all.map((x) => ({ ...x, primary: x.id === c.id ? !c.primary : x.primary })));
@@ -431,7 +498,7 @@ export function CreditCardsSection() {
         open={txFormOpen}
         onClose={() => { setTxFormOpen(false); setPendingPayCard(null); setTxFormInitial(undefined); }}
         initial={txFormInitial}
-        lockType="transfer"
+        lockType="credit_card_payment"
         title={pendingPayCard ? `Pay — ${pendingPayCard.name}` : "Card Payment"}
         onSaved={() => {
           // syncBalances() in TransactionForm already updated all balances
@@ -441,6 +508,59 @@ export function CreditCardsSection() {
           setTxFormInitial(undefined);
         }}
       />
+
+      {reconcileCard && (
+        <Modal title={`Reconcile — ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
+          <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
+            Set the actual balance owing from your statement. This establishes a stable credit card balance baseline.
+          </div>
+          <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcileCard.openingBalance)}</strong></div>
+          <Grid2>
+            <Inp label="Statement Balance Owing ($)" type="number" value={cardReconAmt} onChange={(e) => setCardReconAmt(Number(e.target.value))} />
+            <Inp label="Statement Date" type="date" value={cardReconDate} onChange={(e) => setCardReconDate(e.target.value)} />
+          </Grid2>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Btn variant="secondary" onClick={() => setReconcileCard(null)}>Cancel</Btn>
+            <Btn onClick={() => {
+              if (!reconcileCard) return;
+              const updated = {
+                ...reconcileCard,
+                openingBalance: toFixed2(cardReconAmt),
+                balanceBase: toFixed2(cardReconAmt),
+                reconciledBalance: toFixed2(cardReconAmt),
+                reconciledDate: cardReconDate,
+              };
+              creditCardRepository.saveAll(
+                creditCardRepository.getAll().map((c) => c.id === updated.id ? updated : c)
+              );
+
+              const diff = toFixed2(cardReconAmt - reconcileCard.openingBalance);
+              if (diff !== 0) {
+                transactionRepository.add({
+                  id: Date.now().toString(),
+                  type: "adjustment",
+                  subType: "reconciliation",
+                  amount: Math.abs(diff),
+                  description: `Reconciliation — ${reconcileCard.name}`,
+                  sourceId: reconcileCard.id,
+                  destinationId: reconcileCard.id,
+                  date: cardReconDate,
+                  createdAt: new Date().toISOString(),
+                  currency: "CAD",
+                  status: "cleared",
+                  tag: "Personal",
+                  mode: "Bank Transfer",
+                });
+              }
+
+              syncBalances();
+              reloadCards();
+              notifyDataChanged("cards");
+              setReconcileCard(null);
+            }}>Set Balance</Btn>
+          </div>
+        </Modal>
+      )}
 
       {showForm && (
         <Modal title={form.id ? "Edit Card" : "Add Credit Card"} onClose={() => setShowForm(false)}>

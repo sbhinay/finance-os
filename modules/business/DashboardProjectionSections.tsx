@@ -557,7 +557,7 @@ export function ProjectionSection() {
     // Past: actual transactions grouped by day
     const monthTx = transactions.filter((t) => {
       const d = (t.date ?? t.createdAt ?? "").slice(0, 7);
-      return d === selectedMonth;
+      return d === selectedMonth && t.type !== "adjustment";
     }).sort((a, b) => {
       const da = a.date ?? a.createdAt ?? "";
       const db = b.date ?? b.createdAt ?? "";

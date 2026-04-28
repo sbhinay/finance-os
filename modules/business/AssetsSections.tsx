@@ -268,7 +268,7 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
       {detail && (
         <Modal title={`${detail.name} — Expense History`} onClose={() => setDetail(null)} wide>
           {(() => {
-            const txns = transactions.filter((t) => t.linkedVehicleId === detail.id);
+            const txns = transactions.filter((t) => t.linkedVehicleId === detail.id && t.type !== "adjustment");
             const total = txns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
             return (
               <>

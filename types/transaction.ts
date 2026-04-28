@@ -4,6 +4,7 @@ export type TransactionType =
   | "expense"          // money spent — general
   | "income"           // money earned — general
   | "transfer"         // between own accounts — neutral, no net worth change
+  | "credit_card_payment" // bank-to-card payment — reduces both account and card balances
   | "refund"           // reversal of prior expense — not income
   | "dividend"         // corporate dividend to self — specific T1 treatment
   | "tax_payment"      // CRA remittance — not a general expense
@@ -54,16 +55,17 @@ export type TransactionStatus =
 
 // ─── Balance Effect Reference ─────────────────────────────────────────────────
 //
-// expense        → source balance decreases
-// income         → source balance increases
-// transfer       → source decreases, destination increases (CC destination = balance decreases/owed reduces)
-// refund         → source balance increases (reverses expense)
-// dividend       → source balance increases (same as income but different tax treatment)
-// tax_payment    → source balance decreases (same as expense but excluded from expense reports)
-// loan_receipt   → source balance increases (same as income but NOT taxable — linked to liability)
-// loan_payment   → source balance decreases (principal reduces liability, interest is expense)
-// withdrawal     → source balance decreases (personal draw — not corporate expense)
-// adjustment     → source adjusted by amount, destination gets offsetting entry
+// expense            → source balance decreases
+// income             → source balance increases
+// transfer           → source decreases, destination increases (CC destination = balance decreases/owed reduces)
+// credit_card_payment → bank source decreases, destination card debt decreases
+// refund             → source balance increases (reverses expense)
+// dividend           → source balance increases (same as income but different tax treatment)
+// tax_payment        → source balance decreases (same as expense but excluded from expense reports)
+// loan_receipt       → source balance increases (same as income but NOT taxable — linked to liability)
+// loan_payment       → source balance decreases (principal reduces liability, interest is expense)
+// withdrawal         → source balance decreases (personal draw — not corporate expense)
+// adjustment         → source adjusted by amount, destination gets offsetting entry
 
 export interface Transaction {
   // ── Identity ──────────────────────────────────────────────────────────────
@@ -145,7 +147,7 @@ export function isTaxRelevant(type: TransactionType): boolean {
 
 // ─── Helper — requires destinationId? ────────────────────────────────────────
 export function requiresDestination(type: TransactionType): boolean {
-  return type === "transfer" || type === "adjustment";
+  return type === "transfer" || type === "adjustment" || type === "credit_card_payment";
 }
 
 // ─── Helper — requires subType? ──────────────────────────────────────────────
@@ -193,16 +195,17 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
 
 // ─── Type display labels ──────────────────────────────────────────────────────
 export const TYPE_LABELS: Record<TransactionType, string> = {
-  expense:      "Expense",
-  income:       "Income",
-  transfer:     "Transfer",
-  refund:       "Refund",
-  dividend:     "Dividend",
-  tax_payment:  "Tax Payment",
-  loan_receipt: "Loan Receipt",
-  loan_payment: "Loan Payment",
-  withdrawal:   "Withdrawal",
-  adjustment:   "Adjustment",
+  expense:              "Expense",
+  income:               "Income",
+  transfer:             "Transfer",
+  credit_card_payment:  "Credit Card Payment",
+  refund:               "Refund",
+  dividend:             "Dividend",
+  tax_payment:          "Tax Payment",
+  loan_receipt:         "Loan Receipt",
+  loan_payment:         "Loan Payment",
+  withdrawal:           "Withdrawal",
+  adjustment:           "Adjustment",
 };
 
 // ─── User facing types (shown in TransactionForm) ─────────────────────────────
@@ -210,6 +213,7 @@ export const USER_FACING_TYPES: TransactionType[] = [
   "expense",
   "income",
   "transfer",
+  "credit_card_payment",
   "refund",
   "dividend",
   "loan_receipt",

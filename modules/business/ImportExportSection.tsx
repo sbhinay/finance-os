@@ -1,6 +1,11 @@
 "use client";
 
-import type { Vehicle, HouseLoan, PropertyTax, FixedPayment } from "@/types/domain";
+import type { HouseLoan, PropertyTax, FixedPayment, Vehicle } from "@/types/domain";
+import type { Account } from "@/types/account";
+import type { CreditCard } from "@/types/creditCard";
+import type { Transaction } from "@/types/transaction";
+import type { Category } from "@/types/category";
+import type { Business } from "@/types/business";
 import { useState, useRef } from "react";
 import { migrateFromPrototype } from "@/utils/migrationService";
 import { accountRepository } from "@/repositories/accountRepository";
@@ -37,6 +42,25 @@ export function ImportExportSection() {
   const [pendingData, setPendingData] = useState<Record<string, unknown> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  function isCurrentAppExport(raw: RawObject): boolean {
+    return Array.isArray(raw.bankAccounts) && Array.isArray(raw.creditCards) && Array.isArray(raw.transactions) && Array.isArray(raw.categories) && typeof raw.business === "object";
+  }
+
+  function loadExportResult(raw: RawObject) {
+    return {
+      accounts: asArray(raw.bankAccounts) as Account[],
+      creditCards: asArray(raw.creditCards) as CreditCard[],
+      transactions: asArray(raw.transactions) as Transaction[],
+      categories: asArray(raw.categories) as Category[],
+      business: asObject(raw.business) as Business,
+      vehicles: asArray(raw.vehicles) as Vehicle[],
+      houseLoans: asArray(raw.houseLoans) as HouseLoan[],
+      propertyTaxes: asArray(raw.propertyTaxes) as PropertyTax[],
+      futurePayments: asArray(raw.futurePayments) as FixedPayment[],
+      warnings: [],
+    };
+  }
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -45,7 +69,7 @@ export function ImportExportSection() {
       try {
         const raw = JSON.parse(ev.target?.result as string);
         // Show preview before committing
-        const result = migrateFromPrototype(raw);
+        const result = isCurrentAppExport(raw) ? loadExportResult(raw) : migrateFromPrototype(raw);
         setPreview({
           "Bank Accounts": result.accounts.length,
           "Credit Cards": result.creditCards.length,
@@ -57,6 +81,10 @@ export function ImportExportSection() {
           "Corp Instalments": result.business.corporateInstalments.length,
           "Payroll Remittances": result.business.payrollRemittances.length,
           "Arrears Payments": result.business.arrearsPayments.length,
+          "Vehicles": result.vehicles.length,
+          "House Loans": result.houseLoans.length,
+          "Property Taxes": result.propertyTaxes.length,
+          "Fixed Payments": result.futurePayments.length,
         });
         setPendingData(raw as Record<string, unknown>);
         setStatus(null);
@@ -71,21 +99,11 @@ export function ImportExportSection() {
     if (!pendingData) return;
     setImporting(true);
     try {
-      const result = migrateFromPrototype(pendingData);
+      const result = isCurrentAppExport(pendingData) ? loadExportResult(pendingData) : migrateFromPrototype(pendingData);
 
-      // Write all domains to localStorage
-      accountRepository.saveAll(result.accounts);
-      creditCardRepository.saveAll(result.creditCards);
-      transactionRepository.saveAll(result.transactions);
-      categoryRepository.saveAll(result.categories);
-      businessRepository.save(result.business);
-
-      // Import vehicles, house loans, property taxes, fixed payments from raw data
-      // Resolve account/card names -> IDs for source fields
-      const raw = asObject(pendingData);
+      // Helper to resolve account/card names to IDs for source fields
       const allAccounts = result.accounts;
       const allCards = result.creditCards;
-
       function resolveSourceId(nameOrId: string): string {
         if (!nameOrId) return "";
         const byId = [...allAccounts, ...allCards].find((x) => x.id === nameOrId);
@@ -97,38 +115,36 @@ export function ImportExportSection() {
         return byName ? byName.id : nameOrId;
       }
 
-            const rawHouseLoans = asArray(raw.houseLoans);
-      if (rawHouseLoans.length > 0) {
-        houseLoanRepository.saveAll(
-          rawHouseLoans.map((l) => {
-            const loan = asObject(l);
-            return {
-              ...loan,
-              source: resolveSourceId(String(loan.source ?? "")),
-            } as unknown as HouseLoan;
-          })
-        );
-      }
+      // Write all domains to localStorage
+      accountRepository.saveAll(result.accounts);
+      creditCardRepository.saveAll(result.creditCards);
+      transactionRepository.saveAll(result.transactions);
+      categoryRepository.saveAll(result.categories);
+      businessRepository.save(result.business);
 
-            const rawPropertyTaxes = asArray(raw.propertyTaxes);
-      if (rawPropertyTaxes.length > 0) {
-        propertyTaxRepository.saveAll(
-          rawPropertyTaxes as unknown as PropertyTax[]
-        );
-      }
+      // Import assets with source resolution
+      vehicleRepository.saveAll(
+        result.vehicles.map((v) => ({
+          ...v,
+          source: resolveSourceId(v.source),
+        }))
+      );
 
-            const rawFuturePayments = asArray(raw.futurePayments);
-      if (rawFuturePayments.length > 0) {
-        fixedPaymentRepository.saveAll(
-          rawFuturePayments.map((p) => {
-            const payment = asObject(p);
-            return {
-              ...payment,
-              source: resolveSourceId(String(payment.source ?? "")),
-            } as unknown as FixedPayment;
-          })
-        );
-      }
+      houseLoanRepository.saveAll(
+        result.houseLoans.map((l) => ({
+          ...l,
+          source: resolveSourceId(l.source),
+        }))
+      );
+
+      propertyTaxRepository.saveAll(result.propertyTaxes);
+
+      fixedPaymentRepository.saveAll(
+        result.futurePayments.map((p) => ({
+          ...p,
+          source: resolveSourceId(p.source),
+        }))
+      );
 
       // Notify all hooks to reload
       notifyDataChanged("import");
@@ -137,7 +153,7 @@ export function ImportExportSection() {
         ? ` ${result.warnings.length} migration note(s): ${result.warnings.join("; ")}`
         : "";
 
-      setStatus({ type: "success", message: `✓ Import complete! ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices imported.${warnings}` });
+      setStatus({ type: "success", message: `✓ Import complete! ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices, ${result.vehicles.length} vehicles, ${result.houseLoans.length} house loans, ${result.propertyTaxes.length} property taxes, ${result.futurePayments.length} fixed payments imported.${warnings}` });
       setPreview(null);
       setPendingData(null);
       if (fileRef.current) fileRef.current.value = "";
