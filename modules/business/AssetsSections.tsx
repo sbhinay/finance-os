@@ -154,9 +154,14 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "— Select account —" }, ...accounts.map((a) => ({ value: a.name, label: `${a.name} (${a.type})` }))];
+  const acctOpts = [{ value: "", label: "— Select account —" }, ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` }))];
   const statusColor: Record<string, string> = { Active: "green", "Ending Soon": "amber", Ended: "gray", "Paid Off": "teal" };
   const totalMonthly = vehicles.reduce((s, v) => s + toMonthly(v.payment, v.schedule), 0);
+
+  // Helper to get account name from ID
+  const getAccountName = (accountId: string) => {
+    return accounts.find((a) => a.id === accountId)?.name ?? accountId;
+  };
 
   return (
     <div>
@@ -187,7 +192,7 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
                 <div style={{ fontSize: 12, color: "#6b7280" }}>{v.year} {v.make} {v.model}</div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {fmtCAD(v.payment)}/{v.schedule}
-                  {v.source ? ` · From: ${v.source}` : ""}
+                  {v.source ? ` · From: ${getAccountName(v.source)}` : ""}
                   {v.nextPaymentDate
                     ? ` · Next: ${fmtDate(next ?? v.nextPaymentDate)}`
                     : " · ⚠ Set next payment date"}
@@ -325,9 +330,14 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "— Select —" }, ...accounts.map((a) => ({ value: a.name, label: a.name }))];
+  const acctOpts = [{ value: "", label: "— Select —" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
   const totalRemaining = houseLoans.reduce((s, l) => s + l.remaining, 0);
   const totalMonthly = houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0);
+
+  // Helper to get account name from ID
+  const getAccountName = (accountId: string) => {
+    return accounts.find((a) => a.id === accountId)?.name ?? accountId;
+  };
 
   return (
     <div>
@@ -346,7 +356,7 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
 
       {houseLoans.map((l) => {
         const next = getNextOccurrence(l.nextPaymentDate, l.schedule);
-        const acct = accounts.find((a) => a.name === l.source);
+        const acct = accounts.find((a) => a.id === l.source);
         return (
           <div key={l.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -355,7 +365,7 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
                 {l.address && <div style={{ fontSize: 12, color: "#6b7280" }}>{l.address}</div>}
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {fmtCAD(l.payment)}/{l.schedule}
-                  {l.source ? ` · From: ${l.source}` : ""}
+                  {l.source ? ` · From: ${getAccountName(l.source)}` : ""}
                   {l.nextPaymentDate
                     ? ` · Next: ${fmtDate(next ?? l.nextPaymentDate)}`
                     : " · ⚠ Set next payment date"}
