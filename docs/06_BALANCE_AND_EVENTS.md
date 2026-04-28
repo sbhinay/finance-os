@@ -2,50 +2,75 @@
 
 ## 8. Balance Architecture
 
-### The Rule
-`openingBalance` on Account and CreditCard is a **computed value**. It is derived by replaying all transactions from zero. It is NEVER set directly by any UI component or hook.
+### Current Rule
+`openingBalance` is the current displayed balance for an account or credit card, but replay no longer assumes it is the permanent historical baseline.
+
+Replay now starts from:
+1. `reconciledBalance` if present
+2. otherwise `balanceBase` if present
+3. otherwise `0` when the account/card already has related transactions
+4. otherwise the existing `openingBalance` for brand-new rows with no transaction history
+
+This prevents old computed balances from being replayed on top of themselves.
 
 ### The Flow
-```
+```text
 Any transaction write
         ↓
 transactionRepository.add/saveAll()
         ↓
-syncBalances()          ← utils/syncBalances.ts
+syncBalances()
         ↓
-recalculateBalances()   ← utils/recalculateBalances.ts
-  - reads all transactions
-  - resets all balances to 0
-  - replays each transaction applying balance effects
-  - wraps every operation in toFixed2() to prevent float drift
+recalculateBalances()
+  - loads accounts, cards, transactions
+  - resets each row to its replay base
+  - skips pending rows
+  - skips future-dated rows
+  - skips rows on/before reconciledDate for that source
+  - replays all supported transaction types
         ↓
-accountRepository.saveAll(newAccounts)
-creditCardRepository.saveAll(newCards)
+accountRepository.saveAll(accounts)
+creditCardRepository.saveAll(cards)
 ```
 
-### recalculateBalances.ts
-```typescript
-export function recalculateBalances(transactions: Transaction[]) {
-  const accounts = accountRepository.getAll();
-  const cards = creditCardRepository.getAll();
+### `recalculateBalances.ts`
+Important behaviors in the current implementation:
+- `getReplayBase()` uses `reconciledBalance` first, then `balanceBase`.
+- If no baseline exists but related transactions do, replay starts from `0`.
+- Replay no longer writes `balanceBase` from the currently computed `openingBalance`.
+- `credit_card_payment` is handled directly.
+- `adjustment` rows are replayed, but reconciliation rows can cancel out if source and destination are the same account/card.
 
-  accounts.forEach((a) => (a.openingBalance = 0));
-  cards.forEach((c) => (c.openingBalance = 0));
+### Reconcile Behavior
+Reconcile flows now do two things:
+1. Persist baseline metadata on the account/card
+   - `balanceBase`
+   - `reconciledBalance`
+   - `reconciledDate`
+2. Optionally create an audit transaction row
+   - `type: "adjustment"`
+   - `subType: "reconciliation"`
 
-  for (const t of transactions) {
-    // apply toFixed2() on EVERY mutation to prevent floating point drift
-    if (t.type === "expense") { ... }
-    if (t.type === "income") { ... }
-    if (t.type === "transfer" && t.destinationId) { ... }
-  }
+This gives the app:
+- a stable starting balance for future replay
+- an auditable history of reconcile actions
 
-  accountRepository.saveAll(accounts);
-  creditCardRepository.saveAll(cards);
-}
-```
+### Reporting Behavior
+Reconciliation audit rows should not behave like ordinary spending.
 
-### Performance Note
-Full replay on every write. Suitable for up to ~5,000 transactions. Beyond that, migrate to incremental delta updates or database-level computed columns in Supabase.
+Current expectation:
+- excluded from Daily Log normal transaction list
+- excluded from dashboard month totals and category-style summaries
+- excluded from vehicle expense history
+- excluded from general income/expense reporting
+
+They remain in the transaction repository for traceability.
+
+### Practical Result
+After reconciling an account or card:
+- older bad historical drift should not come back
+- adding one new transaction should only move the balance by that one transaction
+- replay after refresh should stay stable
 
 ---
 
@@ -61,23 +86,16 @@ export function notifyDataChanged(domain?: string) {
 }
 ```
 
-**Pattern:** Every hook listens for `DATA_CHANGED_EVENT` and reloads its data. This solves cross-domain refresh — when DailyLog writes a transaction, BankAccounts section automatically shows updated balance without any prop drilling or shared state.
+Pattern:
+- Hooks listen for `DATA_CHANGED_EVENT` and reload local state.
+- Typical write sequence:
 
-**Usage in hooks:**
-```typescript
-useEffect(() => {
-  const handler = () => load();
-  window.addEventListener(DATA_CHANGED_EVENT, handler);
-  return () => window.removeEventListener(DATA_CHANGED_EVENT, handler);
-}, [load]);
-```
-
-**After any write sequence:**
 ```typescript
 transactionRepository.add(txn);
 syncBalances();
 notifyDataChanged("transactions");
 ```
 
----
+This is still the cross-module refresh mechanism after the balance model changes.
 
+---

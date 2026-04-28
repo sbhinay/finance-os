@@ -4,23 +4,70 @@
 
 ### Transaction
 ```typescript
+type TransactionType =
+  | "expense"
+  | "income"
+  | "transfer"
+  | "credit_card_payment"
+  | "refund"
+  | "dividend"
+  | "tax_payment"
+  | "loan_receipt"
+  | "loan_payment"
+  | "withdrawal"
+  | "adjustment";
+
+type TransactionSubType =
+  | "hst_remittance"
+  | "corp_tax"
+  | "payroll_remittance"
+  | "personal_income_tax"
+  | "other_cra"
+  | "personal_loan"
+  | "bank_loan"
+  | "line_of_credit"
+  | "mortgage"
+  | "shareholder_loan"
+  | "reconciliation"
+  | "correction"
+  | "write_off"
+  | "opening_balance"
+  | "cc_payment"
+  | "tfsa_contribution"
+  | "rrsp_contribution"
+  | "bank_to_bank"
+  | "e_transfer";
+
 interface Transaction {
-  id: string;                    // uid() — random alphanumeric
-  type: TransactionType;         // see Transaction Type System
-  amount: number;                // always positive, toFixed2()
-  description: string;           // user note / vendor name
+  id: string;
+  type: TransactionType;
+  subType?: TransactionSubType;
+  amount: number;
+  interestAmount?: number;
+  principalAmount?: number;
+  date: string;                  // YYYY-MM-DD accounting date
+  createdAt: string;             // ISO UTC when the row was recorded
+  description: string;
+  notes?: string;
   sourceId: string;              // account.id or creditCard.id
-  destinationId?: string;        // transfers only — target account/card id
-  createdAt: string;             // ISO UTC — when user recorded it
-  date?: string;                 // YYYY-MM-DD — accounting date (can be backdated)
-  categoryId?: string;           // category.id — optional for transfers
-  tag?: "Personal" | "Business"; // for tax separation
-  mode?: TransactionMode;        // Cash | Debit | Credit Card | Bank Transfer | E-Transfer
-  linkedVehicleId?: string;      // vehicle.id — for vehicle expense tracking
-  linkedPropertyId?: string;     // houseLoan.id — for property expense tracking
-  odometer?: string;             // km reading — vehicle expenses only
+  destinationId?: string;        // required for transfer, adjustment, credit_card_payment
+  categoryId?: string;
+  tag?: "Personal" | "Business";
+  taxYear?: number;
+  mode?: TransactionMode;
+  currency: string;              // "CAD"
+  status: "pending" | "cleared" | "reconciled";
+  linkedVehicleId?: string;
+  linkedPropertyId?: string;
+  linkedLiabilityId?: string;
+  odometer?: string;
 }
 ```
+
+Notes:
+- `credit_card_payment` is now a first-class transaction type. It is not modeled as a plain expense or a generic transfer in the UI.
+- Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
+- `date` drives filtering, reporting, and balance replay. `createdAt` preserves when the record was actually entered.
 
 ### Account (Bank)
 ```typescript
@@ -29,12 +76,19 @@ interface Account {
   name: string;
   type: "bank" | "cash" | "business";
   currency: string;              // "CAD"
-  openingBalance: number;        // COMPUTED — never set directly
+  openingBalance: number;        // current computed balance shown in UI
+  balanceBase?: number;          // stable replay baseline when no reconcile row exists
+  reconciledBalance?: number;    // latest user-confirmed balance
+  reconciledDate?: string;       // YYYY-MM-DD baseline date
   active: boolean;
   createdAt: string;
-  primary?: boolean;             // shows first in dropdowns with ★
+  primary?: boolean;
 }
 ```
+
+Notes:
+- `openingBalance` is persisted, but treated as the current computed balance, not as a permanent historical baseline.
+- `balanceBase` and `reconciledBalance` are used by replay to avoid compounding old computed values.
 
 ### CreditCard
 ```typescript
@@ -44,11 +98,14 @@ interface CreditCard {
   issuer: string;
   type: "personal" | "business";
   limitAmount: number;
-  openingBalance: number;        // COMPUTED — amount currently owed
-  linkedAccountId?: string;      // default bank account for payments
+  openingBalance: number;        // current amount owed
+  balanceBase?: number;          // stable replay baseline
+  reconciledBalance?: number;    // latest statement-confirmed balance
+  reconciledDate?: string;       // YYYY-MM-DD baseline date
+  linkedAccountId?: string;      // default account for payments
   active: boolean;
   createdAt: string;
-  primary?: boolean;             // shows first in dropdowns with ★
+  primary?: boolean;
 }
 ```
 
@@ -59,9 +116,9 @@ interface Category {
   name: string;
   type: "income" | "expense" | "both";
   color?: string;
-  vehicleLinked?: boolean;       // shows vehicle/odometer fields in TransactionForm
-  propertyLinked?: boolean;      // shows property selector in TransactionForm
-  archived?: boolean;            // hidden from dropdowns, transactions stay linked
+  vehicleLinked?: boolean;
+  propertyLinked?: boolean;
+  archived?: boolean;
 }
 ```
 
@@ -71,8 +128,8 @@ interface FixedPayment {
   id: string;
   name: string;
   amount: number;
-  schedule: PaymentSchedule;     // Weekly | Bi-weekly | Semi-monthly | Monthly | Annual | One-time
-  date: string;                  // YYYY-MM-DD — anchor date, auto-advances after each payment
+  schedule: PaymentSchedule;
+  date: string;                  // anchor date
   endDate?: string;
   source: string;                // account.id or creditCard.id
   categoryId?: string;
@@ -92,10 +149,10 @@ interface Vehicle {
   vtype: "Lease" | "Finance";
   payment: number;
   schedule: PaymentSchedule;
-  source: string;                // account id
+  source: string;                // canonical value should be account.id
   leaseStart: string;
   leaseEnd: string;
-  nextPaymentDate: string;       // auto-advances after each confirmed payment
+  nextPaymentDate: string;
   mileageAllowance: number;
   excessRate: number;
   residual: number;
@@ -117,10 +174,10 @@ interface HouseLoan {
   remaining: number;
   payment: number;
   schedule: PaymentSchedule;
-  source: string;                // account id
+  source: string;                // canonical value should be account.id
   startDate: string;
   endDate: string;
-  nextPaymentDate: string;       // auto-advances after each confirmed payment
+  nextPaymentDate: string;
   interestRate: number;
 }
 ```
@@ -146,17 +203,22 @@ interface PropertyTaxPayment {
 ```
 
 ### Business (CRA Domain)
-Stored as a single JSON object in `finance_os_business`. Contains:
+Stored as one JSON object in `finance_os_business`. The hook normalizes missing arrays and nested defaults on load.
+
+Key domains:
 - `clientName`, `businessName`, `hstNumber`
-- `invoices[]` — contractor invoice records
-- `contracts[]` — client contracts with hourly rates
-- `hoursAllocations[]` — hours per fiscal year per contract
-- `hstRemittances[]` — HST quarterly payments
-- `corpInstalments[]` — corporate tax instalment payments
-- `payrollRemittances[]` — payroll remittance records
-- `arrearsHST`, `arrearsCorp` — outstanding CRA arrears
-- `rateSettings` — historical rate entries (HST rate, quick method rate, corp instalment, payroll draw)
-- `taxObligations[]` — all CRA obligations with paid/unpaid status
+- `contracts[]`
+- `invoices[]`
+- `hstRemittances[]`
+- `corporateInstalments[]`
+- `payrollRemittances[]`
+- `arrearsPayments[]`
+- `arrearsHST`, `arrearsCorp`
+- `rateSettings`
+
+### Current Architectural Notes
+- Transactions remain the master ledger for activity.
+- Accounts and cards now also carry replay baseline metadata so reconciliation can stabilize balances.
+- Import/export must preserve `balanceBase`, `reconciledBalance`, and `reconciledDate` for accounts and credit cards.
 
 ---
-

@@ -2,7 +2,7 @@
 
 ## 10. Repository Pattern
 
-All repositories follow the same interface pattern:
+All repositories still use the same localStorage-first shape:
 
 ```typescript
 export const [domain]Repository = {
@@ -14,11 +14,9 @@ export const [domain]Repository = {
 };
 ```
 
-### Current implementations (localStorage)
-Each repository reads/writes a single localStorage key as a JSON array or object.
-
-### Migration to Supabase
-Only these files change. Everything above the repository layer remains identical. Each method becomes an async Supabase query scoped to `user_id`.
+Current note:
+- `transactionRepository` remains the master ledger repository.
+- `accountRepository` and `creditCardRepository` now persist replay baseline metadata in addition to current balances.
 
 ---
 
@@ -28,70 +26,71 @@ Only these files change. Everything above the repository layer remains identical
 
 | Hook | File | Responsibilities |
 |---|---|---|
-| `useAccounts` | modules/accounts/useAccounts.ts | CRUD for bank accounts, reload on event |
-| `useCreditCards` | modules/creditCards/useCreditCards.ts | CRUD for credit cards |
-| `useTransactions` | modules/transactions/useTransactions.ts | Read transactions, add/delete/update + syncBalances |
-| `useCategories` | modules/categories/useCategories.ts | CRUD + auto-seed defaults + smart delete/archive |
-| `useFixedPayments` | modules/business/useFixedPayments.ts | Fixed payments + pending generation + auto-advance dates |
-| `useBusiness` | modules/business/useBusiness.ts | Business domain — invoices, CRA, rate settings |
-| `useVehicles` | modules/business/useAssets.ts | Vehicle CRUD |
-| `useHouseLoans` | modules/business/useAssets.ts | House loan CRUD |
-| `usePropertyTax` | modules/business/useAssets.ts | Property tax CRUD |
+| `useAccounts` | `modules/accounts/useAccounts.ts` | Account CRUD, account reconcile/edit behavior, reload on events |
+| `useCreditCards` | `modules/creditCards/useCreditCards.ts` | Card CRUD, payment/reconcile support, reload on events |
+| `useTransactions` | `modules/transactions/useTransactions.ts` | Add/update/delete transaction rows, trigger `syncBalances()` |
+| `useCategories` | `modules/categories/useCategories.ts` | Category CRUD, archive behavior, defaults |
+| `useFixedPayments` | `modules/business/useFixedPayments.ts` | Fixed payment CRUD, pending generation, auto-advance logic |
+| `useBusiness` | `modules/business/useBusiness.ts` | Business/CRA domain with normalization of nested defaults |
+| `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD |
+| `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD |
+| `usePropertyTax` | `modules/business/useAssets.ts` | Property tax CRUD |
 
 ### UI Sections
 
-| Section | File | Nav Location |
+| Section | File | Notes |
 |---|---|---|
-| Daily Log | DailyLogSection.tsx | Daily Activity |
-| Transaction History | CoreSections.tsx → TransactionHistorySection | Daily Activity |
-| Dashboard | DashboardProjectionSections.tsx → DashboardSection | Daily Activity |
-| Projection | DashboardProjectionSections.tsx → ProjectionSection | Daily Activity |
-| Import/Export | ImportExportSection.tsx | Daily Activity |
-| Overview | CoreSections.tsx → OverviewSection | Personal Finance |
-| Bank Accounts | CoreSections.tsx → BankAccountsSection | Personal Finance |
-| Credit Cards | CoreSections.tsx → CreditCardsSection | Personal Finance |
-| Fixed Payments | FixedPaymentsSection.tsx | Personal Finance |
-| Vehicles | AssetsSections.tsx → VehiclesSection | Personal Finance |
-| House Loans | AssetsSections.tsx → HouseLoansSection | Personal Finance |
-| Property Tax | AssetsSections.tsx → PropertyTaxSection | Personal Finance |
-| Categories | CategoriesSection.tsx | Personal Finance |
-| Hours & Contracts | HoursContractsSection.tsx | Business / CRA |
-| Corp Income | CorporationIncomeTaxRateSections.tsx → CorporationIncomeSection | Business / CRA |
-| Tax Obligations | TaxObligationsSection.tsx | Business / CRA |
-| Tax & Rate Settings | CorporationIncomeTaxRateSections.tsx → TaxRateSettingsSection | Business / CRA |
+| Daily Log | `modules/business/DailyLogSection.tsx` | Normal daily transactions; reconciliation adjustments should be excluded |
+| Transaction History | `modules/business/CoreSections.tsx` | Cross-account history and edits |
+| Dashboard | `modules/business/DashboardProjectionSections.tsx` | Month totals and category summaries |
+| Projection | `modules/business/DashboardProjectionSections.tsx` | Forecasts based on recurring/business definitions |
+| Import/Export | `modules/business/ImportExportSection.tsx` | Handles both current-app exports and legacy migration inputs |
+| Bank Accounts | `modules/business/CoreSections.tsx` | Includes reconcile and metadata editing |
+| Credit Cards | `modules/business/CoreSections.tsx` | Includes pay flow, reconcile flow, linked-account behavior |
+| Fixed Payments | `modules/business/FixedPaymentsSection.tsx` | Recurring personal finance items |
+| Vehicles | `modules/business/AssetsSections.tsx` | Vehicle assets and linked transaction history |
+| House Loans | `modules/business/AssetsSections.tsx` | Mortgage/loan assets |
+| Property Tax | `modules/business/AssetsSections.tsx` | Property tax schedules |
+| Categories | `modules/business/CategoriesSection.tsx` | Category maintenance |
+| Hours & Contracts | `modules/business/HoursContractsSection.tsx` | Business contracts/hours |
+| Corp Income | `modules/business/CorporationIncomeTaxRateSections.tsx` | Corporate income and tax views |
+| Tax Obligations | `modules/business/TaxObligationsSection.tsx` | CRA obligations |
+| Tax & Rate Settings | `modules/business/CorporationIncomeTaxRateSections.tsx` | HST/corp/payroll rates |
+
+### Important Current Cross-Cutting Rules
+- Transaction writes should always be followed by `syncBalances()` and `notifyDataChanged(...)`.
+- Reconcile flows update repository baseline metadata and may also create audit rows.
+- Import/export is no longer just a prototype-migration concern; it must preserve current app state symmetrically.
 
 ---
 
 ## 12. Navigation Structure
 
-Defined in `app/page.tsx` as a `NAV` array. Three groups:
+Defined in `app/page.tsx` as grouped navigation:
 
-```
+```text
 Daily Activity
-  📓 Daily Log          (id: "dailylog")
-  📋 Transaction History (id: "transactions")
-  🏠 Dashboard          (id: "dashboard")
-  📈 Projection         (id: "projection")
-  💾 Import / Export    (id: "importexport")
+  Daily Log
+  Transaction History
+  Dashboard
+  Projection
+  Import / Export
 
 Personal Finance
-  🏠 Overview           (id: "overview")
-  🏦 Bank Accounts      (id: "accounts")
-  💳 Credit Cards       (id: "cards")
-  📅 Fixed Payments     (id: "fixedpayments")
-  🚗 Vehicles           (id: "vehicles")
-  🏡 House Loans        (id: "houseloans")
-  🏛 Property Tax       (id: "propertytax")
-  🏷 Categories         (id: "categories")
+  Overview
+  Bank Accounts
+  Credit Cards
+  Fixed Payments
+  Vehicles
+  House Loans
+  Property Tax
+  Categories
 
 Business / CRA
-  ⏱ Hours & Contracts  (id: "hourscontracts")
-  💼 Corp Income        (id: "corpincome")
-  📊 Tax Obligations    (id: "cra")
-  ⚙️ Tax & Rate Settings (id: "ratesettings")
+  Hours & Contracts
+  Corp Income
+  Tax Obligations
+  Tax & Rate Settings
 ```
 
-Sidebar: dark `#1e2530` background. Active item: `rgba(255,255,255,.1)` background with `#4a9eff` left border.
-
 ---
-

@@ -4,66 +4,113 @@
 
 | Key | Type | Description |
 |---|---|---|
-| `finance_os_accounts` | `Account[]` | Bank and cash accounts |
-| `finance_os_cards` | `CreditCard[]` | Credit cards |
-| `finance_os_tx` | `Transaction[]` | **Master table — single source of truth** |
-| `finance_os_categories` | `Category[]` | Expense/income categories |
-| `finance_os_business` | `Business` | Business config, invoices, CRA |
+| `finance_os_accounts` | `Account[]` | Bank, cash, and business accounts |
+| `finance_os_cards` | `CreditCard[]` | Credit cards and LOC-style liabilities |
+| `finance_os_tx` | `Transaction[]` | Master ledger used for replay, history, and reporting |
+| `finance_os_categories` | `Category[]` | Income/expense categories |
+| `finance_os_business` | `Business` | Business settings, invoices, CRA, rate settings |
 | `finance_os_vehicles` | `Vehicle[]` | Vehicle assets |
 | `finance_os_house_loans` | `HouseLoan[]` | Mortgage and loan assets |
 | `finance_os_property_taxes` | `PropertyTax[]` | Property tax schedules |
 | `finance_os_fixed_payments` | `FixedPayment[]` | Recurring payment definitions |
-| `finance_os_dismissed_pending` | `string[]` | Keys of dismissed pending alerts |
+| `finance_os_dismissed_pending` | `string[]` | Dismissed pending transaction keys |
 
-**Rule:** `finance_os_tx` is the only table that drives balance calculations. All other tables are configuration/definition tables that trigger or reference transactions.
+Rule:
+- `finance_os_tx` remains the activity ledger.
+- Accounts and cards also persist baseline metadata used by replay:
+  - `balanceBase`
+  - `reconciledBalance`
+  - `reconciledDate`
 
 ---
 
 ## 7. Transaction System
 
-### Transaction Types
-
-#### User-facing types (selectable in TransactionForm)
+### User-facing types (shown in `TransactionForm`)
 | Type | Description | Balance Effect |
 |---|---|---|
-| `expense` | Money spent | Source account/card debited |
-| `income` | Money received | Source account credited |
-| `transfer` | Money between own accounts | Source debited, destination credited |
-| `refund` | Return of a previous expense | Source account/card credited |
-| `dividend` | Corporate dividend to self | Source account credited |
+| `expense` | Normal spend | Account decreases, card debt increases |
+| `income` | Normal income | Source increases |
+| `transfer` | Internal transfer | Source decreases, destination increases |
+| `credit_card_payment` | Pay card from bank | Bank source decreases, destination card debt decreases |
+| `refund` | Reversal of prior spend | Account increases, card debt decreases |
+| `dividend` | Personal dividend income | Source increases |
+| `loan_receipt` | Borrowed money received | Source increases |
+| `loan_payment` | Debt payment | Source decreases |
+| `withdrawal` | Personal draw / owner withdrawal | Source decreases |
 
-**Note:** `TransactionType` in the TypeScript type currently only includes `income | expense | transfer`. `refund` and `dividend` are planned additions — see Deferred Items.
-
-#### System-assigned types (never shown to user as a choice)
-| Type | Description | When |
+### System-assigned types
+| Type | Description | Notes |
 |---|---|---|
-| `adjustment` | Reconciliation correction | When account reconcile creates a balancing entry |
-| `payroll` | Payroll income | When income source is flagged as T4 employment |
+| `tax_payment` | CRA remittance or other tax outflow | Not treated as a general expense report row |
+| `adjustment` | Reconciliation/correction/opening-balance style system adjustment | `subType: "reconciliation"` is used for reconcile audit rows |
 
-### Transfer Rules
-- Always has `sourceId` (where money leaves) AND `destinationId` (where money arrives)
-- No category field — transfers are not expenses or income
-- Credit card payment: `sourceId` = bank account, `destinationId` = credit card
-- CC to CC balance transfer: both source and destination are credit cards
-- TFSA/RRSP contribution: `sourceId` = bank account, `destinationId` = investment account (when built)
-- Loan receipt: `sourceId` = liability account (when built), `destinationId` = bank account
+### Destination Rules
+- `destinationId` is required for:
+  - `transfer`
+  - `credit_card_payment`
+  - `adjustment`
+- `destinationId` is optional for other types.
 
-### Balance Effect by Type
+### Sub-type Rules
+- `tax_payment`, `loan_receipt`, `loan_payment`, and `transfer` can carry sub-types.
+- `adjustment` also carries sub-types such as:
+  - `reconciliation`
+  - `correction`
+  - `write_off`
+  - `opening_balance`
+
+### Balance Effect Reference
+```text
+expense:
+  bank/cash/business source -> openingBalance -= amount
+  credit card source        -> openingBalance += amount
+
+income / dividend / loan_receipt:
+  bank/cash/business source -> openingBalance += amount
+  credit card source        -> openingBalance -= amount
+
+tax_payment / loan_payment / withdrawal:
+  bank/cash/business source -> openingBalance -= amount
+  credit card source        -> openingBalance += amount
+
+transfer:
+  source account           -> openingBalance -= amount
+  source card              -> openingBalance -= amount
+  destination account      -> openingBalance += amount
+  destination card         -> openingBalance -= amount
+
+credit_card_payment:
+  source bank account      -> openingBalance -= amount
+  destination credit card  -> openingBalance -= amount
+
+adjustment:
+  source account/card      -> openingBalance += amount
+  destination account/card -> openingBalance -= amount
 ```
-expense:   account.balance -= amount  | card.balance += amount (more owed)
-income:    account.balance += amount
-refund:    account.balance += amount  | card.balance -= amount (less owed)
-dividend:  account.balance += amount
-transfer:  source.balance -= amount   | destination.balance += amount
-           (for card destination: card.balance -= amount = less owed)
-adjustment: applied as income or expense to bring balance to correct value
-```
 
-### What Is NOT a Transaction
-- Credit card payment (it IS a transfer)
-- TFSA/RRSP contribution (it IS a transfer)
-- Loan receipt (it IS a transfer from liability account)
-- CRA HST remittance (it IS an expense from business account)
+### Reconciliation Rows
+- Reconcile actions may create an audit row with:
+  - `type: "adjustment"`
+  - `subType: "reconciliation"`
+- These rows remain in storage for traceability.
+- Normal reporting views should exclude them from day-to-day expense and income summaries.
+
+### Reporting Helpers
+- `isExpenseReportable(type)` currently includes:
+  - `expense`
+  - `refund`
+- `isIncomeReportable(type)` currently includes:
+  - `income`
+  - `dividend`
+
+That means:
+- `credit_card_payment`
+- `tax_payment`
+- `adjustment`
+- `loan_payment`
+- `withdrawal`
+
+are intentionally outside normal spending category summaries unless a view explicitly includes them.
 
 ---
-
