@@ -7,57 +7,30 @@
 ```
 User action (add/edit/delete transaction)
         ↓
-Write to finance_os_tx (transactionRepository)
+Write to transaction repository
         ↓
-syncBalances() called
+syncBalances()
         ↓
-recalculateBalances() replays ALL transactions from zero
+recalculateBalances() replays all applicable ledger rows
         ↓
 accountRepository.saveAll() + creditCardRepository.saveAll()
         ↓
-notifyDataChanged() fires DATA_CHANGED_EVENT
+notifyDataChanged()
         ↓
-All hooks reload via event listener
-        ↓
-UI re-renders with correct data
+UI reloads from hooks
 ```
 
-**Critical rule:** `openingBalance` on accounts and cards is NEVER written directly by any component or hook. It is ONLY updated through `syncBalances()` → `recalculateBalances()`. Any code that directly mutates `openingBalance` outside this path is a bug.
+### Balance Flow
+- Transactions are the master ledger.
+- Balances are recomputed from transactions after every write.
+- `openingBalance` is treated as the current computed balance and is not authoritative by itself.
 
-### Repository Pattern (localStorage → Supabase swappable)
+### Repository Layer
+- All storage access is centralized in repository files.
+- This cleanly separates UI and domain logic from persistence.
+- The current implementation uses localStorage; a future swap to Supabase should only require repository changes.
 
-Every data domain has a repository file. Repositories are the ONLY layer that touches storage. When migrating to Supabase, only repository files change — zero changes to hooks, components, or business logic.
-
-```typescript
-// Current (localStorage)
-export const transactionRepository = {
-  getAll(): Transaction[] {
-    return JSON.parse(localStorage.getItem("finance_os_tx") ?? "[]");
-  },
-  saveAll(transactions: Transaction[]) {
-    localStorage.setItem("finance_os_tx", JSON.stringify(transactions));
-  },
-  add(t: Transaction) { ... }
-};
-
-// Future (Supabase) — same interface, different implementation
-export const transactionRepository = {
-  async getAll(): Promise<Transaction[]> {
-    const { data } = await supabase
-      .from("transactions")
-      .select()
-      .eq("user_id", currentUser.id);
-    return data;
-  },
-  ...
-};
-```
-
-### TransactionForm — Universal Entry Point
-
-`TransactionForm.tsx` is the single modal used for ALL transaction creates and edits across the entire app. No other component builds its own transaction form.
-
-Every entry point passes a `TransactionFormInitial` object to pre-fill the form, and `onSaved` callback to handle post-save actions.
-
----
-
+### TransactionForm
+- `TransactionForm.tsx` is the universal entry point for all transaction creates and edits.
+- No other component should build an independent transaction form.
+- Each section passes `initial` state and `onSaved` callbacks into the form.

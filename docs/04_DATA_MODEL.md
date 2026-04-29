@@ -3,41 +3,9 @@
 ## 5. Data Model
 
 ### Transaction
+The transaction domain is the master ledger. Every money movement, adjustment, and audit row is stored here.
+
 ```typescript
-type TransactionType =
-  | "expense"
-  | "income"
-  | "transfer"
-  | "credit_card_payment"
-  | "refund"
-  | "dividend"
-  | "tax_payment"
-  | "loan_receipt"
-  | "loan_payment"
-  | "withdrawal"
-  | "adjustment";
-
-type TransactionSubType =
-  | "hst_remittance"
-  | "corp_tax"
-  | "payroll_remittance"
-  | "personal_income_tax"
-  | "other_cra"
-  | "personal_loan"
-  | "bank_loan"
-  | "line_of_credit"
-  | "mortgage"
-  | "shareholder_loan"
-  | "reconciliation"
-  | "correction"
-  | "write_off"
-  | "opening_balance"
-  | "cc_payment"
-  | "tfsa_contribution"
-  | "rrsp_contribution"
-  | "bank_to_bank"
-  | "e_transfer";
-
 interface Transaction {
   id: string;
   type: TransactionType;
@@ -45,18 +13,18 @@ interface Transaction {
   amount: number;
   interestAmount?: number;
   principalAmount?: number;
-  date: string;                  // YYYY-MM-DD accounting date
-  createdAt: string;             // ISO UTC when the row was recorded
+  date: string;
+  createdAt: string;
   description: string;
   notes?: string;
-  sourceId: string;              // account.id or creditCard.id
-  destinationId?: string;        // required for transfer, adjustment, credit_card_payment
+  sourceId: string;
+  destinationId?: string;
   categoryId?: string;
   tag?: "Personal" | "Business";
   taxYear?: number;
   mode?: TransactionMode;
-  currency: string;              // "CAD"
-  status: "pending" | "cleared" | "reconciled";
+  currency: string;
+  status: TransactionStatus;
   linkedVehicleId?: string;
   linkedPropertyId?: string;
   linkedLiabilityId?: string;
@@ -64,31 +32,47 @@ interface Transaction {
 }
 ```
 
-Notes:
-- `credit_card_payment` is now a first-class transaction type. It is not modeled as a plain expense or a generic transfer in the UI.
-- Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
-- `date` drives filtering, reporting, and balance replay. `createdAt` preserves when the record was actually entered.
+#### Important Notes
+- `amount` is always stored positive; direction is determined by `type`.
+- `sourceId` and `destinationId` are references to `Account.id` or `CreditCard.id`.
+- `date` is the accounting date used for reports and replay.
+- `createdAt` is the system-assigned timestamp when the row was created.
+- `linkedVehicleId` and `linkedPropertyId` connect expenses to assets.
 
-### Account (Bank)
+### Transaction Types
+Supported transaction types:
+- `expense`
+- `income`
+- `transfer`
+- `credit_card_payment`
+- `refund`
+- `dividend`
+- `tax_payment`
+- `loan_receipt`
+- `loan_payment`
+- `withdrawal`
+- `adjustment`
+
+#### Reconciliation and Audit
+- Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
+- These rows are kept for auditability but should be excluded from normal expense/income reporting.
+
+### Account
 ```typescript
 interface Account {
   id: string;
   name: string;
   type: "bank" | "cash" | "business";
-  currency: string;              // "CAD"
-  openingBalance: number;        // current computed balance shown in UI
-  balanceBase?: number;          // stable replay baseline when no reconcile row exists
-  reconciledBalance?: number;    // latest user-confirmed balance
-  reconciledDate?: string;       // YYYY-MM-DD baseline date
+  currency: string;
+  openingBalance: number;
+  balanceBase?: number;
+  reconciledBalance?: number;
+  reconciledDate?: string;
   active: boolean;
   createdAt: string;
   primary?: boolean;
 }
 ```
-
-Notes:
-- `openingBalance` is persisted, but treated as the current computed balance, not as a permanent historical baseline.
-- `balanceBase` and `reconciledBalance` are used by replay to avoid compounding old computed values.
 
 ### CreditCard
 ```typescript
@@ -98,11 +82,11 @@ interface CreditCard {
   issuer: string;
   type: "personal" | "business";
   limitAmount: number;
-  openingBalance: number;        // current amount owed
-  balanceBase?: number;          // stable replay baseline
-  reconciledBalance?: number;    // latest statement-confirmed balance
-  reconciledDate?: string;       // YYYY-MM-DD baseline date
-  linkedAccountId?: string;      // default account for payments
+  openingBalance: number;
+  balanceBase?: number;
+  reconciledBalance?: number;
+  reconciledDate?: string;
+  linkedAccountId?: string;
   active: boolean;
   createdAt: string;
   primary?: boolean;
@@ -129,9 +113,9 @@ interface FixedPayment {
   name: string;
   amount: number;
   schedule: PaymentSchedule;
-  date: string;                  // anchor date
+  date: string;
   endDate?: string;
-  source: string;                // account.id or creditCard.id
+  source: string;
   categoryId?: string;
   mode?: string;
   tag?: string;
@@ -149,7 +133,7 @@ interface Vehicle {
   vtype: "Lease" | "Finance";
   payment: number;
   schedule: PaymentSchedule;
-  source: string;                // canonical value should be account.id
+  source: string;
   leaseStart: string;
   leaseEnd: string;
   nextPaymentDate: string;
@@ -174,7 +158,7 @@ interface HouseLoan {
   remaining: number;
   payment: number;
   schedule: PaymentSchedule;
-  source: string;                // canonical value should be account.id
+  source: string;
   startDate: string;
   endDate: string;
   nextPaymentDate: string;
@@ -202,23 +186,6 @@ interface PropertyTaxPayment {
 }
 ```
 
-### Business (CRA Domain)
-Stored as one JSON object in `finance_os_business`. The hook normalizes missing arrays and nested defaults on load.
-
-Key domains:
-- `clientName`, `businessName`, `hstNumber`
-- `contracts[]`
-- `invoices[]`
-- `hstRemittances[]`
-- `corporateInstalments[]`
-- `payrollRemittances[]`
-- `arrearsPayments[]`
-- `arrearsHST`, `arrearsCorp`
-- `rateSettings`
-
-### Current Architectural Notes
-- Transactions remain the master ledger for activity.
-- Accounts and cards now also carry replay baseline metadata so reconciliation can stabilize balances.
-- Import/export must preserve `balanceBase`, `reconciledBalance`, and `reconciledDate` for accounts and credit cards.
-
----
+### Business
+- Stored as a single `Business` object in `finance_os_business`.
+- Contains invoices, contracts, HST remittances, corporate instalments, payroll remittances, arrears, and rate settings.

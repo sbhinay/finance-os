@@ -2,22 +2,22 @@
 
 ## 1. Vision & Purpose
 
-FinanceOS is a personal financial operating system built for **Canadian contractors, full-time employees, and incorporated business owners**. It tracks every transaction in and out of every account, projects short and mid-term financial position, and structures data to support personal (T1) and corporate (T2) tax filing guidance.
+FinanceOS is a personal financial operating system built for **Canadian contractors, full-time employees, and incorporated business owners**. It tracks every transaction in and out of every account, projects short- and mid-term financial position, and structures data to support personal (T1) and corporate (T2) tax guidance.
 
 ### Core Goals
-- Log every penny in and out across all accounts, credit cards, and assets
-- Project 30-day daily and monthly financial position
-- Track CRA obligations (HST, corporate tax, payroll remittances)
-- Structure data to pre-fill or guide Canadian tax return line items
-- Support both personal and incorporated business financial tracking
+- Track cash, bank, credit card, and asset-linked financial activity.
+- Maintain a single ledger of transactions for replay-based balance accuracy.
+- Support Canadian CRA obligations including HST, corporate tax, and payroll remittances.
+- Preserve audit trails for reconciliation, corrections, and historical review.
+- Support both personal and incorporated business financial workflows.
 
 ### Target Users
-- Independent contractors (T4A income, HST registrants)
-- Incorporated business owners (T2 filers, payroll, dividends)
-- Full-time employees with personal finance tracking needs
+- Independent contractors with mixed personal/business finances.
+- Incorporated business owners managing corporate and personal cashflow.
+- Full-time employees who want tax-aware financial tracking.
 
 ### Design Principle
-One tool that grows with the user — starts as a personal tracker, evolves into a tax-ready financial record system.
+One tool that grows with the user: from simple personal tracking to business-ready record keeping and tax-aware financial guidance.
 
 ---
 
@@ -27,17 +27,15 @@ One tool that grows with the user — starts as a personal tracker, evolves into
 |---|---|
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
-| Styling | Inline styles (no CSS framework — intentional for portability) |
+| Styling | Inline styles for portability |
+| State | React state + custom event bus |
 | Storage (current) | Browser localStorage |
-| Storage (future) | Supabase (PostgreSQL) |
+| Storage (future) | Supabase / PostgreSQL |
 | Auth (future) | Supabase Auth |
 | Deployment (future) | Vercel |
 
 ### Project Configuration
-- **Root:** No `src/` folder — files at project root level
-- **Path alias:** `"@/*": ["./*"]` in `tsconfig.json`
-- **No** external UI component libraries
-- **No** state management libraries (React state + event bus only)
-
----
-
+- No `src/` directory; path aliases are configured via `tsconfig.json`.
+- `@/*` resolves to the repository root.
+- No external component UI library is used.
+- No global state library; cross-module updates happen through repository writes and event notifications.

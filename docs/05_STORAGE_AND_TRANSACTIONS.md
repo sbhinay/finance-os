@@ -1,116 +1,42 @@
 # FinanceOS Technical Documentation
 
-## 6. Storage Keys
+## 6. Storage Keys and Transaction System
 
-| Key | Type | Description |
+### Storage Keys
+| Key | Type | Notes |
 |---|---|---|
-| `finance_os_accounts` | `Account[]` | Bank, cash, and business accounts |
-| `finance_os_cards` | `CreditCard[]` | Credit cards and LOC-style liabilities |
-| `finance_os_tx` | `Transaction[]` | Master ledger used for replay, history, and reporting |
-| `finance_os_categories` | `Category[]` | Income/expense categories |
-| `finance_os_business` | `Business` | Business settings, invoices, CRA, rate settings |
-| `finance_os_vehicles` | `Vehicle[]` | Vehicle assets |
-| `finance_os_house_loans` | `HouseLoan[]` | Mortgage and loan assets |
-| `finance_os_property_taxes` | `PropertyTax[]` | Property tax schedules |
-| `finance_os_fixed_payments` | `FixedPayment[]` | Recurring payment definitions |
-| `finance_os_dismissed_pending` | `string[]` | Dismissed pending transaction keys |
+| `finance_os_accounts` | Account[] | Bank/cash/business accounts |
+| `finance_os_cards` | CreditCard[] | Credit card accounts |
+| `finance_os_tx` | Transaction[] | Master transaction ledger |
+| `finance_os_categories` | Category[] | Income/expense categories |
+| `finance_os_business` | Business | Business and CRA settings |
+| `finance_os_vehicles` | Vehicle[] | Vehicle assets |
+| `finance_os_house_loans` | HouseLoan[] | Mortgage/loan assets |
+| `finance_os_property_taxes` | PropertyTax[] | Property tax schedules |
+| `finance_os_fixed_payments` | FixedPayment[] | Recurring payment definitions |
+| `finance_os_dismissed_pending` | string[] | Dismissed pending notification keys |
 
-Rule:
-- `finance_os_tx` remains the activity ledger.
-- Accounts and cards also persist baseline metadata used by replay:
-  - `balanceBase`
-  - `reconciledBalance`
-  - `reconciledDate`
+### Transaction System
+The transaction ledger is the canonical source for all financial movement.
 
----
+#### Type Behavior
+- `expense` and `tax_payment` reduce bank/cash/business sources.
+- `income`, `refund`, `dividend`, and `loan_receipt` increase sources.
+- `transfer` moves value between source and destination.
+- `credit_card_payment` reduces bank source and reduces credit card debt.
+- `adjustment` can be used for reconcile audits and corrections.
 
-## 7. Transaction System
+#### Reporting Inclusion Rules
+- Expense reportable types: `expense`, `refund`
+- Income reportable types: `income`, `dividend`
+- Tax-relevant types: `expense`, `income`, `dividend`, `tax_payment`, `loan_payment`, `withdrawal`
 
-### User-facing types (shown in `TransactionForm`)
-| Type | Description | Balance Effect |
-|---|---|---|
-| `expense` | Normal spend | Account decreases, card debt increases |
-| `income` | Normal income | Source increases |
-| `transfer` | Internal transfer | Source decreases, destination increases |
-| `credit_card_payment` | Pay card from bank | Bank source decreases, destination card debt decreases |
-| `refund` | Reversal of prior spend | Account increases, card debt decreases |
-| `dividend` | Personal dividend income | Source increases |
-| `loan_receipt` | Borrowed money received | Source increases |
-| `loan_payment` | Debt payment | Source decreases |
-| `withdrawal` | Personal draw / owner withdrawal | Source decreases |
+#### Reconciliation Audit Rows
+- Stored as `type: "adjustment"` with `subType: "reconciliation"`.
+- Preserves auditability but should be excluded from normal expense/income summaries and most reporting views.
 
-### System-assigned types
-| Type | Description | Notes |
-|---|---|---|
-| `tax_payment` | CRA remittance or other tax outflow | Not treated as a general expense report row |
-| `adjustment` | Reconciliation/correction/opening-balance style system adjustment | `subType: "reconciliation"` is used for reconcile audit rows |
-
-### Destination Rules
-- `destinationId` is required for:
-  - `transfer`
-  - `credit_card_payment`
-  - `adjustment`
-- `destinationId` is optional for other types.
-
-### Sub-type Rules
-- `tax_payment`, `loan_receipt`, `loan_payment`, and `transfer` can carry sub-types.
-- `adjustment` also carries sub-types such as:
-  - `reconciliation`
-  - `correction`
-  - `write_off`
-  - `opening_balance`
-
-### Balance Effect Reference
-```text
-expense:
-  bank/cash/business source -> openingBalance -= amount
-  credit card source        -> openingBalance += amount
-
-income / dividend / loan_receipt:
-  bank/cash/business source -> openingBalance += amount
-  credit card source        -> openingBalance -= amount
-
-tax_payment / loan_payment / withdrawal:
-  bank/cash/business source -> openingBalance -= amount
-  credit card source        -> openingBalance += amount
-
-transfer:
-  source account           -> openingBalance -= amount
-  source card              -> openingBalance -= amount
-  destination account      -> openingBalance += amount
-  destination card         -> openingBalance -= amount
-
-credit_card_payment:
-  source bank account      -> openingBalance -= amount
-  destination credit card  -> openingBalance -= amount
-
-adjustment:
-  source account/card      -> openingBalance += amount
-  destination account/card -> openingBalance -= amount
-```
-
-### Reconciliation Rows
-- Reconcile actions may create an audit row with:
-  - `type: "adjustment"`
-  - `subType: "reconciliation"`
-- These rows remain in storage for traceability.
-- Normal reporting views should exclude them from day-to-day expense and income summaries.
-
-### Reporting Helpers
-- `isExpenseReportable(type)` currently includes:
-  - `expense`
-  - `refund`
-- `isIncomeReportable(type)` currently includes:
-  - `income`
-  - `dividend`
-
-That means:
-- `credit_card_payment`
-- `tax_payment`
-- `adjustment`
-- `loan_payment`
-- `withdrawal`
-
-are intentionally outside normal spending category summaries unless a view explicitly includes them.
-
----
+#### Validation and Form Rules
+- `amount > 0`
+- `sourceId` must be present
+- `destinationId` required for `transfer`, `credit_card_payment`, and `adjustment`
+- `categoryId` optional for non-expense/income types
