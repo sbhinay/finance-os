@@ -24,30 +24,6 @@ function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
 }
 
-function Sel({ label, value, onChange, options }: {
-  label?: string;
-  value: string | number;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  options: Array<{ value: string; label: string } | string>;
-}) {
-  return (
-    <div>
-      {label && <Label>{label}</Label>}
-      <select
-        value={value ?? ""}
-        onChange={onChange}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}
-      >
-        {options.map((o) => {
-          const optionValue = typeof o === "string" ? o : o.value;
-          const optionLabel = typeof o === "string" ? o : o.label;
-          return <option key={optionValue} value={optionValue}>{optionLabel}</option>;
-        })}
-      </select>
-    </div>
-  );
-}
-
 function Btn({ children, onClick, variant = "primary", small, style }: {
   children: React.ReactNode;
   onClick?: () => void;
@@ -136,7 +112,7 @@ export function DailyLogSection() {
 
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
-  const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
+  const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer">("all");
   const [search, setSearch] = useState("");
   const [viewDate, setViewDate] = useState(todayStr);
   const [showAll, setShowAll] = useState(false);
@@ -264,7 +240,7 @@ export function DailyLogSection() {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-        {(["all", "income", "expense"] as const).map((v) => (
+        {(["all", "income", "expense", "transfer"] as const).map((v) => (
           <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
             {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
           </Btn>

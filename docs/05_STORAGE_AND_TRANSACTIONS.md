@@ -23,7 +23,7 @@ The transaction ledger is the canonical source for all financial movement.
 - `expense` and `tax_payment` reduce bank/cash/business sources.
 - `income`, `refund`, `dividend`, and `loan_receipt` increase sources.
 - `transfer` moves value between source and destination.
-- `credit_card_payment` reduces bank source and reduces credit card debt.
+- `transfer + cc_payment` reduces bank source and reduces credit card debt without affecting spending or income reports.
 - `adjustment` can be used for reconcile audits and corrections.
 
 #### Reporting Inclusion Rules
@@ -38,5 +38,6 @@ The transaction ledger is the canonical source for all financial movement.
 #### Validation and Form Rules
 - `amount > 0`
 - `sourceId` must be present
-- `destinationId` required for `transfer`, `credit_card_payment`, and `adjustment`
+- `destinationId` required for `transfer` and `adjustment`
+- `subType` required for `transfer`, `tax_payment`, `loan_receipt`, and `loan_payment`
 - `categoryId` optional for non-expense/income types

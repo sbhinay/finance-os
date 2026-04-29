@@ -5,7 +5,8 @@
 ### Transaction Rules
 - `amount` must be greater than 0.
 - `sourceId` is required for all transaction types.
-- `destinationId` is required for `transfer`, `credit_card_payment`, and `adjustment`.
+- `destinationId` is required for `transfer` and `adjustment`.
+- `subType` is required for `transfer`, `tax_payment`, `loan_receipt`, and `loan_payment`.
 - `categoryId` is required for `expense` and `income`, optional elsewhere.
 - `pending` transactions do not affect balances or reports.
 - `cleared` and `reconciled` transactions do affect balances.
@@ -44,4 +45,5 @@
 ### Reporting Rules
 - Only `expense` and `refund` are included in expense reporting.
 - Only `income` and `dividend` are included in income reporting.
-- `credit_card_payment`, `tax_payment`, `adjustment`, `loan_payment`, and `withdrawal` are excluded from standard income/expense summaries unless explicitly included.
+- `transfer` rows, including `cc_payment`, are excluded from standard income/expense summaries unless explicitly included.
+- `tax_payment`, `adjustment`, `loan_payment`, and `withdrawal` are also excluded from standard income/expense summaries unless explicitly included.

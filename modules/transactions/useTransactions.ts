@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Transaction, TransactionType } from "@/types/transaction";
+import { Transaction, TransactionType, isExpenseReportable, isIncomeReportable } from "@/types/transaction";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { validateTransaction } from "@/rules/validationRules";
 import { detectCategory, learnedRulesRepository, uncategorizedRepository } from "@/rules/categoryRules";
@@ -41,11 +41,12 @@ export function useTransactions() {
 
     const cleanDesc = description.toLowerCase().trim();
     const detectedCategoryId = categoryId ?? detectCategory(cleanDesc);
+    const shouldClassify = isExpenseReportable(type) || isIncomeReportable(type);
 
-    if (categoryId) {
+    if (shouldClassify && categoryId) {
       learnedRulesRepository.add({ id: uid(), description: cleanDesc, categoryId });
       uncategorizedRepository.remove(cleanDesc);
-    } else if (!detectedCategoryId) {
+    } else if (shouldClassify && !detectedCategoryId) {
       uncategorizedRepository.add(cleanDesc);
     }
 
@@ -60,7 +61,7 @@ export function useTransactions() {
       sourceId,
       destinationId,
       createdAt: new Date().toISOString(),
-      categoryId: detectedCategoryId,
+      categoryId: shouldClassify ? detectedCategoryId : undefined,
       ...overrides,
     };
 

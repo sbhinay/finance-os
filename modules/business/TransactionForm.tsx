@@ -110,7 +110,6 @@ const TYPE_COLORS: Partial<Record<TransactionType, string>> = {
   expense:              "#a31515",
   income:               "#1a7f3c",
   transfer:             "#1a5fa8",
-  credit_card_payment:  "#1a5fa8",
   refund:               "#065f46",
   dividend:             "#4a3ab5",
   tax_payment:          "#a05c00",
@@ -160,6 +159,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     return detectCategory(form.description.toLowerCase().trim());
   }, [form.description]);
 
+  const txType = form.type as TransactionType;
+  const isTransfer = txType === "transfer";
+  const isCreditCardPayTransfer = isTransfer && form.subType === "cc_payment";
+
   const warnings = useMemo(() => {
     const w: string[] = [];
     const amt = Number(form.amount);
@@ -167,7 +170,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if ((form.type === "income" || form.type === "dividend") && cards.some((c) => c.id === form.sourceId)) {
       w.push("Income to a credit card is unusual. Did you mean a transfer?");
     }
-    if (form.type === "credit_card_payment") {
+    if (form.type === "transfer" && form.subType === "cc_payment") {
       if (cards.some((c) => c.id === form.sourceId)) {
         w.push("Source should be a bank account for a credit card payment. Please change the source to the account the payment came from.");
       }
@@ -185,7 +188,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       w.push("Please select a sub-type for accurate reporting.");
     }
     if (requiresDestination(form.type as TransactionType) && !form.destinationId) {
-      w.push("Please select a destination account.");
+      w.push("Please select a destination account or card.");
     }
     if (form.type === "loan_payment" && Number(form.interestAmount) + Number(form.principalAmount) !== amt && amt > 0) {
       const split = toFixed2(Number(form.interestAmount) + Number(form.principalAmount));
@@ -234,20 +237,17 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         odometer:        initial.odometer ?? "",
       });
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(emptyForm);
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrors([]);
-  }, [open, initial?.id, emptyForm, todayLocal]);
+  }, [open, initial, emptyForm, todayLocal]);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
   // Derived state
-  const txType = form.type as TransactionType;
   const activeCats = categories.filter((c) => !c.archived);
   const catList = activeCats.filter((c) =>
     isIncomeReportable(txType) ? (c.type === "income" || c.type === "both")
@@ -257,7 +257,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const isVehicleCat = selectedCat?.vehicleLinked;
   const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
-  const showDestination = txType === "transfer" || txType === "credit_card_payment" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
+  const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
   const showLoanSplit = txType === "loan_payment";
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
   const isReconciliationAudit = !!initial?.id && initial.type === "adjustment" && initial.subType === "reconciliation";
@@ -266,15 +266,14 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const isHistoricalEdit = !!form.id && form.date < todayLocal;
   const showBalancePreview = Boolean(form.sourceId && Number(form.amount) > 0 && !isHistoricalEdit);
 
-  const paymentSources = txType === "credit_card_payment"
+  const paymentSources = isCreditCardPayTransfer
     ? [
         { value: "", label: "— Select bank account —" },
         ...accounts.filter((a) => a.primary).map((a) => ({ value: a.id, label: `★ ${a.name} (${a.type})` })),
         ...accounts.filter((a) => !a.primary).map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
       ]
     : buildSourceOptions(accounts, cards);
-  // For credit_card_payment, destination must be a card and source must be an account
-  const destinationOptions = txType === "credit_card_payment"
+  const destinationOptions = isCreditCardPayTransfer
     ? [
         { value: "", label: "— Select card —" },
         ...cards.map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
@@ -291,8 +290,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     const errs: string[] = [];
     if (!Number(form.amount) || Number(form.amount) <= 0) errs.push("Amount must be greater than zero.");
     if (!form.sourceId) errs.push("Please select an account or card.");
-    if (requiresDestination(txType) && !form.destinationId) errs.push("Please select a destination account.");
-    if (txType === "credit_card_payment") {
+    if (requiresDestination(txType) && !form.destinationId) errs.push("Please select a destination account or card.");
+    if (requiresSubType(txType) && !form.subType) errs.push("Please select a sub-type.");
+    if (isCreditCardPayTransfer) {
       if (cards.some((c) => c.id === form.sourceId)) {
         errs.push("Source must be a bank account (not a credit card) for a credit card payment.");
       }
@@ -315,7 +315,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     const desc = form.description.toLowerCase().trim();
     const isEditing = !!form.id;
 
-    const categoryId = form.categoryId || autoDetectedCat;
+    const categoryId = showCategory ? (form.categoryId || autoDetectedCat) : undefined;
 
     if (categoryId && form.description) {
       learnedRulesRepository.add({ id: uid(), description: desc, categoryId });
@@ -411,6 +411,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 ...p,
                 type: newType,
                 subType: "",
+                sourceId: "",
+                destinationId: "",
+                mode: newType === "transfer" ? "Bank Transfer" : p.mode,
                 ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", odometer: "" }),
               }));
             }}
@@ -418,7 +421,15 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
               options={USER_FACING_TYPES.map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
               required />
             {subTypeOptions.length > 0 && (
-              <Sel label="Sub-type" value={form.subType} onChange={f("subType")}
+              <Sel label="Sub-type" value={form.subType} onChange={(e) => {
+                const nextSubType = e.target.value;
+                setForm((p) => ({
+                  ...p,
+                  subType: nextSubType,
+                  mode: txType === "transfer" && nextSubType === "cc_payment" ? "Bank Transfer" : p.mode,
+                  ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", odometer: "" } : {}),
+                }));
+              }}
                 options={[{ value: "", label: "— Select sub-type —" }, ...subTypeOptions]}
                 required={requiresSubType(txType)} disabled={isReconciliationAudit} />
             )}

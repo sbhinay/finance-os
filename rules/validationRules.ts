@@ -23,13 +23,9 @@ export function validateTransaction(
 ): string | null {
   if (!sourceId) return "Source account is required";
   if (!amount || amount <= 0) return "Amount must be greater than 0";
-  if (type === "transfer" && !destinationId) return "Destination required for transfers";
+  if (type === "transfer" && !destinationId) return "Destination account or card is required for transfers";
   if (type === "transfer" && sourceId === destinationId)
     return "Cannot transfer to the same account";
-  if (type === "credit_card_payment" && !destinationId)
-    return "Destination credit card is required for a credit card payment";
-  if (type === "credit_card_payment" && sourceId === destinationId)
-    return "Source and destination cannot be the same for a credit card payment";
   return null;
 }
 

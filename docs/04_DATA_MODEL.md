@@ -44,7 +44,6 @@ Supported transaction types:
 - `expense`
 - `income`
 - `transfer`
-- `credit_card_payment`
 - `refund`
 - `dividend`
 - `tax_payment`
@@ -52,6 +51,13 @@ Supported transaction types:
 - `loan_payment`
 - `withdrawal`
 - `adjustment`
+
+#### Transfer Sub-types
+- `cc_payment`
+- `bank_to_bank`
+- `e_transfer`
+- `tfsa_contribution`
+- `rrsp_contribution`
 
 #### Reconciliation and Audit
 - Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.

@@ -34,7 +34,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
 
 ## 3. Current Implementation Notes
-- `credit_card_payment` is a first-class transaction type.
+- Internal money movement is standardized on `transfer`; credit card payoff is stored as `transfer` with `subType: "cc_payment"`.
 - Accounts and credit cards support `balanceBase`, `reconciledBalance`, and `reconciledDate`.
 - `recalculateBalances.ts` bases replay on reconciliation metadata and avoids compound drift.
 - Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.

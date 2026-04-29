@@ -29,7 +29,7 @@ This avoids compound replay drift from previously computed balances.
 - `expense`: source account decreases, source card increases
 - `income`: source account increases, source card decreases
 - `transfer`: source decreases, destination increases
-- `credit_card_payment`: source account decreases, destination card decreases
+- `transfer + cc_payment`: source account decreases, destination card decreases
 - `adjustment`: source increases, destination decreases
 
 ### Reconcile Metadata

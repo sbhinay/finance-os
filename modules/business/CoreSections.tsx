@@ -280,9 +280,9 @@ export function BankAccountsSection() {
       {accounts.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No accounts yet.</div>}
 
       {reconcile && (
-        <Modal title={`Reconcile — ${reconcile.name}`} onClose={() => setReconcile(null)}>
+        <Modal title={`Reconcile Statement — ${reconcile.name}`} onClose={() => setReconcile(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
-            Set the actual current balance from your bank statement. This overrides the calculated balance baseline.
+            Set the actual statement balance as of the selected date. This aligns the ledger baseline without creating a normal spending or income entry.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcile.openingBalance)}</strong></div>
           <Grid2>
@@ -329,7 +329,7 @@ export function BankAccountsSection() {
               syncBalances();
               notifyDataChanged("accounts");
               setReconcile(null);
-            }}>Set Balance</Btn>
+            }}>Set Statement Balance</Btn>
           </div>
         </Modal>
       )}
@@ -418,14 +418,16 @@ export function CreditCardsSection() {
   alert(`No linked bank account set for ${c.name}. Edit the card and set a linked account first.`);
   return;
 }
+    const linkedAccount = accounts.find((a) => a.id === c.linkedAccountId);
     setPendingPayCard(c);
     setTxFormInitial({
-      type: "credit_card_payment",
+      type: "transfer",
+      subType: "cc_payment",
       amount: c.openingBalance > 0 ? toFixed2(c.openingBalance) : undefined,
       description: `Credit card payment — ${c.name}`,
       sourceId: c.linkedAccountId ?? "",
       destinationId: c.id,
-      tag: "Personal",
+      tag: linkedAccount?.type === "business" || c.type === "business" ? "Business" : "Personal",
       mode: "Bank Transfer",
     });
     setTxFormOpen(true);
@@ -498,7 +500,7 @@ export function CreditCardsSection() {
         open={txFormOpen}
         onClose={() => { setTxFormOpen(false); setPendingPayCard(null); setTxFormInitial(undefined); }}
         initial={txFormInitial}
-        lockType="credit_card_payment"
+        lockType="transfer"
         title={pendingPayCard ? `Pay — ${pendingPayCard.name}` : "Card Payment"}
         onSaved={() => {
           // syncBalances() in TransactionForm already updated all balances
@@ -510,9 +512,9 @@ export function CreditCardsSection() {
       />
 
       {reconcileCard && (
-        <Modal title={`Reconcile — ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
+        <Modal title={`Reconcile Statement — ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
-            Set the actual balance owing from your statement. This establishes a stable credit card balance baseline.
+            Set the actual statement balance owing as of the selected date. This aligns the card baseline without creating a normal spending or income entry.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcileCard.openingBalance)}</strong></div>
           <Grid2>
@@ -557,7 +559,7 @@ export function CreditCardsSection() {
               reloadCards();
               notifyDataChanged("cards");
               setReconcileCard(null);
-            }}>Set Balance</Btn>
+            }}>Set Statement Balance</Btn>
           </div>
         </Modal>
       )}
