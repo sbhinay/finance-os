@@ -740,10 +740,11 @@ export function TransactionHistorySection() {
                     id: t.id, type: t.type, amount: t.amount,
                     date: t.date ?? t.createdAt?.slice(0, 10),
                     createdAt: t.createdAt,
-                    description: t.description, sourceId: t.sourceId,
+                    description: t.description, notes: t.notes, sourceId: t.sourceId,
+                    destinationId: t.destinationId, subType: t.subType,
                     categoryId: t.categoryId, tag: t.tag, mode: t.mode,
                     linkedVehicleId: t.linkedVehicleId, linkedPropertyId: t.linkedPropertyId,
-                    odometer: t.odometer,
+                    odometer: t.odometer, interestAmount: t.interestAmount, principalAmount: t.principalAmount,
                   });
                   setTxFormOpen(true);
                 }} style={{ padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 6, border: "none", cursor: "pointer", background: "#f3f4f6", color: "#374151" }}>
