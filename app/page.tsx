@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useCategories } from "@/modules/categories/useCategories";
 import { HoursContractsSection } from "@/modules/business/HoursContractsSection";
 import { TaxObligationsSection } from "@/modules/business/TaxObligationsSection";
 import {
@@ -27,6 +26,7 @@ import { useTransactions } from "@/modules/transactions/useTransactions";
 import { DashboardSection, ProjectionSection } from "@/modules/business/DashboardProjectionSections";
 import { ImportExportSection } from "@/modules/business/ImportExportSection";
 import { CategoriesSection } from "@/modules/business/CategoriesSection";
+import { AssetsLiabilitiesSection } from "@/modules/business/AssetsLiabilitiesSection";
 import { syncBalances } from "@/utils/syncBalances";
 import { notifyDataChanged } from "@/utils/events";
 import { fmtCAD } from "@/utils/finance";
@@ -50,7 +50,8 @@ type SectionId =
   | "ratesettings"
   | "dashboard"
   | "projection"
-  | "importexport";
+  | "importexport"
+  | "assetsliabilities";
 
 const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> = [
   { id: "dailylog",       label: "Daily Log",           group: "Daily Activity",  icon: "📓" },
@@ -60,6 +61,7 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "importexport",   label: "Import / Export",     group: "Daily Activity",  icon: "💾" },
   { id: "overview",       label: "Overview",            group: "Personal Finance", icon: "🏠" },
   { id: "accountscards",  label: "Accounts & Cards",    group: "Personal Finance", icon: "💰" },
+  { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "📊" },
   { id: "accounts",       label: "Bank Accounts",       group: "Personal Finance", icon: "🏦" },
   { id: "cards",          label: "Credit Cards",        group: "Personal Finance", icon: "💳" },
   { id: "fixedpayments",  label: "Fixed Payments",      group: "Personal Finance", icon: "📅" },
@@ -178,8 +180,6 @@ export default function Home() {
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
   const { transactions } = useTransactions();
-  const { categories } = useCategories();
-
   // ── Sync balances on startup — single source of truth ──────────────────────
   useEffect(() => {
     syncBalances();
@@ -247,6 +247,7 @@ export default function Home() {
         {section === "accounts"       && wrap(<BankAccountsSection />)}
         {section === "cards"          && wrap(<CreditCardsSection />)}
         {section === "accountscards"  && wrap(<AccountsCardsSection />)}
+        {section === "assetsliabilities" && wrap(<AssetsLiabilitiesSection onNavigate={(target) => setSection(target)} />)}
         {section === "transactions"   && wrap(<TransactionHistorySection />)}
         {section === "fixedpayments"  && wrap(<FixedPaymentsSection accounts={accounts} cards={cards} />)}
         {section === "vehicles"       && wrap(<VehiclesSection accounts={accounts} transactions={transactions} />)}
