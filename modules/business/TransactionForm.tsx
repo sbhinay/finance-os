@@ -395,9 +395,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
           {/* Description + Notes */}
           <div>
-            <Label>Description / Payee</Label>
+            <Label>Description</Label>
             <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Vendor or payee name"
+              placeholder="Merchant, payee, or short note"
               style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const }} />
             {autoDetectedCat && !form.categoryId && (
               <div style={{ fontSize: 11, color: "#1a5fa8", marginTop: 3 }}>
@@ -429,7 +429,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
           {/* Destination — for transfers, adjustments, loans */}
           {showDestination && (
-            <Sel label="To Account / Card" value={form.destinationId} onChange={f("destinationId")}
+            <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")}
               options={destinationOptions} required={requiresDestination(txType)} />
           )}
 
