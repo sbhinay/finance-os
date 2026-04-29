@@ -3,7 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Account, AccountType } from "@/types/account";
 import { accountRepository } from "@/repositories/accountRepository";
+import { creditCardRepository } from "@/repositories/creditCardRepository";
+import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
+import { transactionRepository } from "@/repositories/transactionRepository";
+import { vehicleRepository, houseLoanRepository } from "@/repositories/assetRepositories";
 import { validateNewAccount } from "@/rules/accountRules";
+import { getAccountReferenceReasons } from "@/utils/referenceIntegrity";
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -47,6 +52,25 @@ export function useAccounts() {
   };
 
   const deleteAccount = (id: string) => {
+    const reasons = getAccountReferenceReasons(
+      id,
+      transactionRepository.getAll(),
+      creditCardRepository.getAll(),
+      fixedPaymentRepository.getAll(),
+      vehicleRepository.getAll(),
+      houseLoanRepository.getAll()
+    );
+
+    if (reasons.length > 0) {
+      const existing = accountRepository.getAll().find((a) => a.id === id);
+      if (existing) {
+        accountRepository.update({ ...existing, active: false });
+      }
+      load();
+      window.alert(`Account cannot be deleted because it is referenced by existing data. It has been deactivated instead. ${reasons.join(", ")}.`);
+      return;
+    }
+
     accountRepository.delete(id);
     load();
   };

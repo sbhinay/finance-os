@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Vehicle, HouseLoan, PropertyTax, PropertyTaxPayment } from "@/types/domain";
 import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
+import { transactionRepository } from "@/repositories/transactionRepository";
 import { uid, toFixed2 } from "@/utils/finance";
+import { getVehicleReferenceReasons, getHouseLoanReferenceReasons, getPropertyTaxReferenceReasons } from "@/utils/referenceIntegrity";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VEHICLES
@@ -45,6 +47,11 @@ export function useVehicles() {
   }, [load]);
 
   const deleteVehicle = useCallback((id: string) => {
+    const reasons = getVehicleReferenceReasons(id, transactionRepository.getAll());
+    if (reasons.length > 0) {
+      window.alert(`Vehicle cannot be deleted because it is referenced by existing transactions. ${reasons.join(", ")}.`);
+      return;
+    }
     vehicleRepository.saveAll(vehicleRepository.getAll().filter((v) => v.id !== id));
     load();
   }, [load]);
@@ -91,6 +98,11 @@ export function useHouseLoans() {
   }, [load]);
 
   const deleteHouseLoan = useCallback((id: string) => {
+    const reasons = getHouseLoanReferenceReasons(id, transactionRepository.getAll());
+    if (reasons.length > 0) {
+      window.alert(`House loan cannot be deleted because it is referenced by existing transactions. ${reasons.join(", ")}.`);
+      return;
+    }
     houseLoanRepository.saveAll(houseLoanRepository.getAll().filter((l) => l.id !== id));
     load();
   }, [load]);
@@ -129,6 +141,13 @@ export function usePropertyTax() {
   }, [commit]);
 
   const deleteProperty = useCallback((id: string) => {
+    const property = propertyTaxRepository.getAll().find((p) => p.id === id);
+    if (!property) return;
+    const reasons = getPropertyTaxReferenceReasons(property);
+    if (reasons.length > 0) {
+      window.alert(`Property tax record cannot be deleted because it has existing payments. ${reasons.join(", ")}.`);
+      return;
+    }
     commit(propertyTaxRepository.getAll().filter((p) => p.id !== id));
   }, [commit]);
 

@@ -169,10 +169,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     }
     if (form.type === "credit_card_payment") {
       if (cards.some((c) => c.id === form.sourceId)) {
-        w.push("Source should be a bank account for a credit card payment.");
+        w.push("Source should be a bank account for a credit card payment. Please change the source to the account the payment came from.");
       }
       if (form.destinationId && !cards.some((c) => c.id === form.destinationId)) {
-        w.push("Destination should be a credit card for a credit card payment.");
+        w.push("Destination should be a credit card for a credit card payment. Please select which credit card was paid.");
       }
     }
     if (scheduledAmount && amt > 0 && amt !== scheduledAmount) {
@@ -260,13 +260,30 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const showDestination = txType === "transfer" || txType === "credit_card_payment" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
   const showLoanSplit = txType === "loan_payment";
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
+  const isReconciliationAudit = !!initial?.id && initial.type === "adjustment" && initial.subType === "reconciliation";
+  const showVehicleLink = txType === "expense" && isVehicleCat;
+  const showPropertyLink = txType === "expense" && isPropertyCat;
+  const isHistoricalEdit = !!form.id && form.date < todayLocal;
+  const showBalancePreview = Boolean(form.sourceId && Number(form.amount) > 0 && !isHistoricalEdit);
 
-  const paymentSources = buildSourceOptions(accounts, cards);
-  const destinationOptions = [
-    { value: "", label: "— Select destination —" },
-    ...accounts.filter((a) => a.id !== form.sourceId).map((a) => ({ value: a.id, label: `${a.primary ? "★ " : ""}${a.name} (${a.type})` })),
-    ...cards.filter((c) => c.id !== form.sourceId).map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
-  ];
+  const paymentSources = txType === "credit_card_payment"
+    ? [
+        { value: "", label: "— Select bank account —" },
+        ...accounts.filter((a) => a.primary).map((a) => ({ value: a.id, label: `★ ${a.name} (${a.type})` })),
+        ...accounts.filter((a) => !a.primary).map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
+      ]
+    : buildSourceOptions(accounts, cards);
+  // For credit_card_payment, destination must be a card and source must be an account
+  const destinationOptions = txType === "credit_card_payment"
+    ? [
+        { value: "", label: "— Select card —" },
+        ...cards.map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
+      ]
+    : [
+        { value: "", label: "— Select destination —" },
+        ...accounts.filter((a) => a.id !== form.sourceId).map((a) => ({ value: a.id, label: `${a.primary ? "★ " : ""}${a.name} (${a.type})` })),
+        ...cards.filter((c) => c.id !== form.sourceId).map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
+      ];
 
   const typeColor = TYPE_COLORS[txType] ?? "#1a5fa8";
 
@@ -275,8 +292,16 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (!Number(form.amount) || Number(form.amount) <= 0) errs.push("Amount must be greater than zero.");
     if (!form.sourceId) errs.push("Please select an account or card.");
     if (requiresDestination(txType) && !form.destinationId) errs.push("Please select a destination account.");
-    if (txType === "credit_card_payment" && form.destinationId && form.sourceId === form.destinationId) {
-      errs.push("Source and destination cannot be the same for a credit card payment.");
+    if (txType === "credit_card_payment") {
+      if (cards.some((c) => c.id === form.sourceId)) {
+        errs.push("Source must be a bank account (not a credit card) for a credit card payment.");
+      }
+      if (form.destinationId && cards.some((c) => c.id === form.destinationId) === false) {
+        errs.push("Destination must be a credit card for a credit card payment.");
+      }
+      if (form.destinationId && form.sourceId === form.destinationId) {
+        errs.push("Source and destination cannot be the same for a credit card payment.");
+      }
     }
     return errs;
   }
@@ -353,7 +378,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff", borderTop: `3px solid ${typeColor}` }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: typeColor }}>
-            {title ?? (form.id ? "✏ Edit Transaction" : "New Transaction")}
+            {title ?? (form.id ? (isReconciliationAudit ? "Reconciliation Audit" : "✏ Edit Transaction") : "New Transaction")}
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
         </div>
@@ -365,32 +390,48 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
           {/* Warnings */}
           {warnings.map((w, i) => <Alert key={i} type="warning">⚠ {w}</Alert>)}
+          {isReconciliationAudit && (
+            <Alert type="info">
+              This transaction is a reconciliation audit entry and cannot be edited here. Use the reconcile flow to change account baselines.
+            </Alert>
+          )}
 
           {/* Amount + Date */}
           <Grid2>
-            <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} placeholder="0.00" required />
-            <Inp label="Date" type="date" value={form.date} onChange={f("date")} required />
+            <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} placeholder="0.00" required disabled={isReconciliationAudit} />
+            <Inp label="Date" type="date" value={form.date} onChange={f("date")} required disabled={isReconciliationAudit} />
           </Grid2>
 
           {/* Type + SubType */}
           <Grid2>
-            <Sel label="Type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as TransactionType, subType: "" }))}
-              disabled={!!lockType}
+            <Sel label="Type" value={form.type} onChange={(e) => {
+              const newType = e.target.value as TransactionType;
+              const keepCategory = ["expense", "income", "refund", "dividend"].includes(newType);
+              setForm((p) => ({
+                ...p,
+                type: newType,
+                subType: "",
+                ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", odometer: "" }),
+              }));
+            }}
+              disabled={isReconciliationAudit || !!lockType}
               options={USER_FACING_TYPES.map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
               required />
             {subTypeOptions.length > 0 && (
               <Sel label="Sub-type" value={form.subType} onChange={f("subType")}
                 options={[{ value: "", label: "— Select sub-type —" }, ...subTypeOptions]}
-                required={requiresSubType(txType)} />
+                required={requiresSubType(txType)} disabled={isReconciliationAudit} />
             )}
           </Grid2>
 
           {/* Mode + Tag */}
           <Grid2>
             <Sel label="Payment Mode" value={form.mode} onChange={f("mode")}
-              options={["Cash", "Debit", "Credit Card", "Bank Transfer", "E-Transfer", "Cheque", "Direct Deposit", "Pre-authorized"].map((m) => ({ value: m, label: m }))} />
+              options={["Cash", "Debit", "Credit Card", "Bank Transfer", "E-Transfer", "Cheque", "Direct Deposit", "Pre-authorized"].map((m) => ({ value: m, label: m }))}
+              disabled={isReconciliationAudit} />
             <Sel label="Tag" value={form.tag} onChange={f("tag")}
-              options={[{ value: "Personal", label: "Personal" }, { value: "Business", label: "Business" }]} />
+              options={[{ value: "Personal", label: "Personal" }, { value: "Business", label: "Business" }]}
+              disabled={isReconciliationAudit} />
           </Grid2>
 
           {/* Description + Notes */}
@@ -398,7 +439,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             <Label>Description</Label>
             <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="Merchant, payee, or short note"
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const }} />
+              disabled={isReconciliationAudit}
+              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
             {autoDetectedCat && !form.categoryId && (
               <div style={{ fontSize: 11, color: "#1a5fa8", marginTop: 3 }}>
                 🔍 Auto-detected: {categories.find((c) => c.id === autoDetectedCat)?.name ?? autoDetectedCat}
@@ -409,7 +451,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             <Label>Notes (optional)</Label>
             <input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
               placeholder="Additional notes or reference number"
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const }} />
+              disabled={isReconciliationAudit}
+              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
           </div>
 
           {/* Category + Source */}
@@ -418,46 +461,47 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
               <div>
                 <Label>Category</Label>
                 <select value={form.categoryId} onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
-                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}>
+                  disabled={isReconciliationAudit}
+                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: isReconciliationAudit ? "#f9fafb" : "#fff", fontSize: 13 }}>
                   <option value="">— Select category —</option>
                   {catList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
             ) : <div />}
-            <Sel label="Account / Card" value={form.sourceId} onChange={f("sourceId")} options={paymentSources} required />
+            <Sel label="Account / Card" value={form.sourceId} onChange={f("sourceId")} options={paymentSources} required disabled={isReconciliationAudit} />
           </Grid2>
 
           {/* Destination — for transfers, adjustments, loans */}
           {showDestination && (
             <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")}
-              options={destinationOptions} required={requiresDestination(txType)} />
+              options={destinationOptions} required={requiresDestination(txType)} disabled={isReconciliationAudit} />
           )}
 
           {/* Loan payment split */}
           {showLoanSplit && (
             <Grid2>
-              <Inp label="Principal Amount ($)" type="number" value={form.principalAmount} onChange={f("principalAmount")} placeholder="0.00" />
-              <Inp label="Interest Amount ($)" type="number" value={form.interestAmount} onChange={f("interestAmount")} placeholder="0.00" />
+              <Inp label="Principal Amount ($)" type="number" value={form.principalAmount} onChange={f("principalAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
+              <Inp label="Interest Amount ($)" type="number" value={form.interestAmount} onChange={f("interestAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
             </Grid2>
           )}
 
           {/* Vehicle link */}
-          {isVehicleCat && (
+          {showVehicleLink && (
             <Grid2>
               <Sel label="Vehicle (optional)" value={form.linkedVehicleId} onChange={f("linkedVehicleId")}
-                options={[{ value: "", label: "— Select vehicle —" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} />
-              <Inp label="Odometer (km)" type="number" value={form.odometer} onChange={f("odometer")} placeholder="e.g. 42500" />
+                options={[{ value: "", label: "— Select vehicle —" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} disabled={isReconciliationAudit} />
+              <Inp label="Odometer (km)" type="number" value={form.odometer} onChange={f("odometer")} placeholder="e.g. 42500" disabled={isReconciliationAudit} />
             </Grid2>
           )}
 
           {/* Property link */}
-          {isPropertyCat && (
+          {showPropertyLink && (
             <Sel label="Property (optional)" value={form.linkedPropertyId} onChange={f("linkedPropertyId")}
-              options={[{ value: "", label: "— Select property —" }, ...houseLoans.map((h) => ({ value: h.id, label: h.name }))]} />
+              options={[{ value: "", label: "— Select property —" }, ...houseLoans.map((h) => ({ value: h.id, label: h.name }))]} disabled={isReconciliationAudit} />
           )}
 
           {/* Balance preview */}
-          {form.sourceId && Number(form.amount) > 0 && (() => {
+          {showBalancePreview && (() => {
             const amt = toFixed2(Number(form.amount));
             const srcAcct = accounts.find((a) => a.id === form.sourceId);
             const srcCard = cards.find((c) => c.id === form.sourceId);
@@ -496,13 +540,18 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
               </div>
             );
           })()}
+          {isHistoricalEdit && (
+            <Alert type="info">
+              Historical transactions do not show a current balance preview because the posted result depends on ledger replay, not the current snapshot.
+            </Alert>
+          )}
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 4 }}>
-            <div>{form.id && <Btn variant="danger" onClick={handleDelete}>Delete</Btn>}</div>
+            <div>{form.id && !isReconciliationAudit && <Btn variant="danger" onClick={handleDelete}>Delete</Btn>}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-              <Btn onClick={save}>{form.id ? "Save Changes" : "Add Entry"}</Btn>
+              {!isReconciliationAudit && <Btn onClick={save}>{form.id ? "Save Changes" : "Add Entry"}</Btn>}
             </div>
           </div>
 

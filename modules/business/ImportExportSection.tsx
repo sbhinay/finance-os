@@ -7,12 +7,13 @@ import type { Transaction } from "@/types/transaction";
 import type { Category } from "@/types/category";
 import type { Business } from "@/types/business";
 import { useState, useRef } from "react";
-import { migrateFromPrototype } from "@/utils/migrationService";
+import { migrateFromPrototype, MigrationResult } from "@/utils/migrationService";
 import { accountRepository } from "@/repositories/accountRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { businessRepository } from "@/repositories/businessRepository";
+import { ImportPayload, validateImportPayload } from "@/utils/referenceIntegrity";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
 import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { notifyDataChanged } from "@/utils/events";
@@ -39,25 +40,49 @@ export function ImportExportSection() {
   const [status, setStatus] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<Record<string, number> | null>(null);
-  const [pendingData, setPendingData] = useState<Record<string, unknown> | null>(null);
+  const [pendingData, setPendingData] = useState<ImportPayload | null>(null);
+  const [importValidation, setImportValidation] = useState<{ errors: string[]; warnings: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function isCurrentAppExport(raw: RawObject): boolean {
-    return Array.isArray(raw.bankAccounts) && Array.isArray(raw.creditCards) && Array.isArray(raw.transactions) && Array.isArray(raw.categories) && typeof raw.business === "object";
+  type ImportResult = ImportPayload | MigrationResult;
+
+  function isCurrentAppExport(raw: RawObject): raw is RawObject {
+    return Array.isArray(raw.bankAccounts)
+      && Array.isArray(raw.creditCards)
+      && Array.isArray(raw.transactions)
+      && Array.isArray(raw.categories)
+      && typeof raw.business === "object";
   }
 
-  function loadExportResult(raw: RawObject) {
+  function loadExportResult(raw: RawObject): ImportPayload {
     return {
       accounts: asArray(raw.bankAccounts) as Account[],
       creditCards: asArray(raw.creditCards) as CreditCard[],
       transactions: asArray(raw.transactions) as Transaction[],
       categories: asArray(raw.categories) as Category[],
-      business: asObject(raw.business) as Business,
+      business: asObject(raw.business) as unknown as Business,
       vehicles: asArray(raw.vehicles) as Vehicle[],
       houseLoans: asArray(raw.houseLoans) as HouseLoan[],
       propertyTaxes: asArray(raw.propertyTaxes) as PropertyTax[],
       futurePayments: asArray(raw.futurePayments) as FixedPayment[],
-      warnings: [],
+    };
+  }
+
+  function normalizeImportResult(result: ImportResult): ImportPayload {
+    if ("vehicles" in result && "futurePayments" in result) {
+      return result;
+    }
+
+    return {
+      accounts: result.accounts,
+      creditCards: result.creditCards,
+      transactions: result.transactions,
+      categories: result.categories,
+      business: result.business,
+      vehicles: [],
+      houseLoans: [],
+      propertyTaxes: [],
+      futurePayments: [],
     };
   }
 
@@ -68,8 +93,11 @@ export function ImportExportSection() {
     reader.onload = (ev) => {
       try {
         const raw = JSON.parse(ev.target?.result as string);
-        // Show preview before committing
-        const result = isCurrentAppExport(raw) ? loadExportResult(raw) : migrateFromPrototype(raw);
+        const result = normalizeImportResult(
+          isCurrentAppExport(raw) ? loadExportResult(raw) : migrateFromPrototype(raw)
+        );
+        const validation = validateImportPayload(result);
+        setImportValidation({ errors: validation.errors, warnings: validation.warnings });
         setPreview({
           "Bank Accounts": result.accounts.length,
           "Credit Cards": result.creditCards.length,
@@ -86,9 +114,9 @@ export function ImportExportSection() {
           "Property Taxes": result.propertyTaxes.length,
           "Fixed Payments": result.futurePayments.length,
         });
-        setPendingData(raw as Record<string, unknown>);
+        setPendingData(validation.normalized);
         setStatus(null);
-      } catch (err) {
+      } catch {
         setStatus({ type: "error", message: "Could not parse file. Make sure it's a valid FinanceOS JSON export." });
       }
     };
@@ -97,65 +125,32 @@ export function ImportExportSection() {
 
   function confirmImport() {
     if (!pendingData) return;
+    if (importValidation?.errors.length) {
+      setStatus({ type: "error", message: `Import blocked: ${importValidation.errors.length} issue(s) must be resolved first.` });
+      return;
+    }
     setImporting(true);
     try {
-      const result = isCurrentAppExport(pendingData) ? loadExportResult(pendingData) : migrateFromPrototype(pendingData);
+      const result = pendingData;
 
-      // Helper to resolve account/card names to IDs for source fields
-      const allAccounts = result.accounts;
-      const allCards = result.creditCards;
-      function resolveSourceId(nameOrId: string): string {
-        if (!nameOrId) return "";
-        const byId = [...allAccounts, ...allCards].find((x) => x.id === nameOrId);
-        if (byId) return byId.id;
-
-        const byName = [...allAccounts, ...allCards].find(
-          (x) => x.name.toLowerCase() === String(nameOrId).toLowerCase()
-        );
-        return byName ? byName.id : nameOrId;
-      }
-
-      // Write all domains to localStorage
       accountRepository.saveAll(result.accounts);
       creditCardRepository.saveAll(result.creditCards);
       transactionRepository.saveAll(result.transactions);
       categoryRepository.saveAll(result.categories);
       businessRepository.save(result.business);
 
-      // Import assets with source resolution
-      vehicleRepository.saveAll(
-        result.vehicles.map((v) => ({
-          ...v,
-          source: resolveSourceId(v.source),
-        }))
-      );
-
-      houseLoanRepository.saveAll(
-        result.houseLoans.map((l) => ({
-          ...l,
-          source: resolveSourceId(l.source),
-        }))
-      );
-
+      vehicleRepository.saveAll(result.vehicles);
+      houseLoanRepository.saveAll(result.houseLoans);
       propertyTaxRepository.saveAll(result.propertyTaxes);
-
-      fixedPaymentRepository.saveAll(
-        result.futurePayments.map((p) => ({
-          ...p,
-          source: resolveSourceId(p.source),
-        }))
-      );
+      fixedPaymentRepository.saveAll(result.futurePayments);
 
       // Notify all hooks to reload
       notifyDataChanged("import");
 
-      const warnings = result.warnings.length > 0
-        ? ` ${result.warnings.length} migration note(s): ${result.warnings.join("; ")}`
-        : "";
-
-      setStatus({ type: "success", message: `✓ Import complete! ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices, ${result.vehicles.length} vehicles, ${result.houseLoans.length} house loans, ${result.propertyTaxes.length} property taxes, ${result.futurePayments.length} fixed payments imported.${warnings}` });
+      setStatus({ type: "success", message: `✓ Import complete! ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices, ${result.vehicles.length} vehicles, ${result.houseLoans.length} house loans, ${result.propertyTaxes.length} property taxes, ${result.futurePayments.length} fixed payments imported.${importValidation?.warnings.length ? ` ${importValidation.warnings.length} warning(s) were generated.` : ""}` });
       setPreview(null);
       setPendingData(null);
+      setImportValidation(null);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       setStatus({ type: "error", message: `Import failed: ${String(err)}` });
@@ -240,11 +235,30 @@ export function ImportExportSection() {
                 </div>
               ))}
             </div>
+
+            {importValidation?.errors.length ? (
+              <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#a31515" }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Import blocked due to unresolved reference errors:</div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {importValidation.errors.map((error, idx) => <li key={idx}>{error}</li>)}
+                </ul>
+              </div>
+            ) : null}
+
+            {importValidation?.warnings.length ? (
+              <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fefce8", border: "1px solid #fde68a", color: "#92400e" }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Warnings:</div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {importValidation.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
+                </ul>
+              </div>
+            ) : null}
+
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-              <Btn onClick={confirmImport} disabled={importing}>
+              <Btn onClick={confirmImport} disabled={importing || Boolean(importValidation?.errors.length)}>
                 {importing ? "Importing…" : "✓ Confirm Import"}
               </Btn>
-              <Btn variant="secondary" onClick={() => { setPreview(null); setPendingData(null); if (fileRef.current) fileRef.current.value = ""; }}>
+              <Btn variant="secondary" onClick={() => { setPreview(null); setPendingData(null); setImportValidation(null); if (fileRef.current) fileRef.current.value = ""; }}>
                 Cancel
               </Btn>
             </div>

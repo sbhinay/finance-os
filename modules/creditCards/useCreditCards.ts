@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { CreditCard, CardType } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
+import { transactionRepository } from "@/repositories/transactionRepository";
+import { getCardReferenceReasons } from "@/utils/referenceIntegrity";
 
 export function useCreditCards() {
   const [cards, setCards] = useState<CreditCard[]>([]);
@@ -42,6 +44,17 @@ export function useCreditCards() {
   };
 
   const deleteCard = (id: string) => {
+    const reasons = getCardReferenceReasons(id, transactionRepository.getAll());
+    if (reasons.length > 0) {
+      const existing = creditCardRepository.getAll().find((c) => c.id === id);
+      if (existing) {
+        creditCardRepository.update({ ...existing, active: false });
+      }
+      load();
+      window.alert(`Credit card cannot be deleted because it is referenced by existing transactions. It has been deactivated instead. ${reasons.join(", ")}.`);
+      return;
+    }
+
     creditCardRepository.delete(id);
     load();
   };
