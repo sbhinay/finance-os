@@ -95,7 +95,6 @@ export function recalculateBalances(transactions: Transaction[]) {
         break;
 
       case "transfer":
-      case "credit_card_payment":
         if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance - t.amount);
         if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance - t.amount);
         if (applyToAcc && toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance + t.amount);

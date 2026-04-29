@@ -4,6 +4,7 @@ import type { Category } from "@/types/category";
 import type { Transaction, TransactionType } from "@/types/transaction";
 import type { FixedPayment, HouseLoan, PropertyTax, Vehicle } from "@/types/domain";
 import type { Business } from "@/types/business";
+import { normalizeTransactionShape } from "@/utils/transactionNormalization";
 
 export interface ReferenceCheckResult {
   errors: string[];
@@ -157,7 +158,7 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
   const accountAndCardSources = [...payload.accounts, ...payload.creditCards];
 
   const resolvedTransactions = payload.transactions.map((tx) => {
-    const normalizedTx = { ...tx };
+    const normalizedTx = normalizeTransactionShape(tx);
     const sourceId = resolveReferenceId(accountAndCardSources, String(tx.sourceId));
     if (!sourceId) {
       errors.push(`Transaction ${tx.id} source "${tx.sourceId ?? ""}" could not be resolved to a valid account or card.`);
@@ -189,15 +190,15 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
       normalizedTx.linkedPropertyId = undefined;
     }
 
-    if (tx.type === "credit_card_payment" && normalizedTx.destinationId) {
+    if (normalizedTx.type === "transfer" && normalizedTx.subType === "cc_payment" && normalizedTx.destinationId) {
       const isCard = payload.creditCards.some((c) => c.id === normalizedTx.destinationId);
       if (!isCard) {
         errors.push(`Transaction ${tx.id}: credit card payment destination must be a credit card.`);
       }
     }
 
-    if (requiresDestination(tx.type) && !normalizedTx.destinationId) {
-      errors.push(`Transaction ${tx.id}: type "${tx.type}" requires a destination account or card.`);
+    if (requiresDestination(normalizedTx.type) && !normalizedTx.destinationId) {
+      errors.push(`Transaction ${tx.id}: type "${normalizedTx.type}" requires a destination account or card.`);
     }
 
     return normalizedTx;
@@ -231,5 +232,5 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
 }
 
 function requiresDestination(type: TransactionType) {
-  return type === "transfer" || type === "adjustment" || type === "credit_card_payment";
+  return type === "transfer" || type === "adjustment";
 }
