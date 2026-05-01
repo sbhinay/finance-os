@@ -32,6 +32,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Current-app JSON export/import with asset restoration.
 - Reconciliation metadata on accounts and credit cards.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
+- Initial unified `Assets & Liabilities` page with upcoming-obligation actions.
 
 ## 3. Current Implementation Notes
 - Internal money movement is standardized on `transfer`; credit card payoff is stored as `transfer` with `subType: "cc_payment"`.
@@ -39,6 +40,8 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - `recalculateBalances.ts` bases replay on reconciliation metadata and avoids compound drift.
 - Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
 - Reconciliation adjustments are excluded from normal reporting.
+- The new `Assets & Liabilities` area is now in active transition, not just planned. It already surfaces upcoming obligations and launches selected actions through the canonical `TransactionForm`.
+- Import validation now checks stale references more strictly and falls back to `Other` for ambiguous category mappings instead of guessing.
 
 ## 4. Documentation Structure
 The docs are organized into the following cross-linked files:
@@ -60,3 +63,4 @@ The docs are organized into the following cross-linked files:
 - The documentation prefers current code behavior over legacy wording.
 - Where implementation is not fully complete, deferred items are explicitly listed.
 - This set is a v3 refresh of the repo docs.
+- Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.

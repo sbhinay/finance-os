@@ -57,3 +57,8 @@ Any write path should follow:
 1. persist domain changes in repository
 2. call `syncBalances()` when transactions or account/card balances change
 3. call `notifyDataChanged(...)`
+
+### Unified Asset Workflow Notes
+- The new `Assets & Liabilities` page can now launch selected vehicle and property-tax actions directly into the canonical `TransactionForm`.
+- These actions still follow the same write pipeline as every other manual ledger entry.
+- House-loan direct logging remains deferred until the principal vs interest model is clearer.

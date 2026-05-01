@@ -36,11 +36,13 @@
 - Vehicle and house loan `nextPaymentDate` advance by schedule after confirmation.
 - `Vehicle.source` and `HouseLoan.source` should store account IDs.
 - Asset payment tracking should preserve linked transaction relationships.
+- New asset-originated actions should open the shared `TransactionForm` when they create real ledger rows.
 
 ### Reconciliation Rules
 - Reconcile metadata is stored on accounts/cards using `balanceBase`, `reconciledBalance`, and `reconciledDate`.
 - Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
 - Audit entries are excluded from normal reporting views.
+- Reconcile is a statement-alignment action, not a generic income/expense logging flow.
 
 ### Reporting Rules
 - Only `expense` and `refund` are included in expense reporting.

@@ -51,4 +51,10 @@ export const [domain]Repository = {
 | Vehicles | `modules/business/AssetsSections.tsx` | Vehicle assets and linked transaction history |
 | House Loans | `modules/business/AssetsSections.tsx` | Mortgage/loan assets and payment tracking |
 | Property Tax | `modules/business/AssetsSections.tsx` | Property tax schedules |
+| Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Unified transition page with upcoming obligations and selected direct actions |
 | Import / Export | `modules/business/ImportExportSection.tsx` | Current-app export plus legacy migration support |
+
+### Transition Notes
+- `Assets & Liabilities` is now the new cross-domain shell for asset and debt workflows.
+- Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
+- New actions should prefer launching the canonical `TransactionForm` from the unified page rather than inventing separate transaction-entry behavior.
