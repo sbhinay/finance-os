@@ -20,6 +20,7 @@
 - A free Supabase account is sufficient for the first migration phase.
 - Start with personal single-user cloud save before solving broader commercial multi-tenant concerns.
 - Keep JSON export/import as backup and portability tools, not as the primary persistence model.
+- App access on phone should come first through the deployed web app, not a native mobile rewrite.
 
 ### Migration Roadmap
 1. Map localStorage keys to Supabase tables.
@@ -29,6 +30,12 @@
 5. Remove localStorage fallback after validation.
 6. Add first-load logic that offers to upload existing local browser data into the cloud if cloud storage is empty.
 7. Add visible save/sync status in the UI once cloud persistence becomes primary.
+
+### Phase 1 Setup Artifacts
+- `.env.example` now documents the required public Supabase variables.
+- `lib/supabase/client.ts` provides the shared browser client entry point.
+- `supabase/01_phase1_schema.sql` defines the first user-owned schema and RLS policies.
+- `supabase/README.md` captures the initial setup sequence for local development.
 
 ### Table Design Notes
 - Store transactions, accounts, cards, categories, business, vehicles, house loans, property taxes, fixed payments.
