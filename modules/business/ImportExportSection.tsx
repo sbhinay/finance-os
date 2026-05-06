@@ -115,6 +115,7 @@ export function ImportExportSection() {
   const [status, setStatus] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<Record<string, number> | null>(null);
+  const [previewSource, setPreviewSource] = useState<"file" | "cloud" | null>(null);
   const [pendingData, setPendingData] = useState<ImportPayload | null>(null);
   const [importValidation, setImportValidation] = useState<{ errors: string[]; warnings: string[] } | null>(null);
   const [cloudSession, setCloudSession] = useState<Session | null>(null);
@@ -156,9 +157,10 @@ export function ImportExportSection() {
       .catch(() => setCloudUpdatedAt(null));
   }, [cloudSession]);
 
-  function previewImport(result: ImportPayload) {
+  function previewImport(result: ImportPayload, source: "file" | "cloud") {
     const validation = validateImportPayload(result);
     setImportValidation({ errors: validation.errors, warnings: validation.warnings });
+    setPreviewSource(source);
     setPreview({
       "Bank Accounts": result.accounts.length,
       "Credit Cards": result.creditCards.length,
@@ -189,7 +191,7 @@ export function ImportExportSection() {
         const result = normalizeImportResult(
           isCurrentAppExport(raw) ? loadExportResult(raw) : migrateFromPrototype(raw)
         );
-        previewImport(result);
+        previewImport(result, "file");
       } catch {
         setStatus({ type: "error", message: "Could not parse file. Make sure it is a valid FinanceOS JSON export." });
       }
@@ -224,6 +226,7 @@ export function ImportExportSection() {
         message: `Import complete. ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices, ${result.vehicles.length} vehicles, ${result.houseLoans.length} house loans, ${result.propertyTaxes.length} property taxes, and ${result.futurePayments.length} fixed payments imported.${importValidation?.warnings.length ? ` ${importValidation.warnings.length} warning(s) were generated.` : ""}`,
       });
       setPreview(null);
+      setPreviewSource(null);
       setPendingData(null);
       setImportValidation(null);
       if (fileRef.current) fileRef.current.value = "";
@@ -332,7 +335,7 @@ export function ImportExportSection() {
         setStatus({ type: "warning", message: "No cloud snapshot found for this account yet." });
       } else {
         const result = normalizeImportResult(loadExportResult(snapshot.payload as unknown as RawObject));
-        previewImport(result);
+        previewImport(result, "cloud");
         setStatus({ type: "success", message: "Cloud snapshot loaded. Review the preview below, then confirm import to restore it locally." });
         setCloudUpdatedAt(snapshot.updated_at);
       }
@@ -362,6 +365,58 @@ export function ImportExportSection() {
           }}
         >
           {status.message}
+        </div>
+      )}
+
+      {preview && previewSource === "cloud" && (
+        <div style={{ background: "#fff", border: "1px solid #dbeafe", borderRadius: 10, padding: "20px", marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: "#1a5fa8" }}>Cloud Snapshot Preview</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+            This snapshot was loaded from Supabase cloud backup. Confirm import only if you want to replace the current local browser data with this cloud copy.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
+            {Object.entries(preview).map(([label, count]) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e2e4e8" }}>
+                <span style={{ color: "#6b7280" }}>{label}</span>
+                <span style={{ fontWeight: 700, color: count > 0 ? "#1a5fa8" : "#9ca3af" }}>{count}</span>
+              </div>
+            ))}
+          </div>
+
+          {importValidation?.errors.length ? (
+            <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#a31515" }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Import blocked due to unresolved reference errors:</div>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {importValidation.errors.map((error, idx) => <li key={idx}>{error}</li>)}
+              </ul>
+            </div>
+          ) : null}
+
+          {importValidation?.warnings.length ? (
+            <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fefce8", border: "1px solid #fde68a", color: "#92400e" }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Warnings:</div>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {importValidation.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
+              </ul>
+            </div>
+          ) : null}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <Btn onClick={confirmImport} disabled={importing || Boolean(importValidation?.errors.length)}>
+              {importing ? "Importing..." : "Confirm Cloud Restore"}
+            </Btn>
+            <Btn
+              variant="secondary"
+              onClick={() => {
+                setPreview(null);
+                setPreviewSource(null);
+                setPendingData(null);
+                setImportValidation(null);
+              }}
+            >
+              Cancel
+            </Btn>
+          </div>
         </div>
       )}
 
@@ -423,7 +478,7 @@ export function ImportExportSection() {
           style={{ marginBottom: 12, fontSize: 13 }}
         />
 
-        {preview && (
+        {preview && previewSource === "file" && (
           <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 8, padding: "12px 16px", marginBottom: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Preview - data to be imported:</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
@@ -461,6 +516,7 @@ export function ImportExportSection() {
                 variant="secondary"
                 onClick={() => {
                   setPreview(null);
+                  setPreviewSource(null);
                   setPendingData(null);
                   setImportValidation(null);
                   if (fileRef.current) fileRef.current.value = "";
