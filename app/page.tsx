@@ -249,7 +249,7 @@ export default function Home() {
         {section === "accountscards"  && wrap(<AccountsCardsSection />)}
         {section === "assetsliabilities" && wrap(<AssetsLiabilitiesSection onNavigate={(target) => setSection(target)} />)}
         {section === "transactions"   && wrap(<TransactionHistorySection />)}
-        {section === "fixedpayments"  && wrap(<FixedPaymentsSection accounts={accounts} cards={cards} />)}
+        {section === "fixedpayments"  && wrap(<FixedPaymentsSection />)}
         {section === "vehicles"       && wrap(<VehiclesSection accounts={accounts} transactions={transactions} />)}
         {section === "houseloans"     && wrap(<HouseLoansSection accounts={accounts} />)}
         {section === "propertytax"    && wrap(<PropertyTaxSection />)}
