@@ -4,11 +4,15 @@ export interface Account {
   id: string;
   name: string;
   type: AccountType;
+  bank?: string;
+  accountNumber?: string;
   currency: string;
   openingBalance: number;
   balanceBase?: number;
   reconciledBalance?: number;
   reconciledDate?: string;
+  monthlyFeeAmount?: number;
+  monthlyFeeDate?: string;
   active: boolean;
   createdAt: string;
   primary?: boolean;

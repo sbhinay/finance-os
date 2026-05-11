@@ -68,9 +68,21 @@ export type PaymentSchedule =
   | "Annual"
   | "One-time";
 
+export type RecurringKind =
+  | "general"
+  | "subscription"
+  | "utility"
+  | "insurance"
+  | "planned_payment"
+  | "account_fee"
+  | "card_fee";
+
 export interface FixedPayment {
   id: string;
   name: string;
+  kind?: RecurringKind;
+  ownerType?: "account" | "card";
+  ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;
   date: string;             // anchor date for schedule rolling
@@ -79,6 +91,10 @@ export interface FixedPayment {
   categoryId?: string;
   mode?: string;
   tag?: string;
+}
+
+export function getFixedPaymentKind(fp?: Pick<FixedPayment, "kind"> | null): RecurringKind {
+  return fp?.kind ?? "general";
 }
 
 // ─── Income Sources ───────────────────────────────────────────────────────────

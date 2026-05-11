@@ -18,6 +18,8 @@ export const categoryRules: CategoryRule[] = [
 
 // ─── Learned rules (user-trained) ────────────────────────────────────────────
 const LEARNED_KEY = "finance_os_learned_rules";
+const hasBrowserStorage = () =>
+  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
 export interface LearnedRule {
   id: string;
@@ -27,10 +29,12 @@ export interface LearnedRule {
 
 export const learnedRulesRepository = {
   getAll(): LearnedRule[] {
+    if (!hasBrowserStorage()) return [];
     const raw = localStorage.getItem(LEARNED_KEY);
     return raw ? JSON.parse(raw) : [];
   },
   saveAll(rules: LearnedRule[]) {
+    if (!hasBrowserStorage()) return;
     localStorage.setItem(LEARNED_KEY, JSON.stringify(rules));
   },
   add(rule: LearnedRule) {
@@ -73,10 +77,12 @@ const UNCATEGORIZED_KEY = "finance_os_uncategorized";
 
 export const uncategorizedRepository = {
   getAll(): string[] {
+    if (!hasBrowserStorage()) return [];
     const raw = localStorage.getItem(UNCATEGORIZED_KEY);
     return raw ? JSON.parse(raw) : [];
   },
   add(description: string) {
+    if (!hasBrowserStorage()) return;
     const list = this.getAll();
     if (!list.includes(description)) {
       list.unshift(description);
@@ -84,6 +90,7 @@ export const uncategorizedRepository = {
     }
   },
   remove(description: string) {
+    if (!hasBrowserStorage()) return;
     const list = this.getAll().filter((d) => d !== description);
     localStorage.setItem(UNCATEGORIZED_KEY, JSON.stringify(list));
   },

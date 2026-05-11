@@ -11,6 +11,8 @@ export interface CreditCard {
   reconciledBalance?: number;
   reconciledDate?: string;
   linkedAccountId?: string;
+  annualFeeAmount?: number;
+  annualFeeDate?: string;
   active: boolean;
   createdAt: string;
   primary?: boolean;

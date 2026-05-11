@@ -121,7 +121,16 @@ export function BankAccountsSection() {
   const now = new Date();
   const todayLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
-  const emptyForm = { id: "" as string | undefined, name: "", bank: "", type: "Chequing" as Account["type"], openingBalance: 0, accountNumber: "" };
+  const emptyForm = {
+    id: "" as string | undefined,
+    name: "",
+    bank: "",
+    type: "bank" as Account["type"],
+    openingBalance: 0,
+    accountNumber: "",
+    monthlyFeeAmount: 0,
+    monthlyFeeDate: todayLocal,
+  };
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -136,20 +145,31 @@ export function BankAccountsSection() {
   function save() {
     if (!form.name) return;
     if (form.id) {
+      const existing = accounts.find((a) => a.id === form.id);
       updateAccount({
+        ...(existing ?? {}),
         id: form.id!,
         name: form.name,
+        bank: form.bank,
+        accountNumber: form.accountNumber,
         type: form.type as Account["type"],
         openingBalance: toFixed2(Number(form.openingBalance)),
         balanceBase: toFixed2(Number(form.openingBalance)),
         reconciledBalance: undefined,
         reconciledDate: undefined,
+        monthlyFeeAmount: Number(form.monthlyFeeAmount) > 0 ? toFixed2(Number(form.monthlyFeeAmount)) : undefined,
+        monthlyFeeDate: Number(form.monthlyFeeAmount) > 0 ? form.monthlyFeeDate : undefined,
         active: true,
         currency: "CAD",
-        createdAt: new Date().toISOString(),
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
       });
     } else {
-      addAccount(form.name, form.type as Account["type"], toFixed2(Number(form.openingBalance)));
+      addAccount(form.name, form.type as Account["type"], toFixed2(Number(form.openingBalance)), {
+        bank: form.bank,
+        accountNumber: form.accountNumber,
+        monthlyFeeAmount: Number(form.monthlyFeeAmount) > 0 ? toFixed2(Number(form.monthlyFeeAmount)) : undefined,
+        monthlyFeeDate: Number(form.monthlyFeeAmount) > 0 ? form.monthlyFeeDate : undefined,
+      });
     }
     setShowForm(false); setForm(emptyForm);
     notifyDataChanged("accounts");
@@ -345,6 +365,13 @@ export function BankAccountsSection() {
             { value: "business", label: "Business" },
           ]} />
           <Inp label="Current Balance ($)" type="number" value={form.openingBalance} onChange={f("openingBalance")} />
+          <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Monthly Account Fee (optional)</div>
+            <Grid2>
+              <Inp label="Fee Amount ($)" type="number" value={form.monthlyFeeAmount} onChange={f("monthlyFeeAmount")} />
+              <Inp label="Next Fee Date" type="date" value={form.monthlyFeeDate} onChange={f("monthlyFeeDate")} />
+            </Grid2>
+          </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setShowForm(false)}>Cancel</Btn>
             <Btn onClick={save}>Save</Btn>
@@ -360,7 +387,7 @@ export function BankAccountsSection() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function CreditCardsSection() {
-  const { cards, addCard, deleteCard, reloadCards } = useCreditCards();
+  const { cards, addCard, deleteCard, updateCard, reloadCards } = useCreditCards();
   const { accounts, reloadAccounts } = useAccounts();
 
   useAutoReload(reloadCards);
@@ -375,6 +402,8 @@ export function CreditCardsSection() {
     type: "personal" as CreditCard["type"],
     limitAmount: 0, openingBalance: 0,
     linkedAccountId: "",
+    annualFeeAmount: 0,
+    annualFeeDate: todayLocal,
   };
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -392,10 +421,10 @@ export function CreditCardsSection() {
   function save() {
     if (!form.name) return;
     if (form.id) {
-      // update via repository directly
-      const all = creditCardRepository.getAll();
-      creditCardRepository.saveAll(all.map((c) => c.id === form.id ? {
-        ...c,
+      const existing = cards.find((c) => c.id === form.id);
+      updateCard({
+        ...(existing ?? {}),
+        id: form.id!,
         name: form.name,
         issuer: form.issuer,
         type: form.type,
@@ -405,10 +434,24 @@ export function CreditCardsSection() {
         reconciledBalance: undefined,
         reconciledDate: undefined,
         linkedAccountId: form.linkedAccountId,
-      } : c));
-      reloadCards();
+        annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
+        annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
+        active: existing?.active ?? true,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
+      });
     } else {
-      addCard(form.name, form.issuer, form.type, toFixed2(Number(form.limitAmount)), toFixed2(Number(form.openingBalance)), form.linkedAccountId);
+      addCard(
+        form.name,
+        form.issuer,
+        form.type,
+        toFixed2(Number(form.limitAmount)),
+        toFixed2(Number(form.openingBalance)),
+        form.linkedAccountId,
+        {
+          annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
+          annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
+        }
+      );
     }
     setShowForm(false); setForm(emptyForm);
     notifyDataChanged("cards");
@@ -579,6 +622,13 @@ export function CreditCardsSection() {
             <Inp label="Credit Limit ($)" type="number" value={form.limitAmount} onChange={f("limitAmount")} />
             <Inp label="Balance Owing ($)" type="number" value={form.openingBalance} onChange={f("openingBalance")} />
           </Grid2>
+          <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Annual Card Fee (optional)</div>
+            <Grid2>
+              <Inp label="Fee Amount ($)" type="number" value={form.annualFeeAmount} onChange={f("annualFeeAmount")} />
+              <Inp label="Next Charge Date" type="date" value={form.annualFeeDate} onChange={f("annualFeeDate")} />
+            </Grid2>
+          </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setShowForm(false)}>Cancel</Btn>
             <Btn onClick={save}>Save</Btn>

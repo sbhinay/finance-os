@@ -42,7 +42,9 @@ export function getAccountReferenceReasons(
   const linkedCards = cards.filter((c) => c.linkedAccountId === accountId).length;
   if (linkedCards > 0) reasons.push(`${linkedCards} linked credit card(s)`);
 
-  const fixedPaymentCount = fixedPayments.filter((fp) => fp.source === accountId).length;
+  const fixedPaymentCount = fixedPayments.filter((fp) =>
+    fp.source === accountId && !(fp.ownerType === "account" && fp.ownerId === accountId)
+  ).length;
   if (fixedPaymentCount > 0) reasons.push(`${fixedPaymentCount} recurring payment(s)`);
 
   const vehicleCount = vehicles.filter((v) => v.source === accountId).length;
@@ -56,11 +58,16 @@ export function getAccountReferenceReasons(
 
 export function getCardReferenceReasons(
   cardId: string,
-  transactions: Transaction[]
+  transactions: Transaction[],
+  fixedPayments: FixedPayment[] = []
 ) {
   const reasons: string[] = [];
   const txCount = transactions.filter((tx) => tx.sourceId === cardId || tx.destinationId === cardId).length;
   if (txCount > 0) reasons.push(`${txCount} transaction(s)`);
+  const fixedPaymentCount = fixedPayments.filter((fp) =>
+    fp.source === cardId && !(fp.ownerType === "card" && fp.ownerId === cardId)
+  ).length;
+  if (fixedPaymentCount > 0) reasons.push(`${fixedPaymentCount} recurring payment(s)`);
   return reasons;
 }
 

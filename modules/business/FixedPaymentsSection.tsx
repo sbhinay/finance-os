@@ -2,7 +2,7 @@
 
 import { TransactionForm } from "./TransactionForm";
 import { useState } from "react";
-import { FixedPayment, PendingTransaction, PaymentSchedule } from "@/types/domain";
+import { FixedPayment, PendingTransaction, PaymentSchedule, RecurringKind, getFixedPaymentKind } from "@/types/domain";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
 import { useFixedPayments, calculateBackfillDates } from "./useFixedPayments";
@@ -77,6 +77,35 @@ function Grid2({ children }: { children: React.ReactNode }) {
 }
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual", "One-time"];
+const RECURRING_KINDS: Array<{ value: RecurringKind; label: string }> = [
+  { value: "general", label: "General Recurring" },
+  { value: "subscription", label: "Subscription" },
+  { value: "utility", label: "Utility" },
+  { value: "insurance", label: "Insurance" },
+  { value: "planned_payment", label: "Planned Payment" },
+  { value: "account_fee", label: "Account Fee" },
+  { value: "card_fee", label: "Card Fee" },
+];
+
+const KIND_LABELS: Record<RecurringKind, string> = {
+  general: "General",
+  subscription: "Subscription",
+  utility: "Utility",
+  insurance: "Insurance",
+  planned_payment: "Planned Payment",
+  account_fee: "Account Fee",
+  card_fee: "Card Fee",
+};
+
+const KIND_PLACEHOLDERS: Record<RecurringKind, string> = {
+  general: "e.g. Rogers Internet",
+  subscription: "e.g. YouTube Premium",
+  utility: "e.g. Hydro",
+  insurance: "e.g. Life Insurance",
+  planned_payment: "e.g. Monthly Family Support",
+  account_fee: "e.g. Account Fees - Scotia Personal",
+  card_fee: "e.g. Annual Fee - Avion",
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PENDING BANNER
@@ -219,6 +248,9 @@ export function FixedPaymentsSection() {
   const emptyForm = {
     id: "" as string | undefined,
     name: "", amount: 0 as number,
+    kind: "general" as RecurringKind,
+    ownerType: undefined as FixedPayment["ownerType"] | undefined,
+    ownerId: undefined as string | undefined,
     schedule: "Monthly" as PaymentSchedule,
     date: new Date().toISOString().split("T")[0],
     startDate: new Date().toISOString().split("T")[0], // for backfill
@@ -232,6 +264,7 @@ export function FixedPaymentsSection() {
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
+  const [kindFilter, setKindFilter] = useState<RecurringKind | "all">("all");
 
   // Backfill state
   const [backfillModal, setBackfillModal] = useState<{ fp: FixedPayment; dates: string[] } | null>(null);
@@ -250,22 +283,31 @@ export function FixedPaymentsSection() {
 
   function save() {
     if (!form.name) return;
+    const inferredCategoryId =
+      form.categoryId ||
+      ((form.kind === "account_fee" || form.kind === "card_fee")
+        ? categories.find((c) => c.name.toLowerCase() === "account fees")?.id ?? ""
+        : "");
+
     const fp: FixedPayment = {
       id: form.id || "",
       name: form.name,
+      kind: form.kind,
+      ownerType: form.ownerType,
+      ownerId: form.ownerId,
       amount: toFixed2(Number(form.amount)),
       schedule: form.schedule,
       date: form.date,
       endDate: form.endDate || undefined,
       source: form.source,
-      categoryId: form.categoryId || undefined,
+      categoryId: inferredCategoryId || undefined,
       mode: form.mode || "Debit",
       tag: form.tag || "Personal",
     };
     if (form.id) {
       hooks.updateFixedPayment(fp);
     } else {
-      hooks.addFixedPayment({ name: fp.name, amount: fp.amount, schedule: fp.schedule, date: fp.date, endDate: fp.endDate, source: fp.source, categoryId: fp.categoryId, mode: fp.mode, tag: fp.tag });
+      hooks.addFixedPayment({ name: fp.name, kind: fp.kind, ownerType: fp.ownerType, ownerId: fp.ownerId, amount: fp.amount, schedule: fp.schedule, date: fp.date, endDate: fp.endDate, source: fp.source, categoryId: fp.categoryId, mode: fp.mode, tag: fp.tag });
     }
     setShowForm(false);
     setForm(emptyForm);
@@ -311,9 +353,11 @@ export function FixedPaymentsSection() {
       return s + p.amount * (m[p.schedule] ?? 1);
     }, 0);
 
+  const visiblePayments = fixedPayments.filter((p) => kindFilter === "all" ? true : getFixedPaymentKind(p) === kindFilter);
+
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Fixed Payments</div>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Recurring Payments</div>
 
       {pending.length > 0 && (
         <PendingBanner pending={pending} accounts={accounts} cards={cards} hooks={hooks} />
@@ -336,21 +380,40 @@ export function FixedPaymentsSection() {
         💡 For bills without their own section — insurance, phone, subscriptions. Mortgage and vehicle payments are tracked in their own sections.
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Btn small onClick={() => { setForm(emptyForm); setShowForm(true); }}>+ Add Payment</Btn>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn small variant={kindFilter === "all" ? "primary" : "secondary"} onClick={() => setKindFilter("all")}>All</Btn>
+          {RECURRING_KINDS.map((kind) => (
+            <Btn
+              key={kind.value}
+              small
+              variant={kindFilter === kind.value ? "primary" : "secondary"}
+              onClick={() => setKindFilter(kind.value)}
+            >
+              {kind.label}
+            </Btn>
+          ))}
+        </div>
+        <Btn small onClick={() => { setForm(emptyForm); setShowForm(true); }}>+ Add Recurring Item</Btn>
       </div>
 
-      {fixedPayments.map((p) => {
+      {visiblePayments.map((p) => {
         const isEnded = !!p.endDate && new Date(p.endDate + "T12:00:00") < new Date();
         const next = getNextOccurrence(p.date, p.schedule);
         const nextLabel = p.schedule === "One-time" ? fmtDate(p.date) : (next ? fmtDate(next) : "—");
         const linkedAcct = accounts.find((a) => a.id === p.source);
+        const recurringKind = getFixedPaymentKind(p);
 
         return (
           <div key={p.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "12px 14px", marginBottom: 8, opacity: isEnded ? 0.6 : 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</div>
+                  <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#4b5563" }}>
+                    {KIND_LABELS[recurringKind]}
+                  </span>
+                </div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {p.schedule} · Next: {nextLabel}
                   {p.endDate ? ` · Ends: ${fmtDate(p.endDate)}` : ""}
@@ -380,14 +443,17 @@ export function FixedPaymentsSection() {
         );
       })}
 
-      {fixedPayments.length === 0 && (
-        <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No fixed payments yet.</div>
+      {visiblePayments.length === 0 && (
+        <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>
+          {kindFilter === "all" ? "No recurring items yet." : `No ${KIND_LABELS[kindFilter]} items yet.`}
+        </div>
       )}
 
       {/* Add/Edit form */}
       {showForm && (
-        <Modal title={form.id ? "Edit Fixed Payment" : "Add Fixed Payment"} onClose={() => setShowForm(false)}>
-          <Inp label="Description" value={form.name} onChange={f("name")} placeholder="e.g. Rogers Internet" />
+        <Modal title={form.id ? "Edit Recurring Item" : "Add Recurring Item"} onClose={() => setShowForm(false)}>
+          <Sel label="Recurring Type" value={form.kind} onChange={f("kind")} options={RECURRING_KINDS} />
+          <Inp label="Description" value={form.name} onChange={f("name")} placeholder={KIND_PLACEHOLDERS[form.kind]} />
           <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} />
           <Sel label="Schedule" value={form.schedule} onChange={f("schedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
           <Grid2>

@@ -9,6 +9,7 @@ import { transactionRepository } from "@/repositories/transactionRepository";
 import { vehicleRepository, houseLoanRepository } from "@/repositories/assetRepositories";
 import { validateNewAccount } from "@/rules/accountRules";
 import { getAccountReferenceReasons } from "@/utils/referenceIntegrity";
+import { removeOwnedRecurringForAccount, syncAccountFeeRecurring } from "@/utils/recurringOwners";
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -26,7 +27,8 @@ export function useAccounts() {
   const addAccount = (
     name: string,
     type: AccountType,
-    balance: number
+    balance: number,
+    extras?: Partial<Account>
   ) => {
     const validationError = validateNewAccount(name, accounts);
 
@@ -44,11 +46,14 @@ export function useAccounts() {
       balanceBase: balance,
       active: true,
       createdAt: new Date().toISOString(),
+      ...extras,
     };
 
     accountRepository.add(newAccount);
+    syncAccountFeeRecurring(newAccount);
     load();
     setError(null);
+    return newAccount;
   };
 
   const deleteAccount = (id: string) => {
@@ -71,12 +76,14 @@ export function useAccounts() {
       return;
     }
 
+    removeOwnedRecurringForAccount(id);
     accountRepository.delete(id);
     load();
   };
 
   const updateAccount = (updated: Account) => {
     accountRepository.update(updated);
+    syncAccountFeeRecurring(updated);
     load();
   };
 
