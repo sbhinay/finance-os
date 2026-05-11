@@ -192,6 +192,12 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
   ],
 };
 
+export const SUB_TYPE_LABELS: Partial<Record<TransactionSubType, string>> =
+  Object.values(SUB_TYPE_OPTIONS).flat().reduce((acc, option) => {
+    acc[option.value] = option.label;
+    return acc;
+  }, {} as Partial<Record<TransactionSubType, string>>);
+
 // ─── Type display labels ──────────────────────────────────────────────────────
 export const TYPE_LABELS: Record<TransactionType, string> = {
   expense:              "Expense",

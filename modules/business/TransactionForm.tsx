@@ -12,7 +12,7 @@ import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 import {
   Transaction, TransactionType, TransactionSubType, TransactionMode,
-  TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES,
+  TYPE_LABELS, SUB_TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES,
   requiresDestination, requiresSubType, isExpenseReportable, isIncomeReportable,
   deriveTaxYear,
 } from "@/types/transaction";
@@ -154,6 +154,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<string[]>([]);
   const [showLoanDetails, setShowLoanDetails] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   function canonicalizeInitial(initialValue?: TransactionFormInitial): TransactionFormInitial | undefined {
     if (!initialValue) return initialValue;
@@ -168,15 +169,55 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     return initialValue;
   }
 
-  const autoDetectedCat = useMemo(() => {
-    if (!form.description) return undefined;
-    return detectCategory(form.description.toLowerCase().trim());
-  }, [form.description]);
-
   const txType = form.type as TransactionType;
   const isTransfer = txType === "transfer";
   const isCreditCardPayTransfer = isTransfer && form.subType === "cc_payment";
   const hasLoanSplit = Number(form.interestAmount) > 0 || Number(form.principalAmount) > 0;
+  const selectedCatById = categories.find((c) => c.id === form.categoryId);
+  const sourceName = [...accounts, ...cards].find((x) => x.id === form.sourceId)?.name ?? "";
+  const destinationName = [...accounts, ...cards].find((x) => x.id === form.destinationId)?.name ?? "";
+  const selectedVehicle = vehicles.find((v) => v.id === form.linkedVehicleId);
+  const selectedProperty = houseLoans.find((h) => h.id === form.linkedPropertyId);
+  const selectedSubTypeLabel = form.subType ? SUB_TYPE_LABELS[form.subType as TransactionSubType] ?? form.subType : "";
+
+  const generatedDescription = useMemo(() => {
+    const customTitle = title?.replace(/^Log\s+/i, "").trim();
+    if (customTitle) return customTitle;
+
+    if (txType === "transfer") {
+      if (form.subType === "cc_payment") return `Credit Card Payment${destinationName ? ` - ${destinationName}` : ""}`;
+      if (form.subType === "loc_draw") return `LOC Draw${destinationName ? ` - ${destinationName}` : ""}`;
+      if (selectedSubTypeLabel) return destinationName ? `${selectedSubTypeLabel} - ${destinationName}` : selectedSubTypeLabel;
+      if (sourceName && destinationName) return `Transfer - ${sourceName} to ${destinationName}`;
+      return "Transfer";
+    }
+
+    if (txType === "loan_payment") {
+      if (selectedProperty?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedProperty.name}`;
+      if (selectedVehicle?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedVehicle.name}`;
+      return selectedSubTypeLabel || "Loan Payment";
+    }
+
+    if (txType === "loan_receipt") {
+      if (destinationName) return `${selectedSubTypeLabel || "Loan Receipt"} - ${destinationName}`;
+      return selectedSubTypeLabel || "Loan Receipt";
+    }
+
+    if (selectedVehicle?.name && selectedCatById?.name) return `${selectedCatById.name} - ${selectedVehicle.name}`;
+    if (selectedProperty?.name && selectedCatById?.name) return `${selectedCatById.name} - ${selectedProperty.name}`;
+    if (selectedCatById?.name && sourceName) return `${selectedCatById.name} - ${sourceName}`;
+    if (selectedCatById?.name) return selectedCatById.name;
+    if (selectedSubTypeLabel) return selectedSubTypeLabel;
+    if (sourceName && TYPE_LABELS[txType]) return `${TYPE_LABELS[txType]} - ${sourceName}`;
+    return TYPE_LABELS[txType] ?? "Transaction";
+  }, [title, txType, form.subType, sourceName, destinationName, selectedVehicle, selectedProperty, selectedCatById, selectedSubTypeLabel]);
+
+  const effectiveDescription = useMemo(() => (form.description || generatedDescription).trim(), [form.description, generatedDescription]);
+
+  const autoDetectedCat = useMemo(() => {
+    if (!effectiveDescription) return undefined;
+    return detectCategory(effectiveDescription.toLowerCase().trim());
+  }, [effectiveDescription]);
 
   const warnings = useMemo(() => {
     const w: string[] = [];
@@ -254,9 +295,11 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         odometer:        normalizedInitial.odometer ?? "",
       });
       setShowLoanDetails(Number(normalizedInitial.interestAmount) > 0 || Number(normalizedInitial.principalAmount) > 0);
+      setShowNotes(Boolean(normalizedInitial.notes));
     } else {
       setForm(emptyForm);
       setShowLoanDetails(false);
+      setShowNotes(false);
     }
 
     setErrors([]);
@@ -272,7 +315,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     isIncomeReportable(txType) ? (c.type === "income" || c.type === "both")
     : (c.type === "expense" || c.type === "both")
   );
-  const selectedCat = activeCats.find((c) => c.id === form.categoryId);
+  const selectedCat = selectedCatById;
   const isVehicleCat = selectedCat?.vehicleLinked;
   const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
@@ -332,15 +375,16 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     setErrors([]);
 
     const amount = toFixed2(Number(form.amount));
-    const desc = form.description.toLowerCase().trim();
+    const finalDescription = effectiveDescription;
+    const desc = finalDescription.toLowerCase().trim();
     const isEditing = !!form.id;
 
     const categoryId = showCategory ? (form.categoryId || autoDetectedCat) : undefined;
 
-    if (categoryId && form.description) {
+    if (categoryId && finalDescription) {
       learnedRulesRepository.add({ id: uid(), description: desc, categoryId });
       uncategorizedRepository.remove(desc);
-    } else if (!categoryId && form.description && showCategory) {
+    } else if (!categoryId && finalDescription && showCategory) {
       uncategorizedRepository.add(desc);
     }
 
@@ -353,7 +397,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       principalAmount: showLoanSplit && Number(form.principalAmount) > 0 ? toFixed2(Number(form.principalAmount)) : undefined,
       date:            form.date.slice(0, 10),
       createdAt:       initial?.createdAt ?? new Date().toISOString(),
-      description:     form.description,
+      description:     finalDescription,
       notes:           form.notes || undefined,
       sourceId:        form.sourceId,
       destinationId:   form.destinationId || undefined,
@@ -468,23 +512,56 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           {/* Description + Notes */}
           <div>
             <Label>Description</Label>
-            <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Merchant, payee, or short note"
+            <input value={form.description || generatedDescription} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="Transaction label"
               disabled={isReconciliationAudit}
               style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
+            {!form.description && (
+              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                Auto-generated from the selected type, category, accounts, and linked item. Edit it only if you want a custom label.
+              </div>
+            )}
             {autoDetectedCat && !form.categoryId && (
               <div style={{ fontSize: 11, color: "#1a5fa8", marginTop: 3 }}>
                 🔍 Auto-detected: {categories.find((c) => c.id === autoDetectedCat)?.name ?? autoDetectedCat}
               </div>
             )}
           </div>
-          <div>
-            <Label>Notes (optional)</Label>
-            <input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-              placeholder="Additional notes or reference number"
-              disabled={isReconciliationAudit}
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
-          </div>
+          {showNotes ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <Label>Notes (optional)</Label>
+                {!isReconciliationAudit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((p) => ({ ...p, notes: "" }));
+                      setShowNotes(false);
+                    }}
+                    style={{ border: "none", background: "none", color: "#6b7280", fontSize: 11, cursor: "pointer", padding: 0 }}
+                  >
+                    Hide notes
+                  </button>
+                )}
+              </div>
+              <input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Reference number, extra context, or something you want to remember later"
+                disabled={isReconciliationAudit}
+                style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
+            </div>
+          ) : (
+            !isReconciliationAudit && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowNotes(true)}
+                  style={{ border: "none", background: "none", color: "#1a5fa8", fontSize: 12, cursor: "pointer", padding: 0, fontWeight: 600 }}
+                >
+                  + Add note
+                </button>
+              </div>
+            )
+          )}
 
           {/* Category + Source */}
           <Grid2>

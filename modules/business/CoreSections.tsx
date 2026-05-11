@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { TransactionForm } from "./TransactionForm";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
@@ -15,6 +15,7 @@ import { transactionRepository } from "@/repositories/transactionRepository";
 import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
+import { SUB_TYPE_LABELS } from "@/types/transaction";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -607,11 +608,35 @@ export function TransactionHistorySection() {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
   const [dateTo, setDateTo] = useState(now.toISOString().split("T")[0]);
-  const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer">("all");
+  const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer" | "loan_payment">("all");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("");
+  const [subTypeFilter, setSubTypeFilter] = useState("");
+  const [linkedFilter, setLinkedFilter] = useState("");
   const [editTx, setEditTx] = useState<TransactionFormInitial>(undefined);
   const [txFormOpen, setTxFormOpen] = useState(false);
+
+  const acctName = useCallback((id: string) => [...accounts, ...cards].find((x) => x.id === id)?.name ?? id, [accounts, cards]);
+  const catName = useCallback((id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "", [categories]);
+  const linkedLabel = useCallback((vehicleId?: string, propertyId?: string) => {
+    if (vehicleId) return vehicles.find((v) => v.id === vehicleId)?.name ?? vehicleId;
+    if (propertyId) return houseLoans.find((h) => h.id === propertyId)?.name ?? propertyId;
+    return "";
+  }, [vehicles, houseLoans]);
+
+  const availableSubTypes = useMemo(
+    () =>
+      Array.from(new Set(transactions.map((t) => t.subType).filter(Boolean) as string[]))
+        .sort()
+        .map((value) => ({ value, label: SUB_TYPE_LABELS[value as keyof typeof SUB_TYPE_LABELS] ?? value })),
+    [transactions]
+  );
+
+  const availableLinks = useMemo(() => {
+    const vehicleItems = vehicles.map((v) => ({ value: `vehicle:${v.id}`, label: `Vehicle - ${v.name}` }));
+    const propertyItems = houseLoans.map((h) => ({ value: `property:${h.id}`, label: `Property - ${h.name}` }));
+    return [...vehicleItems, ...propertyItems];
+  }, [vehicles, houseLoans]);
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
@@ -619,17 +644,36 @@ export function TransactionHistorySection() {
       if (d < dateFrom || d > dateTo) return false;
       if (filter !== "all" && t.type !== filter) return false;
       if (catFilter && t.categoryId !== catFilter) return false;
-      if (search && !`${t.description}${t.sourceId}${t.categoryId ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
+      if (subTypeFilter && t.subType !== subTypeFilter) return false;
+      if (linkedFilter) {
+        if (linkedFilter.startsWith("vehicle:") && t.linkedVehicleId !== linkedFilter.slice("vehicle:".length)) return false;
+        if (linkedFilter.startsWith("property:") && t.linkedPropertyId !== linkedFilter.slice("property:".length)) return false;
+      }
+      if (search) {
+        const haystack = [
+          t.description,
+          t.notes,
+          t.sourceId ? acctName(t.sourceId) : "",
+          t.destinationId ? acctName(t.destinationId) : "",
+          catName(t.categoryId),
+          t.subType ? SUB_TYPE_LABELS[t.subType] ?? t.subType : "",
+          linkedLabel(t.linkedVehicleId, t.linkedPropertyId),
+          t.tag ?? "",
+          t.mode ?? "",
+          t.type,
+        ].join(" ").toLowerCase();
+        if (!haystack.includes(search.toLowerCase())) return false;
+      }
       return true;
     }).sort((a, b) => {
       const da = (a.date ?? a.createdAt ?? "");
       const db = (b.date ?? b.createdAt ?? "");
       return db > da ? 1 : -1;
     });
-  }, [transactions, dateFrom, dateTo, filter, catFilter, search]);
+  }, [transactions, dateFrom, dateTo, filter, catFilter, subTypeFilter, linkedFilter, search, acctName, catName, linkedLabel]);
 
   const totalIn = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const totalOut = filtered.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0); // transfers excluded
+  const totalOut = filtered.filter((t) => ["expense", "loan_payment", "tax_payment", "withdrawal"].includes(t.type)).reduce((s, t) => s + t.amount, 0);
   const totalTransfers = filtered.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
 
   // Top categories bar chart
@@ -657,9 +701,6 @@ export function TransactionHistorySection() {
     URL.revokeObjectURL(url);
   }
 
-  const catName = (id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "";
-  const acctName = (id: string) => [...accounts, ...cards].find((x) => x.id === id)?.name ?? id;
-
   return (
     <div>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Transaction History</div>
@@ -671,15 +712,25 @@ export function TransactionHistorySection() {
           <Inp label="To Date" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </Grid2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
-          {(["all", "income", "expense", "transfer"] as const).map((v) => (
+          {(["all", "income", "expense", "transfer", "loan_payment"] as const).map((v) => (
             <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
-              {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
+              {v === "all" ? "All" : v === "loan_payment" ? "Debt" : v.charAt(0).toUpperCase() + v.slice(1)}
             </Btn>
           ))}
           <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
             style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
             <option value="">All Categories</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={subTypeFilter} onChange={(e) => setSubTypeFilter(e.target.value)}
+            style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
+            <option value="">All Sub-types</option>
+            {availableSubTypes.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <select value={linkedFilter} onChange={(e) => setLinkedFilter(e.target.value)}
+            style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
+            <option value="">All Linked Items</option>
+            {availableLinks.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
@@ -690,7 +741,7 @@ export function TransactionHistorySection() {
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <StatBox label="Income" value={fmtCAD(totalIn)} color="#1a7f3c" />
-        <StatBox label="Expenses" value={fmtCAD(totalOut)} color="#a31515" />
+        <StatBox label="Outflows" value={fmtCAD(totalOut)} color="#a31515" />
         <StatBox label="Transfers" value={fmtCAD(totalTransfers)} color="#6b7280" sub="not counted in net" />
         <StatBox label="Net" value={fmtCAD(totalIn - totalOut)} color={totalIn - totalOut >= 0 ? "#1a7f3c" : "#a31515"} />
         <StatBox label="Entries" value={String(filtered.length)} />
@@ -726,6 +777,7 @@ export function TransactionHistorySection() {
                 <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span>{(t.date ?? t.createdAt ?? "").slice(0, 10)}</span>
                   {catName(t.categoryId) && <span>· {catName(t.categoryId)}</span>}
+                  {t.subType && <span>· {SUB_TYPE_LABELS[t.subType] ?? t.subType}</span>}
                   {t.mode && <span>· {t.mode}</span>}
                   {t.sourceId && <span>· {acctName(t.sourceId)}</span>}
                   {t.tag === "Business" && <Pill color="blue">Biz</Pill>}
