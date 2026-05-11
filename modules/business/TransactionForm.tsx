@@ -153,6 +153,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<string[]>([]);
+  const [showLoanDetails, setShowLoanDetails] = useState(false);
 
   function canonicalizeInitial(initialValue?: TransactionFormInitial): TransactionFormInitial | undefined {
     if (!initialValue) return initialValue;
@@ -175,6 +176,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const txType = form.type as TransactionType;
   const isTransfer = txType === "transfer";
   const isCreditCardPayTransfer = isTransfer && form.subType === "cc_payment";
+  const hasLoanSplit = Number(form.interestAmount) > 0 || Number(form.principalAmount) > 0;
 
   const warnings = useMemo(() => {
     const w: string[] = [];
@@ -203,13 +205,13 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (requiresDestination(form.type as TransactionType) && !form.destinationId) {
       w.push("Please select a destination account or card.");
     }
-    if (form.type === "loan_payment" && Number(form.interestAmount) + Number(form.principalAmount) !== amt && amt > 0) {
+    if (form.type === "loan_payment" && hasLoanSplit && Number(form.interestAmount) + Number(form.principalAmount) !== amt && amt > 0) {
       const split = toFixed2(Number(form.interestAmount) + Number(form.principalAmount));
       if (split > 0) w.push(`Interest + Principal (${fmtCAD(split)}) does not equal total amount (${fmtCAD(amt)}).`);
     }
 
     return w;
-  }, [form, scheduledAmount, cards, autoDetectedCat]);
+  }, [form, scheduledAmount, cards, autoDetectedCat, hasLoanSplit]);
 
   // Pre-fill when modal opens
     useEffect(() => {
@@ -251,8 +253,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         linkedPropertyId: normalizedInitial.linkedPropertyId ?? "",
         odometer:        normalizedInitial.odometer ?? "",
       });
+      setShowLoanDetails(Number(normalizedInitial.interestAmount) > 0 || Number(normalizedInitial.principalAmount) > 0);
     } else {
       setForm(emptyForm);
+      setShowLoanDetails(false);
     }
 
     setErrors([]);
@@ -274,6 +278,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
   const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt";
   const showLoanSplit = txType === "loan_payment";
+  const loanDetailsVisible = showLoanSplit && showLoanDetails;
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
   const isReconciliationAudit = !!initial?.id && initial.type === "adjustment" && initial.subType === "reconciliation";
   const showVehicleLink = txType === "expense" && isVehicleCat;
@@ -505,10 +510,31 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
           {/* Loan payment split */}
           {showLoanSplit && (
-            <Grid2>
-              <Inp label="Principal Amount ($)" type="number" value={form.principalAmount} onChange={f("principalAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
-              <Inp label="Interest Amount ($)" type="number" value={form.interestAmount} onChange={f("interestAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
-            </Grid2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Alert type="info">
+                Regular mode: log the full payment amount and source account only. Detailed mode is optional and lets you split the payment into principal and interest for richer reports later.
+              </Alert>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  {form.subType === "mortgage"
+                    ? "Cash planning uses the full mortgage payment; only interest is expense-like in detailed reporting."
+                    : "Cash planning uses the full debt payment; principal and interest are optional details."}
+                </div>
+                <Btn
+                  variant="secondary"
+                  onClick={() => setShowLoanDetails((v) => !v)}
+                  disabled={isReconciliationAudit}
+                >
+                  {showLoanDetails ? "Hide Detailed Split" : "Add Detailed Split"}
+                </Btn>
+              </div>
+              {loanDetailsVisible && (
+                <Grid2>
+                  <Inp label="Principal Amount ($)" type="number" value={form.principalAmount} onChange={f("principalAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
+                  <Inp label="Interest Amount ($)" type="number" value={form.interestAmount} onChange={f("interestAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
+                </Grid2>
+              )}
+            </div>
           )}
 
           {/* Vehicle link */}

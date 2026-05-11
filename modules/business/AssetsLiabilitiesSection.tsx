@@ -201,14 +201,16 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
 
   function openVehiclePayment(vehicle: Vehicle) {
     const nextDate = vehicle.nextPaymentDate ? (getNextOccurrence(vehicle.nextPaymentDate, vehicle.schedule) ?? vehicle.nextPaymentDate) : todayDateOnly();
-    setTxFormTitle(`Log Vehicle Payment - ${vehicle.name}`);
+    const isFinanced = vehicle.vtype === "Finance";
+    setTxFormTitle(isFinanced ? `Log Vehicle Finance Payment - ${vehicle.name}` : `Log Vehicle Payment - ${vehicle.name}`);
     setScheduledAmount(vehicle.payment);
     setPendingPropertyMark(null);
     setTxFormInitial({
-      type: "expense",
+      type: isFinanced ? "loan_payment" : "expense",
+      subType: isFinanced ? "bank_loan" : undefined,
       amount: vehicle.payment,
       date: nextDate,
-      description: `Vehicle Payment - ${vehicle.name}`,
+      description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Payment - ${vehicle.name}`,
       sourceId: vehicle.source || "",
       linkedVehicleId: vehicle.id,
       mode: "Debit",

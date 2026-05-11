@@ -275,7 +275,14 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
       {detail && (
         <Modal title={`${detail.name} — Expense History`} onClose={() => setDetail(null)} wide>
           {(() => {
-            const txns = transactions.filter((t) => t.linkedVehicleId === detail.id && t.type !== "adjustment");
+            const txns = transactions
+              .filter((t) => t.linkedVehicleId === detail.id && t.type !== "adjustment")
+              .sort((a, b) => {
+                const aTime = Date.parse(a.date ?? a.createdAt ?? "") || 0;
+                const bTime = Date.parse(b.date ?? b.createdAt ?? "") || 0;
+                if (bTime !== aTime) return bTime - aTime;
+                return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+              });
             const total = txns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
             return (
               <>
