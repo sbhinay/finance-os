@@ -19,7 +19,7 @@ import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
 import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { notifyDataChanged } from "@/utils/events";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { loadCloudSnapshot, saveCloudSnapshot } from "@/lib/supabase/cloudSnapshots";
+import { buildCloudExportPayload, loadCloudSnapshot, saveCloudSnapshot } from "@/lib/supabase/cloudSnapshots";
 
 type RawObject = Record<string, unknown>;
 type ImportResult = ImportPayload | MigrationResult;
@@ -237,18 +237,7 @@ export function ImportExportSection() {
   }
 
   function handleExport() {
-    const data = {
-      meta: { exportedAt: new Date().toISOString(), appVersion: "next-1.0" },
-      bankAccounts: accountRepository.getAll(),
-      creditCards: creditCardRepository.getAll(),
-      transactions: transactionRepository.getAll(),
-      categories: categoryRepository.getAll(),
-      business: businessRepository.get(),
-      vehicles: vehicleRepository.getAll(),
-      houseLoans: houseLoanRepository.getAll(),
-      propertyTaxes: propertyTaxRepository.getAll(),
-      futurePayments: fixedPaymentRepository.getAll(),
-    };
+    const data = buildCloudExportPayload();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -318,8 +307,8 @@ export function ImportExportSection() {
   async function handleSaveToCloud() {
     setCloudBusy(true);
     try {
-      await saveCloudSnapshot();
-      setCloudUpdatedAt(new Date().toISOString());
+      const saved = await saveCloudSnapshot();
+      setCloudUpdatedAt(saved.updated_at);
       setStatus({ type: "success", message: "Current FinanceOS data saved to Supabase cloud backup." });
     } catch (err) {
       setStatus({ type: "error", message: `Cloud save failed: ${String(err)}` });
@@ -334,7 +323,7 @@ export function ImportExportSection() {
       if (!snapshot) {
         setStatus({ type: "warning", message: "No cloud snapshot found for this account yet." });
       } else {
-        const result = normalizeImportResult(loadExportResult(snapshot.payload as unknown as RawObject));
+        const result = normalizeImportResult(loadExportResult(asObject(snapshot.payload)));
         previewImport(result, "cloud");
         setStatus({ type: "success", message: "Cloud snapshot loaded. Review the preview below, then confirm import to restore it locally." });
         setCloudUpdatedAt(snapshot.updated_at);

@@ -45,16 +45,17 @@ export async function saveCloudSnapshot() {
   if (!authData.user) throw new Error("You must be signed in to save to cloud.");
 
   const payload = buildCloudExportPayload();
+  const updatedAt = new Date().toISOString();
   const { error } = await supabase.from("app_snapshots").upsert(
     {
       user_id: authData.user.id,
       payload,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     },
     { onConflict: "user_id" }
   );
   if (error) throw error;
-  return payload;
+  return { payload, updated_at: updatedAt, user_id: authData.user.id };
 }
 
 export async function loadCloudSnapshot() {
