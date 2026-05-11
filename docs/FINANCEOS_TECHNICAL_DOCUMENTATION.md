@@ -36,12 +36,16 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 
 ## 3. Current Implementation Notes
 - Internal money movement is standardized on `transfer`; credit card payoff is stored as `transfer` with `subType: "cc_payment"`.
+- LOC drawdowns are moving toward `transfer` with `subType: "loc_draw"` instead of being treated like income.
 - Accounts and credit cards support `balanceBase`, `reconciledBalance`, and `reconciledDate`.
 - `recalculateBalances.ts` bases replay on reconciliation metadata and avoids compound drift.
 - Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
 - Reconciliation adjustments are excluded from normal reporting.
 - The new `Assets & Liabilities` area is now in active transition, not just planned. It already surfaces upcoming obligations and launches selected actions through the canonical `TransactionForm`.
+- Legacy `House Loans / Mortgages` now supports direct mortgage logging and backfill for missed historical scheduled payments.
 - Import validation now checks stale references more strictly and falls back to `Other` for ambiguous category mappings instead of guessing.
+- Automatic Supabase write-back was rolled back; cloud behavior is currently safe manual save + safe manual restore preview.
+- Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning rather than relying only on generic expense rows.
 
 ## 4. Documentation Structure
 The docs are organized into the following cross-linked files:
@@ -64,3 +68,4 @@ The docs are organized into the following cross-linked files:
 - Where implementation is not fully complete, deferred items are explicitly listed.
 - This set is a v3 refresh of the repo docs.
 - Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.
+- FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.

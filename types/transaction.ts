@@ -32,6 +32,7 @@ export type TransactionSubType =
   | "opening_balance"
   // transfer sub-types
   | "cc_payment"
+  | "loc_draw"
   | "tfsa_contribution"
   | "rrsp_contribution"
   | "bank_to_bank"
@@ -165,7 +166,6 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
   loan_receipt: [
     { value: "personal_loan",    label: "Personal Loan" },
     { value: "bank_loan",        label: "Bank Loan" },
-    { value: "line_of_credit",   label: "Line of Credit" },
     { value: "mortgage",         label: "Mortgage" },
     { value: "shareholder_loan", label: "Shareholder Loan" },
   ],
@@ -178,6 +178,7 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
   ],
   transfer: [
     { value: "cc_payment",         label: "Credit Card Payment" },
+    { value: "loc_draw",           label: "Line of Credit Draw" },
     { value: "tfsa_contribution",  label: "TFSA Contribution" },
     { value: "rrsp_contribution",  label: "RRSP Contribution" },
     { value: "bank_to_bank",       label: "Bank to Bank" },

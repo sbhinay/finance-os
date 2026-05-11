@@ -5,10 +5,12 @@ import { useState } from "react";
 import { Vehicle, HouseLoan, PaymentSchedule } from "@/types/domain";
 import { Account } from "@/types/account";
 import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
-import { useAccounts } from "@/modules/accounts/useAccounts";
-import { useCategories } from "@/modules/categories/useCategories";
-import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
+import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly, uid } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
+import { transactionRepository } from "@/repositories/transactionRepository";
+import { notifyDataChanged } from "@/utils/events";
+import { syncBalances } from "@/utils/syncBalances";
+import { calculateBackfillDates } from "./useFixedPayments";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -318,6 +320,12 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [txFormOpen, setTxFormOpen] = useState(false);
+  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
+  const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
+  const [backfillModal, setBackfillModal] = useState<{ loan: HouseLoan; dates: string[] } | null>(null);
+  const [backfillAccountId, setBackfillAccountId] = useState("");
+  const [backfillDone, setBackfillDone] = useState<number | null>(null);
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
@@ -338,6 +346,101 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
   const getAccountName = (accountId: string) => {
     return accounts.find((a) => a.id === accountId)?.name ?? accountId;
   };
+  const sourceExists = form.source ? accounts.some((a) => a.id === form.source) : true;
+  const formAcctOpts = sourceExists
+    ? acctOpts
+    : [
+        { value: "", label: "â€” Select â€”" },
+        { value: form.source, label: `Legacy source (${form.source})` },
+        ...accounts.map((a) => ({ value: a.id, label: a.name })),
+      ];
+
+  function openLog(loan: HouseLoan) {
+    const nextDate = loan.nextPaymentDate
+      ? (getNextOccurrence(loan.nextPaymentDate, loan.schedule) ?? loan.nextPaymentDate)
+      : new Date().toISOString().split("T")[0];
+
+    setTxFormInitial({
+      type: "loan_payment",
+      subType: "mortgage",
+      amount: loan.payment,
+      date: nextDate,
+      sourceId: loan.source ?? "",
+      description: `${loan.name} Mortgage Payment`,
+      mode: "Debit",
+      tag: "Personal",
+    });
+    setTxScheduledAmount(loan.payment);
+    setTxFormOpen(true);
+  }
+
+  function openBackfill(loan: HouseLoan) {
+    const anchorDate = loan.startDate || loan.nextPaymentDate;
+    if (!anchorDate) {
+      alert("Please set a mortgage start date or next payment date first.");
+      return;
+    }
+
+    const dates = calculateBackfillDates(anchorDate, loan.schedule, loan.endDate);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const cutoff = yesterday.toISOString().split("T")[0];
+    const pastDates = dates.filter((d) => d <= cutoff);
+
+    if (pastDates.length === 0) {
+      alert("No historical mortgage payments to backfill — all scheduled dates are in the future.");
+      return;
+    }
+
+    setBackfillAccountId(loan.source ?? "");
+    setBackfillModal({ loan, dates: pastDates });
+    setBackfillDone(null);
+  }
+
+  function backfillLoanPayments(loan: HouseLoan, dates: string[], accountId: string): number {
+    if (!dates.length || !accountId) return 0;
+
+    const existing = transactionRepository.getAll();
+    const existingDates = new Set(
+      existing
+        .filter((t) =>
+          t.sourceId === accountId &&
+          toFixed2(t.amount) === toFixed2(loan.payment) &&
+          (t.description === `${loan.name} Mortgage Payment` || t.description?.includes(loan.name))
+        )
+        .map((t) => t.date ?? t.createdAt?.slice(0, 10))
+    );
+
+    let count = 0;
+    dates.forEach((date) => {
+      if (existingDates.has(date)) return;
+
+      const txn: Transaction = {
+        id: uid(),
+        type: "loan_payment",
+        subType: "mortgage",
+        amount: toFixed2(loan.payment),
+        description: `${loan.name} Mortgage Payment`,
+        sourceId: accountId,
+        date,
+        createdAt: new Date().toISOString(),
+        currency: "CAD",
+        status: "cleared",
+        tag: "Personal",
+        mode: "Debit",
+      };
+
+      transactionRepository.add(txn);
+      count++;
+    });
+
+    if (count > 0) {
+      syncBalances();
+      notifyDataChanged("transactions");
+    }
+
+    return count;
+  }
 
   return (
     <div>
@@ -370,6 +473,11 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
                     ? ` · Next: ${fmtDate(next ?? l.nextPaymentDate)}`
                     : " · ⚠ Set next payment date"}
                 </div>
+                {l.source && !accounts.some((a) => a.id === l.source) && (
+                  <div style={{ fontSize: 11, color: "#a05c00", marginTop: 3 }}>
+                    Legacy payment source is no longer linked to a current account. Edit and re-select the right account.
+                  </div>
+                )}
                 {acct && (
                   <div style={{ fontSize: 12, color: acct.openingBalance >= l.payment ? "#1a7f3c" : "#a31515", marginTop: 2 }}>
                     Account balance: {fmtCAD(acct.openingBalance)}
@@ -389,6 +497,8 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
               <div style={{ textAlign: "right", marginLeft: 12 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, color: "#a31515" }}>{fmtCAD(l.remaining)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 4, justifyContent: "flex-end" }}>
+                  <Btn variant="green" small onClick={() => openLog(l)}>Log Payment</Btn>
+                  <Btn variant="secondary" small onClick={() => openBackfill(l)}>Backfill</Btn>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...l, id: l.id }); setShowForm(true); }}>Edit</Btn>
                   <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${l.name}?`)) deleteHouseLoan(l.id); }}>✕</Btn>
                 </div>
@@ -415,7 +525,7 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
             <Sel label="Schedule" value={form.schedule} onChange={f("schedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
             <Inp label="Interest Rate (%)" type="number" value={form.interestRate} onChange={f("interestRate")} />
           </Grid3>
-          <Sel label="Payment From (Account)" value={form.source} onChange={f("source")} options={acctOpts} />
+          <Sel label="Payment From (Account)" value={form.source} onChange={f("source")} options={formAcctOpts} />
           <Grid3>
             <Inp label="Start Date" type="date" value={form.startDate} onChange={f("startDate")} />
             <Inp label="End Date / Maturity" type="date" value={form.endDate} onChange={f("endDate")} />
@@ -427,6 +537,62 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
           </div>
         </Modal>
       )}
+      {backfillModal && (
+        <Modal title={`Backfill — ${backfillModal.loan.name}`} onClose={() => setBackfillModal(null)}>
+          {backfillDone !== null ? (
+            <div style={{ textAlign: "center", padding: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
+              <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical mortgage payments have been added to your transaction log.</div>
+              <div style={{ marginTop: 16 }}>
+                <Btn onClick={() => setBackfillModal(null)}>Done</Btn>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#1a5fa8" }}>
+                Found <strong>{backfillModal.dates.length} scheduled mortgage payments</strong> from {fmtDate(backfillModal.dates[0])} to {fmtDate(backfillModal.dates[backfillModal.dates.length - 1])}. Existing matching transactions will be skipped automatically.
+              </div>
+              <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid #e2e4e8", borderRadius: 8 }}>
+                {backfillModal.dates.map((d) => (
+                  <div key={d} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderBottom: "1px solid #f3f4f6", fontSize: 12 }}>
+                    <span>{fmtDate(d)}</span>
+                    <span style={{ fontWeight: 600, color: "#a31515" }}>{fmtCAD(backfillModal.loan.payment)}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Label>Pay From Account</Label>
+                <select
+                  value={backfillAccountId}
+                  onChange={(e) => setBackfillAccountId(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${backfillAccountId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}
+                >
+                  <option value="">— Select account —</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({fmtCAD(a.openingBalance)})</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Btn variant="secondary" onClick={() => setBackfillModal(null)}>Cancel</Btn>
+                <Btn onClick={() => {
+                  if (!backfillAccountId) { alert("Please select an account."); return; }
+                  const count = backfillLoanPayments(backfillModal.loan, backfillModal.dates, backfillAccountId);
+                  setBackfillDone(count);
+                }}>Log {backfillModal.dates.length} Payments</Btn>
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
+
+      <TransactionForm
+        open={txFormOpen}
+        onClose={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
+        initial={txFormInitial}
+        scheduledAmount={txScheduledAmount}
+        title="Log Mortgage Payment"
+        onSaved={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
+      />
     </div>
   );
 }

@@ -30,7 +30,9 @@ This avoids compound replay drift from previously computed balances.
 - `income`: source account increases, source card decreases
 - `transfer`: source decreases, destination increases
 - `transfer + cc_payment`: source account decreases, destination card decreases
+- `transfer + loc_draw`: source LOC decreases available credit / increases borrowed balance, destination cash account increases
 - `adjustment`: source increases, destination decreases
+- `loan_payment`: source cash decreases by the full payment amount
 
 ### Reconcile Metadata
 Accounts and cards now carry:
@@ -61,4 +63,6 @@ Any write path should follow:
 ### Unified Asset Workflow Notes
 - The new `Assets & Liabilities` page can now launch selected vehicle and property-tax actions directly into the canonical `TransactionForm`.
 - These actions still follow the same write pipeline as every other manual ledger entry.
-- House-loan direct logging remains deferred until the principal vs interest model is clearer.
+- Legacy `House Loans / Mortgages` now supports direct mortgage logging and backfill for missed historical scheduled payments.
+- The unified `Assets & Liabilities` page still routes mortgage actions back to the legacy loan page until the principal-vs-interest UX is cleaner.
+- Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning regardless of expense categorization.

@@ -38,6 +38,7 @@ interface Transaction {
 - `date` is the accounting date used for reports and replay.
 - `createdAt` is the system-assigned timestamp when the row was created.
 - `linkedVehicleId` and `linkedPropertyId` connect expenses to assets.
+- `interestAmount` and `principalAmount` are optional detail fields for debt payments; the total `amount` remains the cash amount that leaves the source account.
 
 ### Transaction Types
 Supported transaction types:
@@ -54,6 +55,7 @@ Supported transaction types:
 
 #### Transfer Sub-types
 - `cc_payment`
+- `loc_draw`
 - `bank_to_bank`
 - `e_transfer`
 - `tfsa_contribution`
@@ -171,6 +173,11 @@ interface HouseLoan {
   interestRate: number;
 }
 ```
+
+#### Regular vs Detailed Liability Inputs
+- Regular mode only needs enough data to plan cash: payment amount, schedule, pay-from account, and next payment date.
+- Detailed mode can add balance-sheet and financing fields like original principal, remaining balance, interest rate, term dates, and principal/interest split support.
+- Missing detailed fields must not block normal cash projection or upcoming-obligation views.
 
 ### PropertyTax
 ```typescript

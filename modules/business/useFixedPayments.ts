@@ -15,7 +15,8 @@ import {
 } from "@/repositories/fixedPaymentRepository";
 import {
     vehicleRepository,
-    houseLoanRepository
+    houseLoanRepository,
+    propertyTaxRepository
 } from "@/repositories/assetRepositories";
 import {
     transactionRepository
@@ -74,6 +75,41 @@ function getOccurrencesBetween(
     return results;
 }
 
+function normalizeText(value: string | undefined): string {
+    return (value ?? "").trim().toLowerCase();
+}
+
+function transactionMatchesPending(
+    txn: Transaction,
+    pending: Omit<PendingTransaction, "key" | "id" | "createdAt">
+): boolean {
+    if (txn.status === "pending" || txn.type === "adjustment") return false;
+
+    const txnDate = txn.date ?? txn.createdAt?.slice(0, 10) ?? "";
+    if (txnDate !== pending.dueDate) return false;
+    if (toFixed2(txn.amount) !== toFixed2(pending.amount)) return false;
+    if (pending.account && txn.sourceId !== pending.account) return false;
+
+    const txnDesc = normalizeText(txn.description);
+    const pendingName = normalizeText(pending.name);
+
+    switch (pending.sourceType) {
+        case "fixed":
+            if (pending.category && txn.categoryId && txn.categoryId !== pending.category) return false;
+            return txnDesc === pendingName || txnDesc.includes(pendingName);
+        case "vehicle":
+            return txn.linkedVehicleId === pending.linkedVehicleId || txnDesc === pendingName;
+        case "loan":
+        case "propertytax":
+        case "cra_payroll":
+        case "cra_corp":
+        case "cra_hst":
+            return txnDesc === pendingName;
+        default:
+            return false;
+    }
+}
+
 // ─── Backfill: calculate all past payment dates from startDate to today ───────
 
 export function calculateBackfillDates(
@@ -121,6 +157,7 @@ export function generatePendingTransactions(
     lastSaved: string | null,
     dismissedKeys: string[],
     existingPending: PendingTransaction[],
+    existingTransactions: Transaction[],
     extraSources ? : {
         vehicles ? : Array < {
             id: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string
@@ -154,6 +191,9 @@ export function generatePendingTransactions(
     const newPending = [...existingPending];
 
     function addIfNew(key: string, entry: Omit < PendingTransaction, "key" | "id" | "createdAt" > ) {
+        if (existingTransactions.some((txn) => transactionMatchesPending(txn, entry))) {
+            return;
+        }
         if (!existingKeys.has(key) && !blockedKeys.has(key)) {
             existingKeys.add(key);
             newPending.push({
@@ -357,11 +397,36 @@ export function useFixedPayments() {
         const fps = fixedPaymentRepository.getAll();
         const dismissed = fixedPaymentRepository.getDismissedKeys();
         const biz = businessRepository.get();
+        const existingTransactions = transactionRepository.getAll();
+        const vehicles = vehicleRepository.getAll();
+        const houseLoans = houseLoanRepository.getAll();
+        const propertyTaxes = propertyTaxRepository.getAll();
 
-        const generated = generatePendingTransactions(fps, null, dismissed, [], {
+        const generated = generatePendingTransactions(fps, null, dismissed, [], existingTransactions, {
+            vehicles: vehicles.map((v) => ({
+                id: v.id,
+                name: v.name,
+                payment: v.payment,
+                nextPaymentDate: v.nextPaymentDate,
+                schedule: v.schedule,
+                source: v.source,
+            })),
+            houseLoans: houseLoans.map((l) => ({
+                id: l.id,
+                name: l.name,
+                payment: l.payment,
+                nextPaymentDate: l.nextPaymentDate,
+                schedule: l.schedule,
+                source: l.source,
+            })),
             payrollRemittances: biz.payrollRemittances ?? [],
             corporateInstalments: biz.corporateInstalments ?? [],
             hstRemittances: biz.hstRemittances ?? [],
+            propertyTaxes: propertyTaxes.map((prop) => ({
+                id: prop.id,
+                name: prop.name,
+                payments: prop.payments ?? [],
+            })),
         });
 
         setFixedPayments(fps);

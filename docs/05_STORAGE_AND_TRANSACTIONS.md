@@ -24,12 +24,16 @@ The transaction ledger is the canonical source for all financial movement.
 - `income`, `refund`, `dividend`, and `loan_receipt` increase sources.
 - `transfer` moves value between source and destination.
 - `transfer + cc_payment` reduces bank source and reduces credit card debt without affecting spending or income reports.
+- `transfer + loc_draw` moves borrowed cash from a tracked line of credit into a receiving account without treating it as income.
+- `loan_payment` reduces the paying source by the full cash amount, even when only part of that amount is true expense.
 - `adjustment` can be used for reconcile audits and corrections.
 
 #### Reporting Inclusion Rules
 - Expense reportable types: `expense`, `refund`
 - Income reportable types: `income`, `dividend`
 - Tax-relevant types: `expense`, `income`, `dividend`, `tax_payment`, `loan_payment`, `withdrawal`
+- `loan_payment` is a cash outflow for planning, but should not be treated as a normal generic expense by default.
+- For mortgages and financed loans, only the interest portion is expense-like; principal is liability reduction.
 
 #### Reconciliation Audit Rows
 - Stored as `type: "adjustment"` with `subType: "reconciliation"`.
@@ -41,3 +45,4 @@ The transaction ledger is the canonical source for all financial movement.
 - `destinationId` required for `transfer` and `adjustment`
 - `subType` required for `transfer`, `tax_payment`, `loan_receipt`, and `loan_payment`
 - `categoryId` optional for non-expense/income types
+- Mortgage and other `loan_payment` rows should not require a destination account in the current model because the liability side is not yet represented as a first-class destination account.

@@ -154,6 +154,19 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<string[]>([]);
 
+  function canonicalizeInitial(initialValue?: TransactionFormInitial): TransactionFormInitial | undefined {
+    if (!initialValue) return initialValue;
+    if (initialValue.type === "loan_receipt" && initialValue.subType === "line_of_credit") {
+      return {
+        ...initialValue,
+        type: "transfer",
+        subType: "loc_draw",
+        mode: initialValue.mode ?? "Bank Transfer",
+      };
+    }
+    return initialValue;
+  }
+
   const autoDetectedCat = useMemo(() => {
     if (!form.description) return undefined;
     return detectCategory(form.description.toLowerCase().trim());
@@ -202,8 +215,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     useEffect(() => {
     if (!open) return;
 
-    if (initial) {
-      const raw = initial.date ?? initial.createdAt;
+    const normalizedInitial = canonicalizeInitial(initial);
+
+    if (normalizedInitial) {
+      const raw = normalizedInitial.date ?? normalizedInitial.createdAt;
       let dateVal = todayLocal;
 
       if (raw) {
@@ -218,23 +233,23 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
-        id:              initial.id,
-        type:            initial.type ?? "expense",
-        subType:         initial.subType ?? "",
-        amount:          initial.amount ?? "",
-        interestAmount:  initial.interestAmount ?? "",
-        principalAmount: initial.principalAmount ?? "",
+        id:              normalizedInitial.id,
+        type:            normalizedInitial.type ?? "expense",
+        subType:         normalizedInitial.subType ?? "",
+        amount:          normalizedInitial.amount ?? "",
+        interestAmount:  normalizedInitial.interestAmount ?? "",
+        principalAmount: normalizedInitial.principalAmount ?? "",
         date:            dateVal,
-        description:     initial.description ?? "",
-        notes:           initial.notes ?? "",
-        sourceId:        initial.sourceId ?? "",
-        destinationId:   initial.destinationId ?? "",
-        categoryId:      initial.categoryId ?? "",
-        tag:             initial.tag ?? "Personal",
-        mode:            initial.mode ?? "Debit",
-        linkedVehicleId: initial.linkedVehicleId ?? "",
-        linkedPropertyId: initial.linkedPropertyId ?? "",
-        odometer:        initial.odometer ?? "",
+        description:     normalizedInitial.description ?? "",
+        notes:           normalizedInitial.notes ?? "",
+        sourceId:        normalizedInitial.sourceId ?? "",
+        destinationId:   normalizedInitial.destinationId ?? "",
+        categoryId:      normalizedInitial.categoryId ?? "",
+        tag:             normalizedInitial.tag ?? "Personal",
+        mode:            normalizedInitial.mode ?? "Debit",
+        linkedVehicleId: normalizedInitial.linkedVehicleId ?? "",
+        linkedPropertyId: normalizedInitial.linkedPropertyId ?? "",
+        odometer:        normalizedInitial.odometer ?? "",
       });
     } else {
       setForm(emptyForm);
@@ -257,7 +272,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const isVehicleCat = selectedCat?.vehicleLinked;
   const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
-  const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt" || txType === "loan_payment";
+  const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt";
   const showLoanSplit = txType === "loan_payment";
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
   const isReconciliationAudit = !!initial?.id && initial.type === "adjustment" && initial.subType === "reconciliation";
