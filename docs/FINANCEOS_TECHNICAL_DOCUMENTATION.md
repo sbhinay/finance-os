@@ -1,6 +1,6 @@
 # FinanceOS — Technical Documentation
 **Version:** 3.0
-**Last Updated:** April 2026
+**Last Updated:** May 2026
 **Status:** Active Development
 
 ---
@@ -33,6 +33,14 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Reconciliation metadata on accounts and credit cards.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
 - Initial unified `Assets & Liabilities` page with upcoming-obligation actions.
+- Parent-owned recurring workflows for:
+  - bank-account fees
+  - credit-card annual fees
+  - vehicle insurance
+  - house-loan property tax
+- Dedicated recurring views for:
+  - `Subscriptions`
+  - `Planned Payments`
 
 ## 3. Current Implementation Notes
 - Internal money movement is standardized on `transfer`; credit card payoff is stored as `transfer` with `subType: "cc_payment"`.
@@ -43,9 +51,16 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Reconciliation adjustments are excluded from normal reporting.
 - The new `Assets & Liabilities` area is now in active transition, not just planned. It already surfaces upcoming obligations and launches selected actions through the canonical `TransactionForm`.
 - Legacy `House Loans / Mortgages` now supports direct mortgage logging and backfill for missed historical scheduled payments.
+- Recurring payments now use a shared engine underneath, but user-facing ownership is moving toward stronger parent records and focused recurring views instead of one generic catch-all list.
+- `Subscriptions` and `Planned Payments` are now first-class recurring views.
+- Planned payments are record-driven rather than hardcoded: each planned item declares whether it posts as an `expense` or a `transfer`.
+- Vehicle insurance is now owned by the vehicle parent record and auto-creates its recurring item behind the scenes.
+- Property tax can now also be owned by the house-loan/property parent and appears in both recurring views and `Assets & Liabilities`.
 - Import validation now checks stale references more strictly and falls back to `Other` for ambiguous category mappings instead of guessing.
 - Automatic Supabase write-back was rolled back; cloud behavior is currently safe manual save + safe manual restore preview.
 - Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning rather than relying only on generic expense rows.
+- Transaction descriptions are now system-first and notes are secondary/collapsed instead of equally prominent.
+- Transaction History is no longer category-only for findability; it now supports richer debt-oriented lookup and subtype-aware display.
 
 ## 4. Documentation Structure
 The docs are organized into the following cross-linked files:
@@ -69,3 +84,4 @@ The docs are organized into the following cross-linked files:
 - This set is a v3 refresh of the repo docs.
 - Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.
 - FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.
+- The current navigation still contains both legacy pages and newer destination pages; this is intentional during transition and is documented in deferred items rather than treated as final information architecture.

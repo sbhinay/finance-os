@@ -31,6 +31,17 @@
 - Annual advances by calendar year.
 - One-time payments do not auto-advance.
 - Overdue and due fixed payments surface in the Daily Log pending banner.
+- Recurring items may now carry a `kind` so one shared engine can power:
+  - general recurring items
+  - subscriptions
+  - utilities
+  - insurance
+  - property tax
+  - planned payments
+  - account fees
+  - card fees
+- Parent-owned recurring rows should be auto-created from their parent records when that parent owns the schedule data.
+- `Planned Payments` must behave by record-declared posting type rather than page-level hardcoded assumptions.
 
 ### Asset Payment Rules
 - Vehicle and house loan `nextPaymentDate` advance by schedule after confirmation.
@@ -39,6 +50,8 @@
 - New asset-originated actions should open the shared `TransactionForm` when they create real ledger rows.
 - Legacy mortgage editing must tolerate stale saved source IDs and allow users to re-select a current account.
 - Mortgage backfill should generate missing historical scheduled payments but skip dates that already have matching ledger rows.
+- Vehicle parent records may also own recurring insurance setup.
+- House-loan/property parent records may also own recurring property-tax setup during the transition away from a standalone property-tax-only model.
 
 ### Regular vs Detailed Rules
 - Regular mode must ask only for the minimum needed to answer cash-flow questions like what came in, what went out, what is due next, and whether the account will be ready.
@@ -65,3 +78,4 @@
 - `tax_payment`, `adjustment`, `loan_payment`, and `withdrawal` are also excluded from standard income/expense summaries unless explicitly included.
 - Regular projections must include full scheduled outflows for mortgages, vehicle payments, fixed payments, and CRA obligations even when those rows are not standard expense types.
 - Detailed financing reports may later use `principalAmount`, `interestAmount`, rate, amortization, and term data when available, but regular projections must not depend on them.
+- Subscription rows should default to `Subscriptions` category when that category exists in the dedicated subscription workflow.

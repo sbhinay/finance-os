@@ -66,3 +66,9 @@ Any write path should follow:
 - Legacy `House Loans / Mortgages` now supports direct mortgage logging and backfill for missed historical scheduled payments.
 - The unified `Assets & Liabilities` page still routes mortgage actions back to the legacy loan page until the principal-vs-interest UX is cleaner.
 - Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning regardless of expense categorization.
+- Parent-owned recurring setup now feeds this same pipeline without bypassing the ledger:
+  - account fees
+  - card annual fees
+  - vehicle insurance
+  - house-loan property tax
+- `Subscriptions` and `Planned Payments` are now dedicated recurring views, but they still create normal ledger transactions through the canonical form and shared write pattern.

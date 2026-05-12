@@ -2,10 +2,10 @@ import { accountRepository } from "@/repositories/accountRepository";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
-import { vehicleRepository } from "@/repositories/assetRepositories";
+import { houseLoanRepository, vehicleRepository } from "@/repositories/assetRepositories";
 import type { Account } from "@/types/account";
 import type { CreditCard } from "@/types/creditCard";
-import type { FixedPayment, Vehicle } from "@/types/domain";
+import type { FixedPayment, HouseLoan, Vehicle } from "@/types/domain";
 
 function getAccountFeesCategoryId() {
   return categoryRepository.getAll().find((c) => c.name.toLowerCase() === "account fees")?.id;
@@ -14,6 +14,10 @@ function getAccountFeesCategoryId() {
 function getCarInsuranceCategoryId() {
   return categoryRepository.getAll().find((c) => c.name.toLowerCase() === "car insurance")?.id
     ?? categoryRepository.getAll().find((c) => c.name.toLowerCase() === "insurance")?.id;
+}
+
+function getPropertyTaxCategoryId() {
+  return categoryRepository.getAll().find((c) => c.name.toLowerCase() === "property tax")?.id;
 }
 
 function upsertOwnedRecurringPayment(next: FixedPayment | null) {
@@ -33,7 +37,7 @@ function upsertOwnedRecurringPayment(next: FixedPayment | null) {
   fixedPaymentRepository.saveAll(all);
 }
 
-function removeOwnedRecurringPayment(ownerType: "account" | "card" | "vehicle", ownerId: string) {
+function removeOwnedRecurringPayment(ownerType: "account" | "card" | "vehicle" | "house_loan", ownerId: string) {
   const all = fixedPaymentRepository.getAll();
   fixedPaymentRepository.saveAll(
     all.filter((fp) => !(fp.ownerType === ownerType && fp.ownerId === ownerId))
@@ -106,6 +110,28 @@ export function syncVehicleInsuranceRecurring(vehicle: Vehicle) {
   });
 }
 
+export function syncHouseLoanPropertyTaxRecurring(loan: HouseLoan) {
+  if (!loan.propertyTaxAmount || loan.propertyTaxAmount <= 0 || !loan.propertyTaxDate) {
+    removeOwnedRecurringPayment("house_loan", loan.id);
+    return;
+  }
+
+  upsertOwnedRecurringPayment({
+    id: `recurring_house_loan_property_tax_${loan.id}`,
+    name: `Property Tax - ${loan.name}`,
+    kind: "property_tax",
+    ownerType: "house_loan",
+    ownerId: loan.id,
+    amount: loan.propertyTaxAmount,
+    schedule: loan.propertyTaxSchedule ?? "Monthly",
+    date: loan.propertyTaxDate,
+    source: loan.propertyTaxSource ?? loan.source,
+    categoryId: getPropertyTaxCategoryId(),
+    mode: "Bank Transfer",
+    tag: "Personal",
+  });
+}
+
 export function removeOwnedRecurringForAccount(accountId: string) {
   removeOwnedRecurringPayment("account", accountId);
 }
@@ -118,8 +144,13 @@ export function removeOwnedRecurringForVehicle(vehicleId: string) {
   removeOwnedRecurringPayment("vehicle", vehicleId);
 }
 
+export function removeOwnedRecurringForHouseLoan(houseLoanId: string) {
+  removeOwnedRecurringPayment("house_loan", houseLoanId);
+}
+
 export function syncAllOwnedRecurringPayments() {
   accountRepository.getAll().forEach(syncAccountFeeRecurring);
   creditCardRepository.getAll().forEach(syncCardFeeRecurring);
   vehicleRepository.getAll().forEach(syncVehicleInsuranceRecurring);
+  houseLoanRepository.getAll().forEach(syncHouseLoanPropertyTaxRecurring);
 }

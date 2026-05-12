@@ -79,6 +79,8 @@ interface Account {
   active: boolean;
   createdAt: string;
   primary?: boolean;
+  monthlyFeeAmount?: number;
+  monthlyFeeDate?: string;
 }
 ```
 
@@ -98,6 +100,8 @@ interface CreditCard {
   active: boolean;
   createdAt: string;
   primary?: boolean;
+  annualFeeAmount?: number;
+  annualFeeDate?: string;
 }
 ```
 
@@ -119,15 +123,37 @@ interface Category {
 interface FixedPayment {
   id: string;
   name: string;
+  kind?: RecurringKind;
+  ownerType?: "account" | "card" | "vehicle" | "house_loan";
+  ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;
   date: string;
   endDate?: string;
   source: string;
+  destinationId?: string;
+  transactionType?: "expense" | "transfer";
+  subType?: TransactionSubType;
   categoryId?: string;
   mode?: string;
   tag?: string;
 }
+
+type RecurringKind =
+  | "general"
+  | "subscription"
+  | "utility"
+  | "insurance"
+  | "property_tax"
+  | "planned_payment"
+  | "account_fee"
+  | "card_fee";
+
+#### Recurring Model Notes
+- `FixedPayment` is still the shared recurring engine record underneath the app.
+- Newer user-facing flows are moving recurring setup into stronger parent domains while still writing to this shared record shape.
+- `ownerType` and `ownerId` identify recurring rows that are owned by a parent record rather than manually defined as standalone entries.
+- `transactionType`, `subType`, and `destinationId` let recurring items declare how they should post without hardcoded page-specific assumptions.
 ```
 
 ### Vehicle
@@ -152,6 +178,10 @@ interface Vehicle {
   principal: number;
   remaining: number;
   interestRate: number;
+  insuranceAmount?: number;
+  insuranceSchedule?: PaymentSchedule;
+  insuranceDate?: string;
+  insuranceSource?: string;
   status: string;
 }
 ```
@@ -171,6 +201,11 @@ interface HouseLoan {
   endDate: string;
   nextPaymentDate: string;
   interestRate: number;
+  propertyTaxAmount?: number;
+  propertyTaxSchedule?: PaymentSchedule;
+  propertyTaxDate?: string;
+  propertyTaxSource?: string;
+  propertyTaxRollNumber?: string;
 }
 ```
 
@@ -178,6 +213,7 @@ interface HouseLoan {
 - Regular mode only needs enough data to plan cash: payment amount, schedule, pay-from account, and next payment date.
 - Detailed mode can add balance-sheet and financing fields like original principal, remaining balance, interest rate, term dates, and principal/interest split support.
 - Missing detailed fields must not block normal cash projection or upcoming-obligation views.
+- Property tax can now either remain in the legacy standalone `PropertyTax` domain or be owned directly by the house-loan/property parent during migration.
 
 ### PropertyTax
 ```typescript

@@ -11,25 +11,29 @@ The items below preserve earlier backlog items while regrouping them under the c
 ## 1. Recurring Architecture
 
 ### High priority
-- Redesign `Fixed Payments` into a shared recurring engine with clearer parent ownership.
+- Continue the redesign of `Fixed Payments` into a shared recurring engine with clearer parent ownership.
 - Keep one recurring engine underneath for schedules, next due, backfill, log payment, and dedup logic.
 - Reframe the user-facing page over time from a generic fixed-payments list into a clearer recurring dashboard.
-- Add asset-originated recurring payment workflows so parent records can launch recurring logic directly.
+- Continue extending asset-originated recurring payment workflows so parent records can launch recurring logic directly.
 - Auto-derive `nextPaymentDate` from schedule plus posted history wherever the rules are reliable enough.
 - Expand backfill and log-payment behavior consistently across recurring domains.
+- Add separate activation / start dates where historical backfill and lifetime cost should differ from the next due date:
+  - account fees
+  - card annual fees
+  - vehicle insurance
+  - property tax when needed
 
 ### Parent-owned recurring items to move out of generic fixed payments
-- Account fees should be owned by bank-account records.
-- Credit-card annual fees should be owned by credit-card records.
-- Subscriptions should become a first-class domain instead of living only as generic fixed payments.
-- Insurance should become a stronger recurring domain instead of being mixed into generic fixed payments.
-- Property tax should become a child workflow of a property record instead of a permanently separate top-level concept.
+- Vehicle insurance should continue moving from generic recurring setup toward richer vehicle-owned modeling.
+- Property tax should continue moving from standalone schedules toward property-owned modeling.
 
 ### First-class recurring domains to add
-- `Subscriptions`
+- Expand `Subscriptions`
   - examples: YouTube, Apple, ChatGPT, gym, memberships, recurring car wash plans
-- `Planned Payments`
+  - later: cancellation / renewal metadata, provider detail, and richer insights
+- Expand `Planned Payments`
   - examples: TFSA, RRSP, donations, monthly family support, one-off planned commitments, planned savings transfers
+  - later: stronger transfer-vs-expense defaults and richer parent metadata
 
 ## 2. Property And Liability Model
 
@@ -42,6 +46,7 @@ The items below preserve earlier backlog items while regrouping them under the c
   - mortgage / house loan
   - property tax
   - insurance
+- Let `Assets & Liabilities` show those property-owned costs more naturally over time instead of leaning on separate legacy tabs.
 - Move mortgage workflows from legacy into `Assets & Liabilities` only after the regular-vs-detailed UX is clear enough.
 - Continue deepening the new `Assets & Liabilities` page so legacy workflows can move there safely.
 
@@ -116,6 +121,10 @@ The items below preserve earlier backlog items while regrouping them under the c
 - Modernize the overall visual system after the structural model is more stable.
 - Improve typography, spacing, form density, card layout, and mobile responsiveness.
 - Reduce old admin-panel feel and make recurring / payment flows feel more guided and modern.
+- Simplify top-level navigation once the new parent-owned recurring structure is stable:
+  - fewer primary tabs
+  - more filtered subviews within strong destination pages
+  - clearer demotion of legacy pages
 
 ## Preserved Older Backlog Themes
 

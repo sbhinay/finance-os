@@ -6,7 +6,12 @@ import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { uid, toFixed2 } from "@/utils/finance";
 import { getVehicleReferenceReasons, getHouseLoanReferenceReasons, getPropertyTaxReferenceReasons } from "@/utils/referenceIntegrity";
-import { removeOwnedRecurringForVehicle, syncVehicleInsuranceRecurring } from "@/utils/recurringOwners";
+import {
+  removeOwnedRecurringForHouseLoan,
+  removeOwnedRecurringForVehicle,
+  syncHouseLoanPropertyTaxRecurring,
+  syncVehicleInsuranceRecurring,
+} from "@/utils/recurringOwners";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VEHICLES
@@ -89,8 +94,10 @@ export function useHouseLoans() {
       principal: toFixed2(fields.principal),
       remaining: toFixed2(fields.remaining),
       payment: toFixed2(fields.payment),
+      propertyTaxAmount: fields.propertyTaxAmount ? toFixed2(fields.propertyTaxAmount) : 0,
     };
     houseLoanRepository.saveAll([...houseLoanRepository.getAll(), l]);
+    syncHouseLoanPropertyTaxRecurring(l);
     load();
   }, [load]);
 
@@ -101,8 +108,13 @@ export function useHouseLoans() {
         principal: toFixed2(updated.principal),
         remaining: toFixed2(updated.remaining),
         payment: toFixed2(updated.payment),
+        propertyTaxAmount: updated.propertyTaxAmount ? toFixed2(updated.propertyTaxAmount) : 0,
       } : l)
     );
+    syncHouseLoanPropertyTaxRecurring({
+      ...updated,
+      propertyTaxAmount: updated.propertyTaxAmount ? toFixed2(updated.propertyTaxAmount) : 0,
+    });
     load();
   }, [load]);
 
@@ -112,6 +124,7 @@ export function useHouseLoans() {
       window.alert(`House loan cannot be deleted because it is referenced by existing transactions. ${reasons.join(", ")}.`);
       return;
     }
+    removeOwnedRecurringForHouseLoan(id);
     houseLoanRepository.saveAll(houseLoanRepository.getAll().filter((l) => l.id !== id));
     load();
   }, [load]);

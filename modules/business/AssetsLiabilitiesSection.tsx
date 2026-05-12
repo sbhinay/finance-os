@@ -14,6 +14,7 @@ type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
 type UpcomingItem =
   | { kind: "vehicle"; id: string; date: string; name: string; amount: number; note: string; vehicle: Vehicle }
   | { kind: "house"; id: string; date: string; name: string; amount: number; note: string; loan: HouseLoan }
+  | { kind: "housePropertyTax"; id: string; date: string; name: string; amount: number; note: string; loan: HouseLoan }
   | { kind: "propertyTax"; id: string; date: string; name: string; amount: number; note: string; property: PropertyTax; payment: PropertyTaxPayment };
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
@@ -125,8 +126,11 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   const netWorth = toFixed2(liquidAssets - totalLiabilities);
 
   const vehicleMonthly = toFixed2(vehicles.reduce((sum, v) => sum + amountBySchedule(v.payment, v.schedule), 0));
+  const ownedPropertyTaxUnpaid = toFixed2(
+    houseLoans.filter((loan) => loan.propertyTaxAmount && loan.propertyTaxAmount > 0).reduce((sum, loan) => sum + (loan.propertyTaxAmount ?? 0), 0)
+  );
   const unpaidPropertyTax = toFixed2(
-    propertyTaxes.flatMap((p) => p.payments ?? []).filter((p) => !p.paid).reduce((sum, p) => sum + p.amount, 0)
+    ownedPropertyTaxUnpaid + propertyTaxes.flatMap((p) => p.payments ?? []).filter((p) => !p.paid).reduce((sum, p) => sum + p.amount, 0)
   );
 
   const financialAssetCandidates = activeAccounts.filter((a) => {
@@ -180,7 +184,19 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         }))
     );
 
-    return sortByDate([...vehicleItems, ...houseItems, ...propertyItems]).slice(0, 8);
+    const ownedPropertyTaxItems: UpcomingItem[] = houseLoans
+      .filter((loan) => loan.propertyTaxDate && (loan.propertyTaxAmount ?? 0) > 0)
+      .map((loan) => ({
+        kind: "housePropertyTax" as const,
+        id: `house-tax-${loan.id}`,
+        date: getNextOccurrence(loan.propertyTaxDate!, loan.propertyTaxSchedule ?? "Monthly") ?? loan.propertyTaxDate!,
+        name: loan.name,
+        amount: loan.propertyTaxAmount ?? 0,
+        note: "Property tax",
+        loan,
+      }));
+
+    return sortByDate([...vehicleItems, ...houseItems, ...ownedPropertyTaxItems, ...propertyItems]).slice(0, 8);
   }, [vehicles, houseLoans, propertyTaxes]);
 
   const upcomingTotal30 = useMemo(() => {
@@ -291,7 +307,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                     <div style={{ fontWeight: 800, color: "#111827", minWidth: 88, textAlign: "right" }}>{fmtCAD(item.amount)}</div>
                     {item.kind === "vehicle" && <ActionBtn variant="green" onClick={() => openVehiclePayment(item.vehicle)}>Log Payment</ActionBtn>}
                     {item.kind === "propertyTax" && <ActionBtn variant="green" onClick={() => openPropertyTaxPayment(item.property, item.payment)}>Mark Paid</ActionBtn>}
-                    {item.kind === "house" && <ActionBtn onClick={() => onNavigate("houseloans")}>Open Legacy</ActionBtn>}
+                    {(item.kind === "house" || item.kind === "housePropertyTax") && <ActionBtn onClick={() => onNavigate("houseloans")}>Open Legacy</ActionBtn>}
                   </div>
                 </div>
               ))}
@@ -320,10 +336,16 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
                     Next due {fmtDate(getNextOccurrence(loan.nextPaymentDate, loan.schedule) ?? loan.nextPaymentDate)}
                   </div>
+                  {!!loan.propertyTaxAmount && (
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
+                      Property tax {fmtCAD(loan.propertyTaxAmount)}/{loan.propertyTaxSchedule ?? "Monthly"}
+                      {loan.propertyTaxDate ? ` | Next ${fmtDate(getNextOccurrence(loan.propertyTaxDate, loan.propertyTaxSchedule ?? "Monthly") ?? loan.propertyTaxDate)}` : ""}
+                    </div>
+                  )}
                 </div>
               ))}
               <div style={{ fontSize: 12, color: "#6b7280" }}>
-                {propertyTaxes.length} property tax schedule{propertyTaxes.length === 1 ? "" : "s"} | unpaid planned tax {fmtCAD(unpaidPropertyTax)}
+                {houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length} property tax schedule{houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length === 1 ? "" : "s"} | unpaid planned tax {fmtCAD(unpaidPropertyTax)}
               </div>
               <div style={{ fontSize: 12, color: "#9ca3af" }}>
                 Direct mortgage logging stays in the legacy view for now until principal vs interest handling is cleaner.

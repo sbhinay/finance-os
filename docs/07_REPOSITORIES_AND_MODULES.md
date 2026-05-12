@@ -36,8 +36,8 @@ export const [domain]Repository = {
 | `useCategories` | `modules/categories/useCategories.ts` | Category CRUD and defaults |
 | `useFixedPayments` | `modules/business/useFixedPayments.ts` | Fixed payment definition and pending generation |
 | `useBusiness` | `modules/business/useBusiness.ts` | Business domain normalization and CRA data |
-| `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD and history |
-| `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD |
+| `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD, history, and owned insurance recurring sync |
+| `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD and owned property-tax recurring sync |
 | `usePropertyTax` | `modules/business/useAssets.ts` | Property tax CRUD |
 
 ### UI Sections
@@ -47,9 +47,11 @@ export const [domain]Repository = {
 | Bank Accounts | `modules/business/CoreSections.tsx` | Includes account reconcile flow |
 | Credit Cards | `modules/business/CoreSections.tsx` | Includes card payment and reconcile flows |
 | Dashboard / Projection | `modules/business/DashboardProjectionSections.tsx` | Monthly actuals, projections, top categories |
-| Fixed Payments | `modules/business/FixedPaymentsSection.tsx` | Recurring payment definitions and pending alerts |
+| Recurring Payments | `modules/business/FixedPaymentsSection.tsx` | Shared recurring engine, filtered recurring views, pending alerts |
+| Subscriptions | `modules/business/FixedPaymentsSection.tsx` | Dedicated subscription view backed by the recurring engine |
+| Planned Payments | `modules/business/FixedPaymentsSection.tsx` | Planned recurring commitments with record-driven expense/transfer posting |
 | Vehicles | `modules/business/AssetsSections.tsx` | Vehicle assets and linked transaction history |
-| House Loans | `modules/business/AssetsSections.tsx` | Mortgage/loan assets and payment tracking |
+| House Loans | `modules/business/AssetsSections.tsx` | Mortgage/loan assets, payment tracking, and property-tax ownership |
 | Property Tax | `modules/business/AssetsSections.tsx` | Property tax schedules |
 | Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Unified transition page with upcoming obligations and selected direct actions |
 | Import / Export | `modules/business/ImportExportSection.tsx` | Current-app export plus legacy migration support |
@@ -58,3 +60,8 @@ export const [domain]Repository = {
 - `Assets & Liabilities` is now the new cross-domain shell for asset and debt workflows.
 - Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
 - New actions should prefer launching the canonical `TransactionForm` from the unified page rather than inventing separate transaction-entry behavior.
+- `FixedPaymentsSection.tsx` is now serving as the shared recurring engine and also exports focused recurring views rather than acting only as a generic fixed-payments page.
+- Parent records now own part of recurring setup directly:
+  - accounts and cards own fee records
+  - vehicles own insurance recurring items
+  - house loans can own property-tax recurring items

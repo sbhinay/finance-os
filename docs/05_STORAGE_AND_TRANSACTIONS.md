@@ -46,3 +46,15 @@ The transaction ledger is the canonical source for all financial movement.
 - `subType` required for `transfer`, `tax_payment`, `loan_receipt`, and `loan_payment`
 - `categoryId` optional for non-expense/income types
 - Mortgage and other `loan_payment` rows should not require a destination account in the current model because the liability side is not yet represented as a first-class destination account.
+
+#### Recurring Posting Rules
+- Recurring items are no longer assumed to be generic expenses.
+- Parent-owned or planned recurring rows may declare their posting behavior explicitly using:
+  - `transactionType`
+  - `subType`
+  - `destinationId`
+- `Subscriptions`, utilities, insurance, account fees, and card fees are usually expense-like.
+- `Planned Payments` can post either as:
+  - `expense` for items like donations or family support
+  - `transfer` for items like TFSA or RRSP contributions
+- This behavior is record-driven, not hardcoded by page name.

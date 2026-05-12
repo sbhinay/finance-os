@@ -43,6 +43,11 @@ export interface HouseLoan {
   endDate: string;
   nextPaymentDate: string;
   interestRate: number;
+  propertyTaxAmount?: number;
+  propertyTaxSchedule?: PaymentSchedule;
+  propertyTaxDate?: string;
+  propertyTaxSource?: string;
+  propertyTaxRollNumber?: string;
 }
 
 // ─── Property Tax ────────────────────────────────────────────────────────────
@@ -77,6 +82,7 @@ export type RecurringKind =
   | "subscription"
   | "utility"
   | "insurance"
+  | "property_tax"
   | "planned_payment"
   | "account_fee"
   | "card_fee";
@@ -87,7 +93,7 @@ export interface FixedPayment {
   id: string;
   name: string;
   kind?: RecurringKind;
-  ownerType?: "account" | "card" | "vehicle";
+  ownerType?: "account" | "card" | "vehicle" | "house_loan";
   ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;

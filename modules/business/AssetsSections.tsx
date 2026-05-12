@@ -344,6 +344,11 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
     payment: 0, schedule: "Bi-weekly" as PaymentSchedule,
     source: "", startDate: "", endDate: "",
     nextPaymentDate: "", interestRate: 0,
+    propertyTaxAmount: 0,
+    propertyTaxSchedule: "Monthly" as PaymentSchedule,
+    propertyTaxDate: "",
+    propertyTaxSource: "",
+    propertyTaxRollNumber: "",
   };
 
   const [showForm, setShowForm] = useState(false);
@@ -360,7 +365,13 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
 
   function save() {
     if (!form.name) return;
-    const l = { ...form, principal: toFixed2(Number(form.principal)), remaining: toFixed2(Number(form.remaining)), payment: toFixed2(Number(form.payment)) };
+    const l = {
+      ...form,
+      principal: toFixed2(Number(form.principal)),
+      remaining: toFixed2(Number(form.remaining)),
+      payment: toFixed2(Number(form.payment)),
+      propertyTaxAmount: toFixed2(Number(form.propertyTaxAmount || 0)),
+    };
     if (form.id) { updateHouseLoan(l as HouseLoan); }
     else { addHouseLoan(l as Omit<HouseLoan, "id">); }
     setShowForm(false); setForm(emptyForm);
@@ -511,6 +522,14 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
                     Account balance: {fmtCAD(acct.openingBalance)}
                   </div>
                 )}
+                {!!l.propertyTaxAmount && (
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                    Property tax: {fmtCAD(l.propertyTaxAmount)}/{l.propertyTaxSchedule ?? "Monthly"}
+                    {l.propertyTaxSource ? ` · From: ${getAccountName(l.propertyTaxSource)}` : ""}
+                    {l.propertyTaxDate ? ` · Next: ${fmtDate(l.propertyTaxDate)}` : ""}
+                    {l.propertyTaxRollNumber ? ` · Roll #: ${l.propertyTaxRollNumber}` : ""}
+                  </div>
+                )}
                 {l.principal > 0 && (
                   <div style={{ marginTop: 6 }}>
                     <div style={{ height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
@@ -555,10 +574,19 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
           </Grid3>
           <Sel label="Payment From (Account)" value={form.source} onChange={f("source")} options={formAcctOpts} />
           <Grid3>
+            <Inp label="Property Tax ($, optional)" type="number" value={form.propertyTaxAmount} onChange={f("propertyTaxAmount")} />
+            <Sel label="Property Tax Schedule" value={form.propertyTaxSchedule} onChange={f("propertyTaxSchedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
+            <Sel label="Property Tax From" value={form.propertyTaxSource || form.source} onChange={f("propertyTaxSource")} options={formAcctOpts} />
+          </Grid3>
+          <Grid3>
             <Inp label="Start Date" type="date" value={form.startDate} onChange={f("startDate")} />
             <Inp label="End Date / Maturity" type="date" value={form.endDate} onChange={f("endDate")} />
             <Inp label="Next Payment Date" type="date" value={form.nextPaymentDate ?? ""} onChange={f("nextPaymentDate")} />
           </Grid3>
+          <Grid2>
+            <Inp label="Property Tax Next Due (optional)" type="date" value={form.propertyTaxDate ?? ""} onChange={f("propertyTaxDate")} />
+            <Inp label="Property Tax Roll Number (optional)" value={form.propertyTaxRollNumber ?? ""} onChange={f("propertyTaxRollNumber")} placeholder="e.g. municipal roll number" />
+          </Grid2>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setShowForm(false)}>Cancel</Btn>
             <Btn onClick={save}>Save</Btn>

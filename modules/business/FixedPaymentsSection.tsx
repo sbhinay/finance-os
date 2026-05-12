@@ -92,6 +92,7 @@ const RECURRING_KINDS: Array<{ value: RecurringKind; label: string }> = [
   { value: "subscription", label: "Subscription" },
   { value: "utility", label: "Utility" },
   { value: "insurance", label: "Insurance" },
+  { value: "property_tax", label: "Property Tax" },
   { value: "planned_payment", label: "Planned Payment" },
   { value: "account_fee", label: "Account Fee" },
   { value: "card_fee", label: "Card Fee" },
@@ -102,6 +103,7 @@ const KIND_LABELS: Record<RecurringKind, string> = {
   subscription: "Subscription",
   utility: "Utility",
   insurance: "Insurance",
+  property_tax: "Property Tax",
   planned_payment: "Planned Payment",
   account_fee: "Account Fee",
   card_fee: "Card Fee",
@@ -112,6 +114,7 @@ const KIND_PLACEHOLDERS: Record<RecurringKind, string> = {
   subscription: "e.g. YouTube Premium",
   utility: "e.g. Hydro",
   insurance: "e.g. Life Insurance",
+  property_tax: "e.g. Primary Property Tax",
   planned_payment: "e.g. Monthly Family Support",
   account_fee: "e.g. Account Fees - Scotia Personal",
   card_fee: "e.g. Annual Fee - Avion",
@@ -347,7 +350,23 @@ export function FixedPaymentsSection({
     if (form.id) {
       hooks.updateFixedPayment(fp);
     } else {
-      hooks.addFixedPayment({ name: fp.name, kind: fp.kind, ownerType: fp.ownerType, ownerId: fp.ownerId, amount: fp.amount, schedule: fp.schedule, date: fp.date, endDate: fp.endDate, source: fp.source, categoryId: fp.categoryId, mode: fp.mode, tag: fp.tag });
+      hooks.addFixedPayment({
+        name: fp.name,
+        kind: fp.kind,
+        ownerType: fp.ownerType,
+        ownerId: fp.ownerId,
+        amount: fp.amount,
+        schedule: fp.schedule,
+        date: fp.date,
+        endDate: fp.endDate,
+        source: fp.source,
+        destinationId: fp.destinationId,
+        transactionType: fp.transactionType,
+        subType: fp.subType,
+        categoryId: fp.categoryId,
+        mode: fp.mode,
+        tag: fp.tag,
+      });
     }
     setShowForm(false);
     setForm(emptyForm);
