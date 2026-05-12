@@ -1,11 +1,12 @@
 "use client";
 
 import { TransactionForm } from "./TransactionForm";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Vehicle, HouseLoan, PaymentSchedule } from "@/types/domain";
 import { Account } from "@/types/account";
+import { useCategories } from "@/modules/categories/useCategories";
 import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
-import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly, uid } from "@/utils/finance";
+import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly, uid } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { notifyDataChanged } from "@/utils/events";
@@ -121,14 +122,34 @@ function getVehicleStatus(v: Vehicle): string {
   return "Active";
 }
 
+function pickLeaseVehicleCategoryId(categories: Array<{ id: string; name: string }>): string | undefined {
+  const preferredNames = ["Vehicle Lease", "Transportation", "Car Maintenance"];
+  for (const name of preferredNames) {
+    const match = categories.find((category) => category.name === name);
+    if (match) return match.id;
+  }
+  return undefined;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // VEHICLES SECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function VehiclesSection({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
+export function VehiclesSection({
+  accounts,
+  transactions,
+  editVehicleId,
+  onEditHandled,
+}: {
+  accounts: Account[];
+  transactions: Transaction[];
+  editVehicleId?: string | null;
+  onEditHandled?: () => void;
+}) {
   const { vehicles, addVehicle, updateVehicle, deleteVehicle } = useVehicles();
+  const { categories } = useCategories();
 
-  const emptyForm = {
+  const emptyForm = useMemo(() => ({
     id: "" as string | undefined,
     name: "", year: "", make: "", model: "",
     vtype: "Lease" as Vehicle["vtype"],
@@ -140,15 +161,129 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
     principal: 0, remaining: 0, interestRate: 0,
     insuranceAmount: 0, insuranceSchedule: "Monthly" as PaymentSchedule, insuranceDate: "", insuranceSource: "",
     status: "Active",
-  };
+  }), []);
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [detail, setDetail] = useState<Vehicle | null>(null);
+  const [txFormOpen, setTxFormOpen] = useState(false);
+  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
+  const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
+  const [backfillModal, setBackfillModal] = useState<{ vehicle: Vehicle; dates: string[] } | null>(null);
+  const [backfillAccountId, setBackfillAccountId] = useState("");
+  const [backfillDone, setBackfillDone] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!editVehicleId) return;
+    const vehicle = vehicles.find((v) => v.id === editVehicleId);
+    if (!vehicle) return;
+    const frame = window.requestAnimationFrame(() => {
+      setForm({ ...emptyForm, ...vehicle });
+      setShowForm(true);
+      onEditHandled?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editVehicleId, vehicles, onEditHandled, emptyForm]);
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  function openLog(vehicle: Vehicle) {
+    const nextDate = vehicle.nextPaymentDate
+      ? (getNextOccurrence(vehicle.nextPaymentDate, vehicle.schedule) ?? vehicle.nextPaymentDate)
+      : new Date().toISOString().split("T")[0];
+    const isFinanced = vehicle.vtype === "Finance";
+    const leaseCategoryId = !isFinanced ? pickLeaseVehicleCategoryId(categories) : undefined;
+    setTxFormInitial({
+      type: isFinanced ? "loan_payment" : "expense",
+      subType: isFinanced ? "bank_loan" : undefined,
+      amount: vehicle.payment,
+      date: nextDate,
+      sourceId: vehicle.source ?? "",
+      description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Lease Payment - ${vehicle.name}`,
+      linkedVehicleId: vehicle.id,
+      categoryId: leaseCategoryId,
+      mode: "Debit",
+      tag: "Personal",
+    });
+    setTxScheduledAmount(vehicle.payment);
+    setTxFormOpen(true);
+  }
+
+  function openBackfill(vehicle: Vehicle) {
+    const anchorDate = vehicle.leaseStart || vehicle.nextPaymentDate;
+    if (!anchorDate) {
+      alert("Please set a vehicle start date or next payment date first.");
+      return;
+    }
+
+    const dates = calculateBackfillDates(anchorDate, vehicle.schedule, vehicle.leaseEnd);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const cutoff = yesterday.toISOString().split("T")[0];
+    const pastDates = dates.filter((d) => d <= cutoff);
+
+    if (pastDates.length === 0) {
+      alert("No historical vehicle payments to backfill — all scheduled dates are in the future.");
+      return;
+    }
+
+    setBackfillAccountId(vehicle.source ?? "");
+    setBackfillModal({ vehicle, dates: pastDates });
+    setBackfillDone(null);
+  }
+
+  function backfillVehiclePayments(vehicle: Vehicle, dates: string[], accountId: string): number {
+    if (!dates.length || !accountId) return 0;
+
+    const existing = transactionRepository.getAll();
+    const existingDates = new Set(
+      existing
+        .filter((tx) => tx.linkedVehicleId === vehicle.id)
+        .map((tx) => tx.date)
+    );
+
+    let inserted = 0;
+    dates.forEach((date) => {
+      if (existingDates.has(date)) return;
+      const isFinanced = vehicle.vtype === "Finance";
+      const leaseCategoryId = !isFinanced ? pickLeaseVehicleCategoryId(categories) : undefined;
+      const tx: Transaction = {
+        id: uid(),
+        type: isFinanced ? "loan_payment" : "expense",
+        subType: isFinanced ? "bank_loan" : undefined,
+        amount: toFixed2(vehicle.payment),
+        date,
+        createdAt: new Date(`${date}T12:00:00`).toISOString(),
+        description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Lease Payment - ${vehicle.name}`,
+        sourceId: accountId,
+        categoryId: leaseCategoryId,
+        tag: "Personal",
+        mode: "Debit",
+        currency: "CAD",
+        status: "cleared",
+        linkedVehicleId: vehicle.id,
+      };
+      existing.push(tx);
+      inserted += 1;
+    });
+
+    if (inserted > 0) {
+      transactionRepository.saveAll(existing);
+      const advancedDate = getNextOccurrence(vehicle.nextPaymentDate || vehicle.leaseStart, vehicle.schedule)
+        ?? advanceOneInterval(dates[dates.length - 1], vehicle.schedule);
+      updateVehicle({
+        ...vehicle,
+        source: accountId,
+        nextPaymentDate: advancedDate,
+      });
+      syncBalances();
+      notifyDataChanged("transactions");
+    }
+
+    return inserted;
+  }
 
   function save() {
     if (!form.name) return;
@@ -231,6 +366,8 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", marginLeft: 12 }}>
+                <Btn variant="green" small onClick={() => openLog(v)}>Log Payment</Btn>
+                <Btn variant="secondary" small onClick={() => openBackfill(v)}>Backfill</Btn>
                 <Btn variant="secondary" small onClick={() => setDetail(v)}>View History</Btn>
                 <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...v }); setShowForm(true); }}>Edit</Btn>
                 <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${v.name}?`)) deleteVehicle(v.id); }}>✕</Btn>
@@ -293,6 +430,54 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
         </Modal>
       )}
 
+      {backfillModal && (
+        <Modal title={`Backfill — ${backfillModal.vehicle.name}`} onClose={() => setBackfillModal(null)}>
+          {backfillDone !== null ? (
+            <div style={{ textAlign: "center", padding: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
+              <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical vehicle payments have been added to your transaction log.</div>
+              <div style={{ marginTop: 16 }}>
+                <Btn onClick={() => setBackfillModal(null)}>Done</Btn>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#1a5fa8" }}>
+                Found <strong>{backfillModal.dates.length} scheduled vehicle payments</strong> from {fmtDate(backfillModal.dates[0])} to {fmtDate(backfillModal.dates[backfillModal.dates.length - 1])}. Existing matching transactions will be skipped automatically.
+              </div>
+              <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid #e2e4e8", borderRadius: 8 }}>
+                {backfillModal.dates.map((d) => (
+                  <div key={d} style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderBottom: "1px solid #f3f4f6", fontSize: 12 }}>
+                    <span>{fmtDate(d)}</span>
+                    <span style={{ fontWeight: 600, color: "#a31515" }}>{fmtCAD(backfillModal.vehicle.payment)}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Label>Pay From Account</Label>
+                <select
+                  value={backfillAccountId}
+                  onChange={(e) => setBackfillAccountId(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${backfillAccountId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}
+                >
+                  <option value="">— Select account —</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({fmtCAD(a.openingBalance)})</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Btn variant="secondary" onClick={() => setBackfillModal(null)}>Cancel</Btn>
+                <Btn onClick={() => {
+                  if (!backfillAccountId) { alert("Please select an account."); return; }
+                  const count = backfillVehiclePayments(backfillModal.vehicle, backfillModal.dates, backfillAccountId);
+                  setBackfillDone(count);
+                }}>Log {backfillModal.dates.length} Payments</Btn>
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
+
       {detail && (
         <Modal title={`${detail.name} — Expense History`} onClose={() => setDetail(null)} wide>
           {(() => {
@@ -327,6 +512,14 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
           })()}
         </Modal>
       )}
+
+      <TransactionForm
+        open={txFormOpen}
+        onClose={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
+        initial={txFormInitial}
+        scheduledAmount={txScheduledAmount}
+        title={txFormInitial?.subType === "bank_loan" ? "Log Vehicle Finance Payment" : "Log Vehicle Payment"}
+      />
     </div>
   );
 }
@@ -335,10 +528,18 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
 // HOUSE LOANS SECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
+export function HouseLoansSection({
+  accounts,
+  editHouseLoanId,
+  onEditHandled,
+}: {
+  accounts: Account[];
+  editHouseLoanId?: string | null;
+  onEditHandled?: () => void;
+}) {
   const { houseLoans, addHouseLoan, updateHouseLoan, deleteHouseLoan } = useHouseLoans();
 
-  const emptyForm = {
+  const emptyForm = useMemo(() => ({
     id: "" as string | undefined,
     name: "", address: "", principal: 0, remaining: 0,
     payment: 0, schedule: "Bi-weekly" as PaymentSchedule,
@@ -349,7 +550,7 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
     propertyTaxDate: "",
     propertyTaxSource: "",
     propertyTaxRollNumber: "",
-  };
+  }), []);
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -359,6 +560,18 @@ export function HouseLoansSection({ accounts }: { accounts: Account[] }) {
   const [backfillModal, setBackfillModal] = useState<{ loan: HouseLoan; dates: string[] } | null>(null);
   const [backfillAccountId, setBackfillAccountId] = useState("");
   const [backfillDone, setBackfillDone] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!editHouseLoanId) return;
+    const loan = houseLoans.find((h) => h.id === editHouseLoanId);
+    if (!loan) return;
+    const frame = window.requestAnimationFrame(() => {
+      setForm({ ...emptyForm, ...loan, id: loan.id });
+      setShowForm(true);
+      onEditHandled?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editHouseLoanId, houseLoans, onEditHandled, emptyForm]);
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));

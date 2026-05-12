@@ -27,6 +27,7 @@ import { DashboardSection, ProjectionSection } from "@/modules/business/Dashboar
 import { ImportExportSection } from "@/modules/business/ImportExportSection";
 import { CategoriesSection } from "@/modules/business/CategoriesSection";
 import { AssetsLiabilitiesSection } from "@/modules/business/AssetsLiabilitiesSection";
+import { HealthReportSection } from "@/modules/business/HealthReportSection";
 import { syncBalances } from "@/utils/syncBalances";
 import { notifyDataChanged } from "@/utils/events";
 import { fmtCAD } from "@/utils/finance";
@@ -39,6 +40,7 @@ type SectionId =
   | "accountscards"
   | "categories"
   | "dailylog"
+  | "healthreport"
   | "transactions"
   | "fixedpayments"
   | "subscriptions"
@@ -57,6 +59,7 @@ type SectionId =
 
 const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> = [
   { id: "dailylog",       label: "Daily Log",           group: "Daily Activity",  icon: "📓" },
+  { id: "healthreport",   label: "Health Report",       group: "Daily Activity",  icon: "🩺" },
   { id: "transactions",   label: "Transaction History", group: "Daily Activity",  icon: "📋" },
   { id: "dashboard",      label: "Dashboard",           group: "Daily Activity",  icon: "🏠" },
   { id: "projection",     label: "Projection",          group: "Daily Activity",  icon: "📈" },
@@ -180,6 +183,8 @@ function AccountsCardsSection() {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function Home() {
   const [section, setSection] = useState<SectionId>("dailylog");
+  const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
+  const [editHouseLoanId, setEditHouseLoanId] = useState<string | null>(null);
 
   const { accounts } = useAccounts();
   const { transactions } = useTransactions();
@@ -247,6 +252,18 @@ export default function Home() {
       <main style={{ flex: 1, minWidth: 0, padding: 24 }}>
         {section === "overview"       && wrap(<OverviewSection />)}
         {section === "dailylog"       && wrap(<DailyLogSection />)}
+        {section === "healthreport"   && wrap(
+          <HealthReportSection
+            onOpenVehicle={(id) => {
+              setEditVehicleId(id);
+              setSection("vehicles");
+            }}
+            onOpenHouseLoan={(id) => {
+              setEditHouseLoanId(id);
+              setSection("houseloans");
+            }}
+          />
+        )}
         {section === "accounts"       && wrap(<BankAccountsSection />)}
         {section === "cards"          && wrap(<CreditCardsSection />)}
         {section === "accountscards"  && wrap(<AccountsCardsSection />)}
@@ -255,8 +272,21 @@ export default function Home() {
         {section === "fixedpayments"  && wrap(<FixedPaymentsSection />)}
         {section === "subscriptions"  && wrap(<SubscriptionsSection />)}
         {section === "plannedpayments" && wrap(<PlannedPaymentsSection />)}
-        {section === "vehicles"       && wrap(<VehiclesSection accounts={accounts} transactions={transactions} />)}
-        {section === "houseloans"     && wrap(<HouseLoansSection accounts={accounts} />)}
+        {section === "vehicles"       && wrap(
+          <VehiclesSection
+            accounts={accounts}
+            transactions={transactions}
+            editVehicleId={editVehicleId}
+            onEditHandled={() => setEditVehicleId(null)}
+          />
+        )}
+        {section === "houseloans"     && wrap(
+          <HouseLoansSection
+            accounts={accounts}
+            editHouseLoanId={editHouseLoanId}
+            onEditHandled={() => setEditHouseLoanId(null)}
+          />
+        )}
         {section === "propertytax"    && wrap(<PropertyTaxSection />)}
         {section === "hourscontracts" && wrap(<HoursContractsSection accounts={accounts} />)}
         {section === "corpincome"     && wrap(<CorporationIncomeSection transactions={transactions} />)}
