@@ -2,12 +2,18 @@ import { accountRepository } from "@/repositories/accountRepository";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
+import { vehicleRepository } from "@/repositories/assetRepositories";
 import type { Account } from "@/types/account";
 import type { CreditCard } from "@/types/creditCard";
-import type { FixedPayment } from "@/types/domain";
+import type { FixedPayment, Vehicle } from "@/types/domain";
 
 function getAccountFeesCategoryId() {
   return categoryRepository.getAll().find((c) => c.name.toLowerCase() === "account fees")?.id;
+}
+
+function getCarInsuranceCategoryId() {
+  return categoryRepository.getAll().find((c) => c.name.toLowerCase() === "car insurance")?.id
+    ?? categoryRepository.getAll().find((c) => c.name.toLowerCase() === "insurance")?.id;
 }
 
 function upsertOwnedRecurringPayment(next: FixedPayment | null) {
@@ -27,7 +33,7 @@ function upsertOwnedRecurringPayment(next: FixedPayment | null) {
   fixedPaymentRepository.saveAll(all);
 }
 
-function removeOwnedRecurringPayment(ownerType: "account" | "card", ownerId: string) {
+function removeOwnedRecurringPayment(ownerType: "account" | "card" | "vehicle", ownerId: string) {
   const all = fixedPaymentRepository.getAll();
   fixedPaymentRepository.saveAll(
     all.filter((fp) => !(fp.ownerType === ownerType && fp.ownerId === ownerId))
@@ -78,6 +84,28 @@ export function syncCardFeeRecurring(card: CreditCard) {
   });
 }
 
+export function syncVehicleInsuranceRecurring(vehicle: Vehicle) {
+  if (!vehicle.insuranceAmount || vehicle.insuranceAmount <= 0 || !vehicle.insuranceDate) {
+    removeOwnedRecurringPayment("vehicle", vehicle.id);
+    return;
+  }
+
+  upsertOwnedRecurringPayment({
+    id: `recurring_vehicle_insurance_${vehicle.id}`,
+    name: `Insurance - ${vehicle.name}`,
+    kind: "insurance",
+    ownerType: "vehicle",
+    ownerId: vehicle.id,
+    amount: vehicle.insuranceAmount,
+    schedule: vehicle.insuranceSchedule ?? "Monthly",
+    date: vehicle.insuranceDate,
+    source: vehicle.insuranceSource ?? vehicle.source,
+    categoryId: getCarInsuranceCategoryId(),
+    mode: "Debit",
+    tag: "Personal",
+  });
+}
+
 export function removeOwnedRecurringForAccount(accountId: string) {
   removeOwnedRecurringPayment("account", accountId);
 }
@@ -86,7 +114,12 @@ export function removeOwnedRecurringForCard(cardId: string) {
   removeOwnedRecurringPayment("card", cardId);
 }
 
+export function removeOwnedRecurringForVehicle(vehicleId: string) {
+  removeOwnedRecurringPayment("vehicle", vehicleId);
+}
+
 export function syncAllOwnedRecurringPayments() {
   accountRepository.getAll().forEach(syncAccountFeeRecurring);
   creditCardRepository.getAll().forEach(syncCardFeeRecurring);
+  vehicleRepository.getAll().forEach(syncVehicleInsuranceRecurring);
 }

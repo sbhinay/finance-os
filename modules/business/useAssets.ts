@@ -6,6 +6,7 @@ import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { uid, toFixed2 } from "@/utils/finance";
 import { getVehicleReferenceReasons, getHouseLoanReferenceReasons, getPropertyTaxReferenceReasons } from "@/utils/referenceIntegrity";
+import { removeOwnedRecurringForVehicle, syncVehicleInsuranceRecurring } from "@/utils/recurringOwners";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VEHICLES
@@ -29,8 +30,10 @@ export function useVehicles() {
       payment: toFixed2(fields.payment),
       principal: toFixed2(fields.principal),
       remaining: toFixed2(fields.remaining),
+      insuranceAmount: fields.insuranceAmount ? toFixed2(fields.insuranceAmount) : 0,
     };
     vehicleRepository.saveAll([...all, v]);
+    syncVehicleInsuranceRecurring(v);
     load();
   }, [load]);
 
@@ -41,8 +44,13 @@ export function useVehicles() {
         payment: toFixed2(updated.payment),
         principal: toFixed2(updated.principal),
         remaining: toFixed2(updated.remaining),
+        insuranceAmount: updated.insuranceAmount ? toFixed2(updated.insuranceAmount) : 0,
       } : v)
     );
+    syncVehicleInsuranceRecurring({
+      ...updated,
+      insuranceAmount: updated.insuranceAmount ? toFixed2(updated.insuranceAmount) : 0,
+    });
     load();
   }, [load]);
 
@@ -52,6 +60,7 @@ export function useVehicles() {
       window.alert(`Vehicle cannot be deleted because it is referenced by existing transactions. ${reasons.join(", ")}.`);
       return;
     }
+    removeOwnedRecurringForVehicle(id);
     vehicleRepository.saveAll(vehicleRepository.getAll().filter((v) => v.id !== id));
     load();
   }, [load]);

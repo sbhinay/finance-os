@@ -10,6 +10,7 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2 } from "@/utils/finance";
+import { SUB_TYPE_OPTIONS, type TransactionSubType, type TransactionType } from "@/types/transaction";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,15 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function Grid2({ children }: { children: React.ReactNode }) {
   return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>;
 }
+
+type FixedPaymentsSectionProps = {
+  title?: string;
+  introText?: string;
+  forcedKind?: RecurringKind;
+  addLabel?: string;
+  emptyLabel?: string;
+  hideKindFilters?: boolean;
+};
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual", "One-time"];
 const RECURRING_KINDS: Array<{ value: RecurringKind; label: string }> = [
@@ -237,13 +247,32 @@ export function PendingBanner({
 // FIXED PAYMENTS SECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function FixedPaymentsSection() {
+export function FixedPaymentsSection({
+  title = "Recurring Payments",
+  introText = "Shared recurring engine for subscriptions, utilities, insurance, planned payments, and legacy recurring items that do not yet live under a stronger parent record.",
+  forcedKind,
+  addLabel = "+ Add Recurring Item",
+  emptyLabel,
+  hideKindFilters = false,
+}: FixedPaymentsSectionProps = {}) {
   // Internal hooks — no props needed
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
   const { categories } = useCategories();
   const hooks = useFixedPayments();
   const { fixedPayments, pending } = hooks;
+  const subscriptionCategoryId = categories.find((c) => c.name.toLowerCase() === "subscriptions")?.id ?? "";
+  const accountFeesCategoryId = categories.find((c) => c.name.toLowerCase() === "account fees")?.id ?? "";
+  const plannedTransferSubTypes = (SUB_TYPE_OPTIONS.transfer ?? []).filter((option) =>
+    ["tfsa_contribution", "rrsp_contribution", "bank_to_bank", "e_transfer"].includes(option.value)
+  );
+  const lockedCategoryId =
+    forcedKind === "subscription"
+      ? subscriptionCategoryId
+      : (forcedKind === "account_fee" || forcedKind === "card_fee")
+        ? accountFeesCategoryId
+        : "";
+  const isCategoryLocked = !!lockedCategoryId;
 
   const emptyForm = {
     id: "" as string | undefined,
@@ -255,6 +284,9 @@ export function FixedPaymentsSection() {
     date: new Date().toISOString().split("T")[0],
     startDate: new Date().toISOString().split("T")[0], // for backfill
     endDate: "", source: "",
+    destinationId: "",
+    transactionType: "expense" as "expense" | "transfer",
+    subType: "" as TransactionSubType | "",
     categoryId: "", mode: "Debit" as string,
     tag: "Personal" as "Personal" | "Business",
   };
@@ -264,12 +296,14 @@ export function FixedPaymentsSection() {
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
-  const [kindFilter, setKindFilter] = useState<RecurringKind | "all">("all");
+  const [kindFilter, setKindFilter] = useState<RecurringKind | "all">(forcedKind ?? "all");
 
   // Backfill state
   const [backfillModal, setBackfillModal] = useState<{ fp: FixedPayment; dates: string[] } | null>(null);
   const [backfillAccountId, setBackfillAccountId] = useState("");
   const [backfillDone, setBackfillDone] = useState<number | null>(null);
+  const isPlannedPaymentsPage = forcedKind === "planned_payment";
+  const isTransferPlannedPayment = isPlannedPaymentsPage && form.transactionType === "transfer";
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -283,10 +317,13 @@ export function FixedPaymentsSection() {
 
   function save() {
     if (!form.name) return;
+    if (form.transactionType === "transfer" && !form.destinationId) return;
+    if (form.transactionType === "transfer" && !form.subType) return;
     const inferredCategoryId =
-      form.categoryId ||
+      lockedCategoryId ||
+      (form.transactionType === "expense" ? form.categoryId : "") ||
       ((form.kind === "account_fee" || form.kind === "card_fee")
-        ? categories.find((c) => c.name.toLowerCase() === "account fees")?.id ?? ""
+        ? accountFeesCategoryId
         : "");
 
     const fp: FixedPayment = {
@@ -300,7 +337,10 @@ export function FixedPaymentsSection() {
       date: form.date,
       endDate: form.endDate || undefined,
       source: form.source,
-      categoryId: inferredCategoryId || undefined,
+      destinationId: form.transactionType === "transfer" ? form.destinationId || undefined : undefined,
+      transactionType: form.kind === "planned_payment" ? form.transactionType : undefined,
+      subType: form.transactionType === "transfer" ? (form.subType || undefined) : undefined,
+      categoryId: form.transactionType === "expense" ? (inferredCategoryId || undefined) : undefined,
       mode: form.mode || "Debit",
       tag: form.tag || "Personal",
     };
@@ -315,12 +355,15 @@ export function FixedPaymentsSection() {
 
   function openLog(fp: FixedPayment) {
     const next = getNextOccurrence(fp.date, fp.schedule);
+    const postingType: TransactionType = fp.transactionType ?? "expense";
     setTxFormInitial({
-      type: "expense",
+      type: postingType,
+      subType: postingType === "transfer" ? fp.subType : undefined,
       amount: fp.amount,
       date: next ?? new Date().toISOString().split("T")[0],
       sourceId: fp.source ?? "",
-      categoryId: fp.categoryId ?? "",
+      destinationId: postingType === "transfer" ? (fp.destinationId ?? "") : "",
+      categoryId: postingType === "expense" ? (fp.categoryId ?? "") : "",
       mode: fp.mode ?? "Debit",
       tag: (form.tag as "Personal" | "Business") ?? "Personal",
       description: fp.name,
@@ -353,11 +396,12 @@ export function FixedPaymentsSection() {
       return s + p.amount * (m[p.schedule] ?? 1);
     }, 0);
 
-  const visiblePayments = fixedPayments.filter((p) => kindFilter === "all" ? true : getFixedPaymentKind(p) === kindFilter);
+  const activeKindFilter = forcedKind ?? kindFilter;
+  const visiblePayments = fixedPayments.filter((p) => activeKindFilter === "all" ? true : getFixedPaymentKind(p) === activeKindFilter);
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Recurring Payments</div>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{title}</div>
 
       {pending.length > 0 && (
         <PendingBanner pending={pending} accounts={accounts} cards={cards} hooks={hooks} />
@@ -377,24 +421,26 @@ export function FixedPaymentsSection() {
       </div>
 
       <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        💡 For bills without their own section — insurance, phone, subscriptions. Mortgage and vehicle payments are tracked in their own sections.
+        💡 {introText}
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Btn small variant={kindFilter === "all" ? "primary" : "secondary"} onClick={() => setKindFilter("all")}>All</Btn>
-          {RECURRING_KINDS.map((kind) => (
-            <Btn
-              key={kind.value}
-              small
-              variant={kindFilter === kind.value ? "primary" : "secondary"}
-              onClick={() => setKindFilter(kind.value)}
-            >
-              {kind.label}
-            </Btn>
-          ))}
-        </div>
-        <Btn small onClick={() => { setForm(emptyForm); setShowForm(true); }}>+ Add Recurring Item</Btn>
+        {!hideKindFilters ? (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Btn small variant={kindFilter === "all" ? "primary" : "secondary"} onClick={() => setKindFilter("all")}>All</Btn>
+            {RECURRING_KINDS.map((kind) => (
+              <Btn
+                key={kind.value}
+                small
+                variant={kindFilter === kind.value ? "primary" : "secondary"}
+                onClick={() => setKindFilter(kind.value)}
+              >
+                {kind.label}
+              </Btn>
+            ))}
+          </div>
+        ) : <div />}
+        <Btn small onClick={() => { setForm({ ...emptyForm, kind: forcedKind ?? emptyForm.kind, categoryId: lockedCategoryId || emptyForm.categoryId }); setShowForm(true); }}>{addLabel}</Btn>
       </div>
 
       {visiblePayments.map((p) => {
@@ -433,7 +479,7 @@ export function FixedPaymentsSection() {
                 )}
                 <Btn variant="amber" small onClick={() => openBackfill(p)} style={{ fontSize: 11 }}>⟳ Backfill</Btn>
                 <Btn variant="secondary" small onClick={() => {
-                  setForm({ ...emptyForm, ...p, id: p.id, startDate: p.date, endDate: p.endDate ?? "", tag: (p.tag ?? "Personal") as "Personal" | "Business" });
+                  setForm({ ...emptyForm, ...p, id: p.id, startDate: p.date, endDate: p.endDate ?? "", tag: (p.tag ?? "Personal") as "Personal" | "Business", categoryId: lockedCategoryId || p.categoryId || "" });
                   setShowForm(true);
                 }}>Edit</Btn>
                 <Btn variant="danger" small onClick={() => { if (confirm(`Delete "${p.name}"?`)) hooks.deleteFixedPayment(p.id); }}>✕</Btn>
@@ -445,14 +491,31 @@ export function FixedPaymentsSection() {
 
       {visiblePayments.length === 0 && (
         <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>
-          {kindFilter === "all" ? "No recurring items yet." : `No ${KIND_LABELS[kindFilter]} items yet.`}
+          {emptyLabel ?? (activeKindFilter === "all" ? "No recurring items yet." : `No ${KIND_LABELS[activeKindFilter]} items yet.`)}
         </div>
       )}
 
       {/* Add/Edit form */}
       {showForm && (
         <Modal title={form.id ? "Edit Recurring Item" : "Add Recurring Item"} onClose={() => setShowForm(false)}>
-          <Sel label="Recurring Type" value={form.kind} onChange={f("kind")} options={RECURRING_KINDS} />
+          {!forcedKind && <Sel label="Recurring Type" value={form.kind} onChange={f("kind")} options={RECURRING_KINDS} />}
+          {isPlannedPaymentsPage && (
+            <Sel
+              label="Posting Type"
+              value={form.transactionType}
+              onChange={(e) => setForm((p) => ({
+                ...p,
+                transactionType: e.target.value as "expense" | "transfer",
+                categoryId: e.target.value === "expense" ? p.categoryId : "",
+                destinationId: e.target.value === "transfer" ? p.destinationId : "",
+                subType: e.target.value === "transfer" ? p.subType : "",
+              }))}
+              options={[
+                { value: "expense", label: "Expense" },
+                { value: "transfer", label: "Transfer" },
+              ]}
+            />
+          )}
           <Inp label="Description" value={form.name} onChange={f("name")} placeholder={KIND_PLACEHOLDERS[form.kind]} />
           <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} />
           <Sel label="Schedule" value={form.schedule} onChange={f("schedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
@@ -461,16 +524,31 @@ export function FixedPaymentsSection() {
             <Inp label="End Date (optional)" type="date" value={form.endDate ?? ""} onChange={f("endDate")} />
           </Grid2>
           <Sel label="Pay From" value={form.source} onChange={f("source")} options={acctOpts} />
+          {isTransferPlannedPayment && (
+            <Grid2>
+              <Sel label="Transfer Sub-type" value={form.subType} onChange={f("subType")} options={[{ value: "", label: "— Select transfer type —" }, ...plannedTransferSubTypes]} />
+              <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")} options={acctOpts} />
+            </Grid2>
+          )}
           <Grid2>
             <div>
               <Label>Category</Label>
-              <select value={form.categoryId} onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
-                style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}>
-                <option value="">— Select category —</option>
-                {categories.filter((c) => c.type === "expense" || c.type === "both").map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {isTransferPlannedPayment ? (
+                <div style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#f9fafb", fontSize: 13, color: "#6b7280" }}>
+                  Not used for transfer-based planned payments
+                </div>
+              ) : (
+                <select
+                  value={lockedCategoryId || form.categoryId}
+                  disabled={isCategoryLocked}
+                  onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
+                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${(lockedCategoryId || form.categoryId) ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: isCategoryLocked ? "#f9fafb" : "#fff", fontSize: 13, color: isCategoryLocked ? "#374151" : "#111827" }}>
+                  {!isCategoryLocked && <option value="">— Select category —</option>}
+                  {categories.filter((c) => c.type === "expense" || c.type === "both").map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <Sel label="Payment Mode" value={form.mode} onChange={f("mode")}
               options={["Cash", "Debit", "Credit Card", "Bank Transfer", "E-Transfer"]} />
@@ -549,5 +627,31 @@ export function FixedPaymentsSection() {
         onSaved={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
       />
     </div>
+  );
+}
+
+export function SubscriptionsSection() {
+  return (
+    <FixedPaymentsSection
+      title="Subscriptions"
+      introText="Track app, membership, and service subscriptions in one place. These still use the shared recurring engine underneath."
+      forcedKind="subscription"
+      addLabel="+ Add Subscription"
+      emptyLabel="No subscriptions yet."
+      hideKindFilters
+    />
+  );
+}
+
+export function PlannedPaymentsSection() {
+  return (
+    <FixedPaymentsSection
+      title="Planned Payments"
+      introText="Track flexible commitments like TFSA contributions, RRSP moves, donations, and family support in one place. These can stay scheduled for projection or be logged on demand."
+      forcedKind="planned_payment"
+      addLabel="+ Add Planned Payment"
+      emptyLabel="No planned payments yet."
+      hideKindFilters
+    />
   );
 }

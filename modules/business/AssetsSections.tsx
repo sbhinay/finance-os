@@ -137,7 +137,9 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
     nextPaymentDate: "", mileageAllowance: 20000,
     excessRate: 0.15, residual: 0,
     endOfLeaseOption: "Return" as Vehicle["endOfLeaseOption"],
-    principal: 0, remaining: 0, interestRate: 0, status: "Active",
+    principal: 0, remaining: 0, interestRate: 0,
+    insuranceAmount: 0, insuranceSchedule: "Monthly" as PaymentSchedule, insuranceDate: "", insuranceSource: "",
+    status: "Active",
   };
 
   const [showForm, setShowForm] = useState(false);
@@ -150,7 +152,13 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
 
   function save() {
     if (!form.name) return;
-    const v = { ...form, payment: toFixed2(Number(form.payment)), principal: toFixed2(Number(form.principal)), remaining: toFixed2(Number(form.remaining)) };
+    const v = {
+      ...form,
+      payment: toFixed2(Number(form.payment)),
+      principal: toFixed2(Number(form.principal)),
+      remaining: toFixed2(Number(form.remaining)),
+      insuranceAmount: toFixed2(Number(form.insuranceAmount || 0)),
+    };
     if (form.id) { updateVehicle(v as Vehicle); }
     else { addVehicle(v as Omit<Vehicle, "id">); }
     setShowForm(false); setForm(emptyForm);
@@ -199,6 +207,13 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
                     ? ` · Next: ${fmtDate(next ?? v.nextPaymentDate)}`
                     : " · ⚠ Set next payment date"}
                 </div>
+                {!!v.insuranceAmount && (
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                    Insurance: {fmtCAD(v.insuranceAmount)}/{v.insuranceSchedule ?? "Monthly"}
+                    {v.insuranceSource ? ` Â· From: ${getAccountName(v.insuranceSource)}` : ""}
+                    {v.insuranceDate ? ` Â· Next: ${fmtDate(v.insuranceDate)}` : ""}
+                  </div>
+                )}
                 {v.vtype === "Lease" && v.leaseEnd && (
                   <div style={{ fontSize: 12, color: "#6b7280" }}>
                     Lease ends: {fmtDate(v.leaseEnd)}{mp && mp.daysLeft > 0 ? ` · ${mp.daysLeft} days left` : ""}
@@ -244,10 +259,16 @@ export function VehiclesSection({ accounts, transactions }: { accounts: Account[
             <Sel label="Payment From" value={form.source} onChange={f("source")} options={acctOpts} />
           </Grid3>
           <Grid3>
+            <Inp label="Insurance ($, optional)" type="number" value={form.insuranceAmount} onChange={f("insuranceAmount")} />
+            <Sel label="Insurance Schedule" value={form.insuranceSchedule} onChange={f("insuranceSchedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
+            <Sel label="Insurance From" value={form.insuranceSource || form.source} onChange={f("insuranceSource")} options={acctOpts} />
+          </Grid3>
+          <Grid3>
             <Inp label="Start Date" type="date" value={form.leaseStart} onChange={f("leaseStart")} />
             <Inp label={form.vtype === "Lease" ? "Lease End Date" : "Loan End Date"} type="date" value={form.leaseEnd} onChange={f("leaseEnd")} />
             <Inp label="Next Payment Date" type="date" value={form.nextPaymentDate ?? ""} onChange={f("nextPaymentDate")} />
           </Grid3>
+          <Inp label="Insurance Next Due (optional)" type="date" value={form.insuranceDate ?? ""} onChange={f("insuranceDate")} />
           {form.vtype === "Lease" && (
             <>
               <Grid3>

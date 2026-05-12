@@ -22,6 +22,10 @@ export interface Vehicle {
   principal: number;
   remaining: number;
   interestRate: number;
+  insuranceAmount?: number;
+  insuranceSchedule?: PaymentSchedule;
+  insuranceDate?: string;
+  insuranceSource?: string;
   status: string;
 }
 
@@ -77,17 +81,22 @@ export type RecurringKind =
   | "account_fee"
   | "card_fee";
 
+export type PlannedPaymentTransactionType = Extract<TransactionType, "expense" | "transfer">;
+
 export interface FixedPayment {
   id: string;
   name: string;
   kind?: RecurringKind;
-  ownerType?: "account" | "card";
+  ownerType?: "account" | "card" | "vehicle";
   ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;
   date: string;             // anchor date for schedule rolling
   endDate?: string;
   source: string;           // account or card id
+  destinationId?: string;
+  transactionType?: PlannedPaymentTransactionType;
+  subType?: TransactionSubType;
   categoryId?: string;
   mode?: string;
   tag?: string;
@@ -145,8 +154,12 @@ export interface PendingTransaction {
   account: string;
   category: string;
   type: "Expense" | "Income";
+  transactionType?: PlannedPaymentTransactionType;
+  subType?: TransactionSubType;
+  destinationId?: string;
   mode: string;
   tag: "Personal" | "Business";
   linkedVehicleId?: string;
   createdAt: string;
 }
+import type { TransactionSubType, TransactionType } from "@/types/transaction";

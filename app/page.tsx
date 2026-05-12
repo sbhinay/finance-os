@@ -7,7 +7,7 @@ import {
   CorporationIncomeSection,
   TaxRateSettingsSection,
 } from "@/modules/business/CorporationIncomeTaxRateSections";
-import { FixedPaymentsSection } from "@/modules/business/FixedPaymentsSection";
+import { FixedPaymentsSection, PlannedPaymentsSection, SubscriptionsSection } from "@/modules/business/FixedPaymentsSection";
 import {
   VehiclesSection,
   HouseLoansSection,
@@ -41,6 +41,8 @@ type SectionId =
   | "dailylog"
   | "transactions"
   | "fixedpayments"
+  | "subscriptions"
+  | "plannedpayments"
   | "vehicles"
   | "houseloans"
   | "propertytax"
@@ -65,6 +67,8 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "accounts",       label: "Bank Accounts",       group: "Personal Finance", icon: "🏦" },
   { id: "cards",          label: "Credit Cards",        group: "Personal Finance", icon: "💳" },
   { id: "fixedpayments",  label: "Fixed Payments",      group: "Personal Finance", icon: "📅" },
+  { id: "subscriptions",  label: "Subscriptions",       group: "Personal Finance", icon: "🔁" },
+  { id: "plannedpayments", label: "Planned Payments",   group: "Personal Finance", icon: "🎯" },
   { id: "vehicles",       label: "Vehicles",            group: "Personal Finance", icon: "🚗" },
   { id: "houseloans",     label: "House Loans",         group: "Personal Finance", icon: "🏡" },
   { id: "propertytax",    label: "Property Tax",        group: "Personal Finance", icon: "🏛" },
@@ -178,7 +182,6 @@ export default function Home() {
   const [section, setSection] = useState<SectionId>("dailylog");
 
   const { accounts } = useAccounts();
-  const { cards } = useCreditCards();
   const { transactions } = useTransactions();
   // ── Sync balances on startup — single source of truth ──────────────────────
   useEffect(() => {
@@ -250,6 +253,8 @@ export default function Home() {
         {section === "assetsliabilities" && wrap(<AssetsLiabilitiesSection onNavigate={(target) => setSection(target)} />)}
         {section === "transactions"   && wrap(<TransactionHistorySection />)}
         {section === "fixedpayments"  && wrap(<FixedPaymentsSection />)}
+        {section === "subscriptions"  && wrap(<SubscriptionsSection />)}
+        {section === "plannedpayments" && wrap(<PlannedPaymentsSection />)}
         {section === "vehicles"       && wrap(<VehiclesSection accounts={accounts} transactions={transactions} />)}
         {section === "houseloans"     && wrap(<HouseLoansSection accounts={accounts} />)}
         {section === "propertytax"    && wrap(<PropertyTaxSection />)}

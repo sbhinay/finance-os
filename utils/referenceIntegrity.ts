@@ -78,6 +78,19 @@ export function getVehicleReferenceReasons(vehicleId: string, transactions: Tran
   return reasons;
 }
 
+export function getVehicleReferenceReasonsWithRecurring(
+  vehicleId: string,
+  transactions: Transaction[],
+  fixedPayments: FixedPayment[] = []
+) {
+  const reasons = getVehicleReferenceReasons(vehicleId, transactions);
+  const fixedPaymentCount = fixedPayments.filter((fp) =>
+    fp.ownerType === "vehicle" && fp.ownerId === vehicleId
+  ).length;
+  if (fixedPaymentCount > 0) reasons.push(`${fixedPaymentCount} recurring payment(s)`);
+  return reasons;
+}
+
 export function getHouseLoanReferenceReasons(houseLoanId: string, transactions: Transaction[]) {
   const reasons: string[] = [];
   const txCount = transactions.filter((tx) => tx.linkedPropertyId === houseLoanId).length;

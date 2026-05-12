@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
     FixedPayment,
+    PlannedPaymentTransactionType,
     PendingTransaction,
     PaymentSchedule
 } from "@/types/domain";
@@ -223,6 +224,9 @@ export function generatePendingTransactions(
                 account: p.source,
                 category: p.categoryId ?? "", // store categoryId not string
                 type: "Expense",
+                transactionType: p.transactionType,
+                subType: p.subType,
+                destinationId: p.destinationId,
                 mode: p.mode ?? "Debit",
                 tag: (p.tag ?? "Personal") as "Personal" | "Business",
             });
@@ -385,6 +389,26 @@ function getTransactionType(sourceType: string): {
     }
 }
 
+function getFixedPaymentPosting(fp: FixedPayment): {
+    type: TransactionType;
+    subType?: TransactionSubType;
+    destinationId?: string;
+    categoryId?: string;
+} {
+    const transactionType: PlannedPaymentTransactionType = fp.transactionType ?? "expense";
+    if (transactionType === "transfer") {
+        return {
+            type: "transfer",
+            subType: fp.subType,
+            destinationId: fp.destinationId,
+        };
+    }
+    return {
+        type: "expense",
+        categoryId: fp.categoryId,
+    };
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useFixedPayments() {
@@ -480,19 +504,22 @@ export function useFixedPayments() {
         );
 
         let count = 0;
+        const posting = getFixedPaymentPosting(fp);
         dates.forEach((date) => {
             if (existingDates.has(date)) return; // skip duplicates
             const txn: Transaction = {
                 id: uid(),
-                type: "expense",
+                type: posting.type,
+                subType: posting.subType,
                 amount: toFixed2(fp.amount),
                 description: fp.name,
                 sourceId: accountId,
+                destinationId: posting.destinationId,
                 date,
                 createdAt: new Date().toISOString(),
                 currency: "CAD",
                 status: "cleared",
-                categoryId: fp.categoryId || undefined,
+                categoryId: posting.categoryId || undefined,
                 tag: (fp.tag ?? "Personal") as "Personal" | "Business",
                 mode: (fp.mode ?? "Debit") as Transaction["mode"],
             };
@@ -520,17 +547,20 @@ export function useFixedPayments() {
         description ? : string
     ) => {
         if (!amount || !date) return;
+        const posting = getFixedPaymentPosting(fp);
         const txn: Transaction = {
             id: uid(),
-            type: "expense",
+            type: posting.type,
+            subType: posting.subType,
             amount: toFixed2(amount),
             description: description || fp.name,
             sourceId: accountId,
+            destinationId: posting.destinationId,
             date,
             createdAt: new Date().toISOString(),
             currency: "CAD",
             status: "cleared",
-            categoryId: categoryId || undefined,
+            categoryId: (posting.type === "expense" ? (categoryId || posting.categoryId) : undefined) || undefined,
             tag: tag ?? "Personal",
             mode: mode ?? "Debit",
         };
@@ -557,23 +587,23 @@ export function useFixedPayments() {
         const needsAccount = !["cra_payroll", "cra_corp", "cra_hst"].includes(p.sourceType);
         if (needsAccount && !p.account) return;
 
-        const {
-            type,
-            subType
-        } = getTransactionType(p.sourceType);
+        const pendingType = p.sourceType === "fixed" && p.transactionType
+            ? { type: p.transactionType as TransactionType, subType: p.subType }
+            : getTransactionType(p.sourceType);
 
         const txn: Transaction = {
             id: uid(),
-            type,
-            subType,
+            type: pendingType.type,
+            subType: pendingType.subType,
             amount: toFixed2(p.amount),
             description: p.name,
             sourceId: p.account,
+            destinationId: p.destinationId,
             date: p.dueDate,
             createdAt: new Date().toISOString(),
             currency: "CAD",
             status: "cleared",
-            categoryId: p.category || undefined,
+            categoryId: pendingType.type === "expense" ? (p.category || undefined) : undefined,
             tag: p.tag,
             mode: p.mode as Transaction["mode"],
         };
