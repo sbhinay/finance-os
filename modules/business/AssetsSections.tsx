@@ -590,7 +590,7 @@ export function HouseLoansSection({
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "— Select —" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
+  const acctOpts = [{ value: "", label: "— Select account —" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
   const totalRemaining = houseLoans.reduce((s, l) => s + l.remaining, 0);
   const totalMonthly = houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0);
 
@@ -599,11 +599,21 @@ export function HouseLoansSection({
     return accounts.find((a) => a.id === accountId)?.name ?? accountId;
   };
   const sourceExists = form.source ? accounts.some((a) => a.id === form.source) : true;
+  const propertyTaxSourceExists = form.propertyTaxSource
+    ? accounts.some((a) => a.id === form.propertyTaxSource)
+    : true;
   const formAcctOpts = sourceExists
     ? acctOpts
     : [
-        { value: "", label: "â€” Select â€”" },
+        { value: "", label: "— Select account —" },
         { value: form.source, label: `Legacy source (${form.source})` },
+        ...accounts.map((a) => ({ value: a.id, label: a.name })),
+      ];
+  const formPropertyTaxAcctOpts = propertyTaxSourceExists
+    ? acctOpts
+    : [
+        { value: "", label: "— Select account —" },
+        { value: form.propertyTaxSource ?? "", label: `Legacy source (${form.propertyTaxSource})` },
         ...accounts.map((a) => ({ value: a.id, label: a.name })),
       ];
 
@@ -789,7 +799,7 @@ export function HouseLoansSection({
           <Grid3>
             <Inp label="Property Tax ($, optional)" type="number" value={form.propertyTaxAmount} onChange={f("propertyTaxAmount")} />
             <Sel label="Property Tax Schedule" value={form.propertyTaxSchedule} onChange={f("propertyTaxSchedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
-            <Sel label="Property Tax From" value={form.propertyTaxSource || form.source} onChange={f("propertyTaxSource")} options={formAcctOpts} />
+            <Sel label="Property Tax From" value={form.propertyTaxSource ?? ""} onChange={f("propertyTaxSource")} options={formPropertyTaxAcctOpts} />
           </Grid3>
           <Grid3>
             <Inp label="Start Date" type="date" value={form.startDate} onChange={f("startDate")} />

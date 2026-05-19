@@ -665,6 +665,8 @@ export function TransactionHistorySection() {
   const [catFilter, setCatFilter] = useState("");
   const [subTypeFilter, setSubTypeFilter] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
+  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState<TransactionFormInitial>(undefined);
   const [txFormOpen, setTxFormOpen] = useState(false);
 
@@ -727,6 +729,11 @@ export function TransactionHistorySection() {
   const totalIn = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalOut = filtered.filter((t) => ["expense", "loan_payment", "tax_payment", "withdrawal"].includes(t.type)).reduce((s, t) => s + t.amount, 0);
   const totalTransfers = filtered.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filtered.length);
+  const pagedTransactions = filtered.slice(startIndex, endIndex);
 
   // Top categories bar chart
   const catMap: Record<string, number> = {};
@@ -760,31 +767,31 @@ export function TransactionHistorySection() {
       {/* Filters */}
       <div style={{ background: "#fff", border: "1px solid #1a5fa8", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
         <Grid2>
-          <Inp label="From Date" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <Inp label="To Date" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <Inp label="From Date" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
+          <Inp label="To Date" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
         </Grid2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
           {(["all", "income", "expense", "transfer", "loan_payment"] as const).map((v) => (
-            <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
+            <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => { setFilter(v); setPage(1); }}>
               {v === "all" ? "All" : v === "loan_payment" ? "Debt" : v.charAt(0).toUpperCase() + v.slice(1)}
             </Btn>
           ))}
-          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
+          <select value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setPage(1); }}
             style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
             <option value="">All Categories</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <select value={subTypeFilter} onChange={(e) => setSubTypeFilter(e.target.value)}
+          <select value={subTypeFilter} onChange={(e) => { setSubTypeFilter(e.target.value); setPage(1); }}
             style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
             <option value="">All Sub-types</option>
             {availableSubTypes.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
-          <select value={linkedFilter} onChange={(e) => setLinkedFilter(e.target.value)}
+          <select value={linkedFilter} onChange={(e) => { setLinkedFilter(e.target.value); setPage(1); }}
             style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
             <option value="">All Linked Items</option>
             {availableLinks.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search…"
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
           <Btn variant="secondary" small onClick={exportCSV}>⬇ Export CSV</Btn>
         </div>
@@ -819,7 +826,31 @@ export function TransactionHistorySection() {
 
       {/* Transaction list */}
       <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
-        {filtered.slice(0, 200).map((t) => {
+        {filtered.length > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", borderBottom: "1px solid #f3f4f6", background: "#f9fafb" }}>
+            <div style={{ fontSize: 12, color: "#6b7280" }}>
+              Showing <strong>{startIndex + 1}</strong>–<strong>{endIndex}</strong> of <strong>{filtered.length}</strong>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>Per page</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}
+              >
+                {[25, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <Btn variant="secondary" small disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>← Prev</Btn>
+              <div style={{ fontSize: 12, color: "#374151", minWidth: 64, textAlign: "center" }}>
+                Page {currentPage} / {totalPages}
+              </div>
+              <Btn variant="secondary" small disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next →</Btn>
+            </div>
+          </div>
+        )}
+        {pagedTransactions.map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
           return (

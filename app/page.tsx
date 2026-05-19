@@ -69,7 +69,7 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "📊" },
   { id: "accounts",       label: "Bank Accounts",       group: "Personal Finance", icon: "🏦" },
   { id: "cards",          label: "Credit Cards",        group: "Personal Finance", icon: "💳" },
-  { id: "fixedpayments",  label: "Fixed Payments",      group: "Personal Finance", icon: "📅" },
+  { id: "fixedpayments",  label: "Recurring Payments",  group: "Personal Finance", icon: "📅" },
   { id: "subscriptions",  label: "Subscriptions",       group: "Personal Finance", icon: "🔁" },
   { id: "plannedpayments", label: "Planned Payments",   group: "Personal Finance", icon: "🎯" },
   { id: "vehicles",       label: "Vehicles",            group: "Personal Finance", icon: "🚗" },
@@ -81,6 +81,149 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "cra",            label: "Tax Obligations",     group: "Business / CRA",   icon: "📊" },
   { id: "ratesettings",   label: "Tax & Rate Settings", group: "Business / CRA",   icon: "⚙️" },
 ];
+
+const SECONDARY_SECTION_IDS = new Set<SectionId>([
+  "overview",
+  "accounts",
+  "cards",
+  "categories",
+  "transactions",
+  "subscriptions",
+  "plannedpayments",
+  "vehicles",
+  "houseloans",
+  "propertytax",
+  "corpincome",
+  "cra",
+  "ratesettings",
+  "projection",
+  "importexport",
+]);
+
+const PRIMARY_NAV_IDS = new Set<SectionId>([
+  "dailylog",
+  "dashboard",
+  "accountscards",
+  "assetsliabilities",
+  "fixedpayments",
+  "hourscontracts",
+  "healthreport",
+]);
+
+const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
+  overview: "dashboard",
+  accounts: "accountscards",
+  cards: "accountscards",
+  accountscards: "accountscards",
+  categories: "fixedpayments",
+  dailylog: "dailylog",
+  healthreport: "healthreport",
+  transactions: "dailylog",
+  fixedpayments: "fixedpayments",
+  subscriptions: "fixedpayments",
+  plannedpayments: "fixedpayments",
+  vehicles: "assetsliabilities",
+  houseloans: "assetsliabilities",
+  propertytax: "assetsliabilities",
+  hourscontracts: "hourscontracts",
+  corpincome: "hourscontracts",
+  cra: "hourscontracts",
+  ratesettings: "hourscontracts",
+  dashboard: "dashboard",
+  projection: "dashboard",
+  importexport: "healthreport",
+  assetsliabilities: "assetsliabilities",
+};
+
+const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string }>>> = {
+  dailylog: [
+    { id: "dailylog", label: "Daily Log" },
+    { id: "transactions", label: "Transaction History" },
+  ],
+  transactions: [
+    { id: "dailylog", label: "Daily Log" },
+    { id: "transactions", label: "Transaction History" },
+  ],
+  dashboard: [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "projection", label: "Projection" },
+  ],
+  projection: [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "projection", label: "Projection" },
+  ],
+  accountscards: [
+    { id: "accountscards", label: "Combined View" },
+    { id: "accounts", label: "Bank Accounts" },
+    { id: "cards", label: "Credit Cards" },
+  ],
+  accounts: [
+    { id: "accountscards", label: "Combined View" },
+    { id: "accounts", label: "Bank Accounts" },
+    { id: "cards", label: "Credit Cards" },
+  ],
+  cards: [
+    { id: "accountscards", label: "Combined View" },
+    { id: "accounts", label: "Bank Accounts" },
+    { id: "cards", label: "Credit Cards" },
+  ],
+  assetsliabilities: [
+    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "vehicles", label: "Vehicles" },
+    { id: "houseloans", label: "House Loans" },
+    { id: "propertytax", label: "Property Tax" },
+  ],
+  vehicles: [
+    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "vehicles", label: "Vehicles" },
+    { id: "houseloans", label: "House Loans" },
+    { id: "propertytax", label: "Property Tax" },
+  ],
+  houseloans: [
+    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "vehicles", label: "Vehicles" },
+    { id: "houseloans", label: "House Loans" },
+    { id: "propertytax", label: "Property Tax" },
+  ],
+  propertytax: [
+    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "vehicles", label: "Vehicles" },
+    { id: "houseloans", label: "House Loans" },
+    { id: "propertytax", label: "Property Tax" },
+  ],
+  hourscontracts: [
+    { id: "hourscontracts", label: "Hours & Contracts" },
+    { id: "corpincome", label: "Corp Income" },
+    { id: "cra", label: "Tax Obligations" },
+    { id: "ratesettings", label: "Tax & Rate Settings" },
+  ],
+  corpincome: [
+    { id: "hourscontracts", label: "Hours & Contracts" },
+    { id: "corpincome", label: "Corp Income" },
+    { id: "cra", label: "Tax Obligations" },
+    { id: "ratesettings", label: "Tax & Rate Settings" },
+  ],
+  cra: [
+    { id: "hourscontracts", label: "Hours & Contracts" },
+    { id: "corpincome", label: "Corp Income" },
+    { id: "cra", label: "Tax Obligations" },
+    { id: "ratesettings", label: "Tax & Rate Settings" },
+  ],
+  ratesettings: [
+    { id: "hourscontracts", label: "Hours & Contracts" },
+    { id: "corpincome", label: "Corp Income" },
+    { id: "cra", label: "Tax Obligations" },
+    { id: "ratesettings", label: "Tax & Rate Settings" },
+  ],
+  healthreport: [
+    { id: "healthreport", label: "Health Report" },
+    { id: "importexport", label: "Import / Export" },
+  ],
+  importexport: [
+    { id: "healthreport", label: "Health Report" },
+    { id: "importexport", label: "Import / Export" },
+  ],
+};
 
 // ─── Accounts & Cards combined view ──────────────────────────────────────────
 function AccountsCardsSection() {
@@ -194,12 +337,33 @@ export default function Home() {
     notifyDataChanged();
   }, []);
 
-  const navGroups = NAV.reduce<Record<string, typeof NAV>>((acc, item) => {
+  const primaryNav = NAV.filter((item) => PRIMARY_NAV_IDS.has(item.id)).map((item) => ({
+    ...item,
+    label:
+      item.id === "hourscontracts"
+        ? "Business"
+        : item.id === "healthreport"
+          ? "Data & Health"
+          : item.id === "fixedpayments"
+            ? "Recurring Payments"
+            : item.label,
+    group:
+      item.id === "dailylog" || item.id === "dashboard"
+        ? "Core"
+        : item.id === "accountscards" || item.id === "assetsliabilities" || item.id === "fixedpayments"
+          ? "Finance"
+          : item.id === "hourscontracts"
+            ? "Business"
+            : "System",
+  }));
+  const navGroups = primaryNav.reduce<Record<string, typeof primaryNav>>((acc, item) => {
     (acc[item.group] = acc[item.group] ?? []).push(item);
     return acc;
   }, {});
 
-  const groupOrder = ["Daily Activity", "Personal Finance", "Business / CRA"];
+  const groupOrder = ["Core", "Finance", "Business", "System"];
+  const currentHubLinks = PRIMARY_SECTION_BY_SECTION[section] === "fixedpayments" ? [] : (HUB_LINKS[section] ?? []);
+  const showingSecondaryView = SECONDARY_SECTION_IDS.has(section);
 
   const wrap = (children: React.ReactNode) => (
     <div className="bg-white rounded-lg border shadow-sm p-5">{children}</div>
@@ -225,7 +389,7 @@ export default function Home() {
                 {group}
               </div>
               {(navGroups[group] ?? []).map((item) => {
-                const active = section === item.id;
+                const active = PRIMARY_SECTION_BY_SECTION[section] === item.id;
                 return (
                   <button key={item.id} onClick={() => setSection(item.id)} style={{
                     width: "100%", textAlign: "left",
@@ -250,6 +414,49 @@ export default function Home() {
 
       {/* ── Main ── */}
       <main style={{ flex: 1, minWidth: 0, padding: 24 }}>
+        {currentHubLinks.length > 0 && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            marginBottom: 16,
+            padding: "12px 14px",
+            background: "#fff",
+            border: "1px solid #e2e4e8",
+            borderRadius: 12,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".05em" }}>
+              {showingSecondaryView ? "Detail View" : "Hub View"}
+            </div>
+            {currentHubLinks.map((item) => {
+              const active = section === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setSection(item.id)}
+                  style={{
+                    padding: "7px 12px",
+                    borderRadius: 999,
+                    border: active ? "1px solid #1a5fa8" : "1px solid #d1d5db",
+                    background: active ? "#eaf3ff" : "#fff",
+                    color: active ? "#1a5fa8" : "#374151",
+                    fontSize: 13,
+                    fontWeight: active ? 700 : 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+            {showingSecondaryView && (
+              <div style={{ marginLeft: "auto", fontSize: 12, color: "#6b7280" }}>
+                This is still available, but it now sits under a stronger parent hub.
+              </div>
+            )}
+          </div>
+        )}
         {section === "overview"       && wrap(<OverviewSection />)}
         {section === "dailylog"       && wrap(<DailyLogSection />)}
         {section === "healthreport"   && wrap(
