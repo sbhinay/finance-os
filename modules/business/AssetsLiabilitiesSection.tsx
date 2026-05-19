@@ -256,7 +256,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <div>
           <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Assets & Liabilities</div>
           <div style={{ fontSize: 13, color: "#6b7280", maxWidth: 760 }}>
-            This is the new unified command area for asset, debt, and net worth tracking. Legacy tabs remain available while we migrate the real workflows here.
+            This is the unified command area for asset, debt, and net worth tracking. Detail views remain available while we fold more of the workflow into this hub.
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -277,10 +277,10 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Upcoming Obligations"
           accent="#a05c00"
-          actions={<ActionBtn onClick={() => onNavigate("propertytax")}>Legacy Schedules</ActionBtn>}
+          actions={<ActionBtn onClick={() => onNavigate("propertytax")}>Open Schedules</ActionBtn>}
         >
           {upcomingObligations.length === 0 ? (
-            <EmptyNote>No upcoming obligations are scheduled yet. Add next payment dates in the legacy asset tabs to make this page actionable.</EmptyNote>
+            <EmptyNote>No upcoming obligations are scheduled yet. Add next payment dates in the related detail views to make this page actionable.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {upcomingObligations.map((item) => (
@@ -307,7 +307,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                     <div style={{ fontWeight: 800, color: "#111827", minWidth: 88, textAlign: "right" }}>{fmtCAD(item.amount)}</div>
                     {item.kind === "vehicle" && <ActionBtn variant="green" onClick={() => openVehiclePayment(item.vehicle)}>Log Payment</ActionBtn>}
                     {item.kind === "propertyTax" && <ActionBtn variant="green" onClick={() => openPropertyTaxPayment(item.property, item.payment)}>Mark Paid</ActionBtn>}
-                    {(item.kind === "house" || item.kind === "housePropertyTax") && <ActionBtn onClick={() => onNavigate("houseloans")}>Open Legacy</ActionBtn>}
+                    {(item.kind === "house" || item.kind === "housePropertyTax") && <ActionBtn onClick={() => onNavigate("houseloans")}>Open Details</ActionBtn>}
                   </div>
                 </div>
               ))}
@@ -320,10 +320,10 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Real Estate"
           accent="#b45309"
-          actions={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Legacy</ActionBtn>}
+          actions={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Details</ActionBtn>}
         >
           {houseLoans.length === 0 && propertyTaxes.length === 0 ? (
-            <EmptyNote>No real estate items yet. Use the legacy House Loans and Property Tax tabs while this area takes on their workflows.</EmptyNote>
+            <EmptyNote>No real estate items yet. Use House Loans and Property Tax detail views while this area absorbs more of that workflow.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {houseLoans.slice(0, 3).map((loan) => (
@@ -348,7 +348,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                 {houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length} property tax schedule{houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length === 1 ? "" : "s"} | unpaid planned tax {fmtCAD(unpaidPropertyTax)}
               </div>
               <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                Direct mortgage logging stays in the legacy view for now until principal vs interest handling is cleaner.
+                Direct mortgage logging stays in the House Loans detail view for now until principal vs interest handling is cleaner.
               </div>
             </div>
           )}
@@ -357,10 +357,10 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Vehicles"
           accent="#1d4ed8"
-          actions={<ActionBtn onClick={() => onNavigate("vehicles")}>Open Legacy</ActionBtn>}
+          actions={<ActionBtn onClick={() => onNavigate("vehicles")}>Open Details</ActionBtn>}
         >
           {vehicles.length === 0 ? (
-            <EmptyNote>No vehicles yet. Add leases and financed vehicles in the legacy Vehicles tab for now.</EmptyNote>
+            <EmptyNote>No vehicles yet. Add leases and financed vehicles in the Vehicles detail view for now.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {vehicles.slice(0, 3).map((vehicle) => {
@@ -420,7 +420,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           actions={<ActionBtn onClick={() => onNavigate("cards")}>Credit Cards</ActionBtn>}
         >
           {activeCards.length === 0 && houseLoans.length === 0 ? (
-            <EmptyNote>No liabilities tracked yet. Credit cards and house loans will continue to live in their legacy tabs during the transition.</EmptyNote>
+            <EmptyNote>No liabilities tracked yet. Credit cards and house loans still live in their detail views during the transition.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ fontSize: 13, color: "#6b7280" }}>Credit cards owing: {fmtCAD(cardLiabilities)}</div>

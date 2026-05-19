@@ -18,7 +18,7 @@ import { syncBalances } from "@/utils/syncBalances";
 import { SUB_TYPE_LABELS } from "@/types/transaction";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
-// ─── Primitives ───────────────────────────────────────────────────────────────
+// --- Primitives ---------------------------------------------------------------
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
@@ -96,7 +96,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
   return <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: c.bg, color: c.fg }}>{children}</span>;
 }
 
-// ─── Hook that auto-reloads on data changed event ─────────────────────────────
+// --- Hook that auto-reloads on data changed event -----------------------------
 
 function useAutoReload(reload: () => void) {
   useEffect(() => {
@@ -106,9 +106,9 @@ function useAutoReload(reload: () => void) {
   }, [reload]);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 // BANK ACCOUNTS SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 
 export function BankAccountsSection() {
   const { accounts, addAccount, updateAccount, deleteAccount, reloadAccounts } = useAccounts();
@@ -253,15 +253,15 @@ export function BankAccountsSection() {
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <Btn variant="secondary" small onClick={() => setExpanded(expanded === a.id ? null : a.id)}>
-                    {expanded === a.id ? "▲ Hide" : "▼ Outflows"}
+                    {expanded === a.id ? "? Hide" : "? Outflows"}
                   </Btn>
                   <Btn variant="secondary" small onClick={() => { setReconcile(a); setReconAmt(a.openingBalance); setReconDate(a.reconciledDate ?? todayLocal); }}>Reconcile</Btn>
                   <button onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}
                     style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: a.primary ? "#1a7f3c" : "#f3f4f6", color: a.primary ? "#fff" : "#6b7280" }}>
-                    {a.primary ? "★ Primary" : "☆ Primary"}
+                    {a.primary ? "? Primary" : "? Primary"}
                   </button>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...a, id: a.id }); setShowForm(true); }}>Edit</Btn>
-                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${a.name}?`)) { deleteAccount(a.id); notifyDataChanged("accounts"); } }}>✕</Btn>
+                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${a.name}?`)) { deleteAccount(a.id); notifyDataChanged("accounts"); } }}>?</Btn>
                 </div>
               </div>
             </div>
@@ -383,9 +383,9 @@ export function BankAccountsSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 // CREDIT CARDS SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 
 export function CreditCardsSection() {
   const { cards, addCard, deleteCard, updateCard, reloadCards } = useCreditCards();
@@ -528,10 +528,10 @@ export function CreditCardsSection() {
                     creditCardRepository.saveAll(all.map((x) => ({ ...x, primary: x.id === c.id ? !c.primary : x.primary })));
                     reloadCards(); notifyDataChanged("cards");
                   }} style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: c.primary ? "#1a7f3c" : "#f3f4f6", color: c.primary ? "#fff" : "#6b7280" }}>
-                    {c.primary ? "★ Primary" : "☆ Primary"}
+                    {c.primary ? "? Primary" : "? Primary"}
                   </button>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...c, id: c.id }); setShowForm(true); }}>Edit</Btn>
-                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${c.name}?`)) { deleteCard(c.id); notifyDataChanged("cards"); } }}>✕</Btn>
+                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${c.name}?`)) { deleteCard(c.id); notifyDataChanged("cards"); } }}>?</Btn>
                 </div>
               </div>
             </div>
@@ -641,9 +641,9 @@ export function CreditCardsSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 // TRANSACTION HISTORY SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 
 export function TransactionHistorySection() {
   const { transactions, reloadTransactions } = useTransactions();
@@ -793,7 +793,7 @@ export function TransactionHistorySection() {
           </select>
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search…"
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
-          <Btn variant="secondary" small onClick={exportCSV}>⬇ Export CSV</Btn>
+          <Btn variant="secondary" small onClick={exportCSV}>? Export CSV</Btn>
         </div>
       </div>
 
@@ -842,11 +842,11 @@ export function TransactionHistorySection() {
                   <option key={size} value={size}>{size}</option>
                 ))}
               </select>
-              <Btn variant="secondary" small disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>← Prev</Btn>
+              <Btn variant="secondary" small disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>? Prev</Btn>
               <div style={{ fontSize: 12, color: "#374151", minWidth: 64, textAlign: "center" }}>
                 Page {currentPage} / {totalPages}
               </div>
-              <Btn variant="secondary" small disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next →</Btn>
+              <Btn variant="secondary" small disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next ?</Btn>
             </div>
           </div>
         )}
@@ -870,7 +870,7 @@ export function TransactionHistorySection() {
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
-                  {t.type === "income" ? "+" : t.type === "transfer" ? "⇄" : "-"}{fmtCAD(t.amount)}
+                  {t.type === "income" ? "+" : t.type === "transfer" ? "?" : "-"}{fmtCAD(t.amount)}
                 </Pill>
                 <button onClick={() => {
                   setEditTx({
@@ -892,7 +892,6 @@ export function TransactionHistorySection() {
           );
         })}
         {filtered.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24, fontSize: 13 }}>No transactions in this date range.</div>}
-        {filtered.length > 200 && <div style={{ textAlign: "center", color: "#6b7280", fontSize: 12, padding: 8 }}>Showing 200 of {filtered.length} — export CSV for full data</div>}
       </div>
 
       <TransactionForm
@@ -905,76 +904,8 @@ export function TransactionHistorySection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 // OVERVIEW SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------------------
 
-export function OverviewSection() {
-  const { accounts, reloadAccounts } = useAccounts();
-  const { cards, reloadCards } = useCreditCards();
-  const { transactions } = useTransactions();
 
-  useAutoReload(reloadAccounts);
-  useAutoReload(reloadCards);
-
-  const totalAccounts = accounts.reduce((s, a) => s + a.openingBalance, 0);
-  const totalCards = cards.reduce((s, c) => s + c.openingBalance, 0);
-  const totalLimit = cards.reduce((s, c) => s + c.limitAmount, 0);
-  const net = totalAccounts - totalCards;
-  const now = new Date();
-  const monthStr = now.toISOString().slice(0, 7);
-  const monthTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(monthStr));
-  const mIn = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const mOut = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0); // transfers excluded
-
-  const summaryItems = [
-    { label: "Accounts Total", value: fmtCAD(totalAccounts), color: "#1a7f3c" },
-    { label: "Card Balance", value: fmtCAD(totalCards), color: "#a31515" },
-    { label: "Available Credit", value: fmtCAD(totalLimit - totalCards), color: "#1a5fa8" },
-    { label: "Net Cash Position", value: fmtCAD(net), color: net >= 0 ? "#1a7f3c" : "#a31515" },
-    { label: "Month Income", value: fmtCAD(mIn), color: "#1a7f3c" },
-    { label: "Month Expenses", value: fmtCAD(mOut), color: "#a31515" },
-    { label: "Month Net", value: fmtCAD(mIn - mOut), color: mIn - mOut >= 0 ? "#1a7f3c" : "#a31515" },
-    { label: "Transactions", value: String(transactions.length) },
-  ];
-
-  return (
-    <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Overview</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
-        {summaryItems.map((item) => (
-          <div key={item.label} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "16px" }}>
-            <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>{item.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: item.color ?? "#1a1a1a" }}>{item.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Account balances quick view */}
-      {accounts.length > 0 && (
-        <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Account Balances</div>
-          {accounts.map((a) => (
-            <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
-              <span>{a.name} <span style={{ fontSize: 11, color: "#9ca3af" }}>({a.type})</span></span>
-              <span style={{ fontWeight: 600, color: a.openingBalance >= 0 ? "#1a7f3c" : "#a31515" }}>{fmtCAD(a.openingBalance)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Card balances quick view */}
-      {cards.length > 0 && (
-        <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px" }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Card Balances</div>
-          {cards.map((c) => (
-            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
-              <span>{c.name} <span style={{ fontSize: 11, color: "#9ca3af" }}>({fmtCAD(c.limitAmount)} limit)</span></span>
-              <span style={{ fontWeight: 600, color: "#a31515" }}>{fmtCAD(c.openingBalance)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

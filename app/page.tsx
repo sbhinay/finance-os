@@ -7,7 +7,7 @@ import {
   CorporationIncomeSection,
   TaxRateSettingsSection,
 } from "@/modules/business/CorporationIncomeTaxRateSections";
-import { FixedPaymentsSection, PlannedPaymentsSection, SubscriptionsSection } from "@/modules/business/FixedPaymentsSection";
+import { FixedPaymentsSection } from "@/modules/business/FixedPaymentsSection";
 import {
   VehiclesSection,
   HouseLoansSection,
@@ -18,7 +18,6 @@ import {
   BankAccountsSection,
   CreditCardsSection,
   TransactionHistorySection,
-  OverviewSection,
 } from "@/modules/business/CoreSections";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
@@ -34,7 +33,6 @@ import { fmtCAD } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 type SectionId =
-  | "overview"
   | "accounts"
   | "cards"
   | "accountscards"
@@ -43,8 +41,6 @@ type SectionId =
   | "healthreport"
   | "transactions"
   | "fixedpayments"
-  | "subscriptions"
-  | "plannedpayments"
   | "vehicles"
   | "houseloans"
   | "propertytax"
@@ -63,16 +59,11 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "transactions",   label: "Transaction History", group: "Daily Activity",  icon: "📋" },
   { id: "dashboard",      label: "Dashboard",           group: "Daily Activity",  icon: "🏠" },
   { id: "projection",     label: "Projection",          group: "Daily Activity",  icon: "📈" },
-  { id: "importexport",   label: "Import / Export",     group: "Daily Activity",  icon: "💾" },
-  { id: "overview",       label: "Overview",            group: "Personal Finance", icon: "🏠" },
-  { id: "accountscards",  label: "Accounts & Cards",    group: "Personal Finance", icon: "💰" },
+  { id: "importexport",   label: "Import / Export",     group: "Daily Activity",  icon: "💾" },  { id: "accountscards",  label: "Accounts & Cards",    group: "Personal Finance", icon: "💰" },
   { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "📊" },
   { id: "accounts",       label: "Bank Accounts",       group: "Personal Finance", icon: "🏦" },
   { id: "cards",          label: "Credit Cards",        group: "Personal Finance", icon: "💳" },
-  { id: "fixedpayments",  label: "Recurring Payments",  group: "Personal Finance", icon: "📅" },
-  { id: "subscriptions",  label: "Subscriptions",       group: "Personal Finance", icon: "🔁" },
-  { id: "plannedpayments", label: "Planned Payments",   group: "Personal Finance", icon: "🎯" },
-  { id: "vehicles",       label: "Vehicles",            group: "Personal Finance", icon: "🚗" },
+  { id: "fixedpayments",  label: "Recurring Payments",  group: "Personal Finance", icon: "📅" },  { id: "vehicles",       label: "Vehicles",            group: "Personal Finance", icon: "🚗" },
   { id: "houseloans",     label: "House Loans",         group: "Personal Finance", icon: "🏡" },
   { id: "propertytax",    label: "Property Tax",        group: "Personal Finance", icon: "🏛" },
   { id: "categories",     label: "Categories",          group: "Personal Finance", icon: "🏷" },
@@ -83,13 +74,10 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
 ];
 
 const SECONDARY_SECTION_IDS = new Set<SectionId>([
-  "overview",
   "accounts",
   "cards",
   "categories",
   "transactions",
-  "subscriptions",
-  "plannedpayments",
   "vehicles",
   "houseloans",
   "propertytax",
@@ -111,7 +99,6 @@ const PRIMARY_NAV_IDS = new Set<SectionId>([
 ]);
 
 const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
-  overview: "dashboard",
   accounts: "accountscards",
   cards: "accountscards",
   accountscards: "accountscards",
@@ -120,8 +107,6 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   healthreport: "healthreport",
   transactions: "dailylog",
   fixedpayments: "fixedpayments",
-  subscriptions: "fixedpayments",
-  plannedpayments: "fixedpayments",
   vehicles: "assetsliabilities",
   houseloans: "assetsliabilities",
   propertytax: "assetsliabilities",
@@ -457,7 +442,6 @@ export default function Home() {
             )}
           </div>
         )}
-        {section === "overview"       && wrap(<OverviewSection />)}
         {section === "dailylog"       && wrap(<DailyLogSection />)}
         {section === "healthreport"   && wrap(
           <HealthReportSection
@@ -477,8 +461,6 @@ export default function Home() {
         {section === "assetsliabilities" && wrap(<AssetsLiabilitiesSection onNavigate={(target) => setSection(target)} />)}
         {section === "transactions"   && wrap(<TransactionHistorySection />)}
         {section === "fixedpayments"  && wrap(<FixedPaymentsSection />)}
-        {section === "subscriptions"  && wrap(<SubscriptionsSection />)}
-        {section === "plannedpayments" && wrap(<PlannedPaymentsSection />)}
         {section === "vehicles"       && wrap(
           <VehiclesSection
             accounts={accounts}
@@ -507,3 +489,5 @@ export default function Home() {
     </div>
   );
 }
+
+

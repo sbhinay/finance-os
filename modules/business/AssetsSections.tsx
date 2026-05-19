@@ -708,7 +708,7 @@ export function HouseLoansSection({
     <div>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>House Loans / Mortgages</div>
       <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        💡 Define your mortgage/loan details here. Do not duplicate in Fixed Payments.
+        💡 Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
         <StatBox label="Total Remaining" value={fmtCAD(totalRemaining)} color="#a31515" />

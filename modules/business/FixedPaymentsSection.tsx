@@ -80,10 +80,6 @@ function Grid2({ children }: { children: React.ReactNode }) {
 type FixedPaymentsSectionProps = {
   title?: string;
   introText?: string;
-  forcedKind?: RecurringKind;
-  addLabel?: string;
-  emptyLabel?: string;
-  hideKindFilters?: boolean;
 };
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual", "One-time"];
@@ -247,16 +243,12 @@ export function PendingBanner({
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FIXED PAYMENTS SECTION
+// RECURRING PAYMENTS SECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function FixedPaymentsSection({
   title = "Recurring Payments",
   introText = "Shared recurring engine for subscriptions, utilities, insurance, planned payments, and legacy recurring items that do not yet live under a stronger parent record.",
-  forcedKind,
-  addLabel = "+ Add Recurring Item",
-  emptyLabel,
-  hideKindFilters = false,
 }: FixedPaymentsSectionProps = {}) {
   // Internal hooks — no props needed
   const { accounts } = useAccounts();
@@ -269,14 +261,6 @@ export function FixedPaymentsSection({
   const plannedTransferSubTypes = (SUB_TYPE_OPTIONS.transfer ?? []).filter((option) =>
     ["tfsa_contribution", "rrsp_contribution", "bank_to_bank", "e_transfer"].includes(option.value)
   );
-  const lockedCategoryId =
-    forcedKind === "subscription"
-      ? subscriptionCategoryId
-      : (forcedKind === "account_fee" || forcedKind === "card_fee")
-        ? accountFeesCategoryId
-        : "";
-  const isCategoryLocked = !!lockedCategoryId;
-
   const emptyForm = {
     id: "" as string | undefined,
     name: "", amount: 0 as number,
@@ -299,14 +283,21 @@ export function FixedPaymentsSection({
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
-  const [kindFilter, setKindFilter] = useState<RecurringKind | "all">(forcedKind ?? "all");
+  const [kindFilter, setKindFilter] = useState<RecurringKind | "all">("all");
 
   // Backfill state
   const [backfillModal, setBackfillModal] = useState<{ fp: FixedPayment; dates: string[] } | null>(null);
   const [backfillAccountId, setBackfillAccountId] = useState("");
   const [backfillDone, setBackfillDone] = useState<number | null>(null);
-  const isPlannedPaymentsPage = forcedKind === "planned_payment";
-  const isTransferPlannedPayment = isPlannedPaymentsPage && form.transactionType === "transfer";
+  const lockedCategoryId =
+    form.kind === "subscription"
+      ? subscriptionCategoryId
+      : (form.kind === "account_fee" || form.kind === "card_fee")
+        ? accountFeesCategoryId
+        : "";
+  const isCategoryLocked = !!lockedCategoryId;
+  const isPlannedPayment = form.kind === "planned_payment";
+  const isTransferPlannedPayment = isPlannedPayment && form.transactionType === "transfer";
 
   const f = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -415,7 +406,7 @@ export function FixedPaymentsSection({
       return s + p.amount * (m[p.schedule] ?? 1);
     }, 0);
 
-  const activeKindFilter = forcedKind ?? kindFilter;
+  const activeKindFilter = kindFilter;
   const visiblePayments = fixedPayments.filter((p) => activeKindFilter === "all" ? true : getFixedPaymentKind(p) === activeKindFilter);
 
   return (
@@ -444,22 +435,20 @@ export function FixedPaymentsSection({
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-        {!hideKindFilters ? (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Btn small variant={kindFilter === "all" ? "primary" : "secondary"} onClick={() => setKindFilter("all")}>All</Btn>
-            {RECURRING_KINDS.map((kind) => (
-              <Btn
-                key={kind.value}
-                small
-                variant={kindFilter === kind.value ? "primary" : "secondary"}
-                onClick={() => setKindFilter(kind.value)}
-              >
-                {kind.label}
-              </Btn>
-            ))}
-          </div>
-        ) : <div />}
-        <Btn small onClick={() => { setForm({ ...emptyForm, kind: forcedKind ?? emptyForm.kind, categoryId: lockedCategoryId || emptyForm.categoryId }); setShowForm(true); }}>{addLabel}</Btn>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn small variant={kindFilter === "all" ? "primary" : "secondary"} onClick={() => setKindFilter("all")}>All</Btn>
+          {RECURRING_KINDS.map((kind) => (
+            <Btn
+              key={kind.value}
+              small
+              variant={kindFilter === kind.value ? "primary" : "secondary"}
+              onClick={() => setKindFilter(kind.value)}
+            >
+              {kind.label}
+            </Btn>
+          ))}
+        </div>
+        <Btn small onClick={() => { setForm({ ...emptyForm }); setShowForm(true); }}>+ Add Recurring Item</Btn>
       </div>
 
       {visiblePayments.map((p) => {
@@ -510,15 +499,15 @@ export function FixedPaymentsSection({
 
       {visiblePayments.length === 0 && (
         <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>
-          {emptyLabel ?? (activeKindFilter === "all" ? "No recurring items yet." : `No ${KIND_LABELS[activeKindFilter]} items yet.`)}
+          {activeKindFilter === "all" ? "No recurring items yet." : `No ${KIND_LABELS[activeKindFilter]} items yet.`}
         </div>
       )}
 
       {/* Add/Edit form */}
       {showForm && (
         <Modal title={form.id ? "Edit Recurring Item" : "Add Recurring Item"} onClose={() => setShowForm(false)}>
-          {!forcedKind && <Sel label="Recurring Type" value={form.kind} onChange={f("kind")} options={RECURRING_KINDS} />}
-          {isPlannedPaymentsPage && (
+          <Sel label="Recurring Type" value={form.kind} onChange={f("kind")} options={RECURRING_KINDS} />
+          {isPlannedPayment && (
             <Sel
               label="Posting Type"
               value={form.transactionType}
@@ -646,31 +635,5 @@ export function FixedPaymentsSection({
         onSaved={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
       />
     </div>
-  );
-}
-
-export function SubscriptionsSection() {
-  return (
-    <FixedPaymentsSection
-      title="Subscriptions"
-      introText="Track app, membership, and service subscriptions in one place. These still use the shared recurring engine underneath."
-      forcedKind="subscription"
-      addLabel="+ Add Subscription"
-      emptyLabel="No subscriptions yet."
-      hideKindFilters
-    />
-  );
-}
-
-export function PlannedPaymentsSection() {
-  return (
-    <FixedPaymentsSection
-      title="Planned Payments"
-      introText="Track flexible commitments like TFSA contributions, RRSP moves, donations, and family support in one place. These can stay scheduled for projection or be logged on demand."
-      forcedKind="planned_payment"
-      addLabel="+ Add Planned Payment"
-      emptyLabel="No planned payments yet."
-      hideKindFilters
-    />
   );
 }
