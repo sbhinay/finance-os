@@ -11,6 +11,7 @@ export interface Account {
   balanceBase?: number;
   reconciledBalance?: number;
   reconciledDate?: string;
+  reconciledAt?: string;
   monthlyFeeAmount?: number;
   monthlyFeeDate?: string;
   active: boolean;

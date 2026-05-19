@@ -10,6 +10,7 @@ export interface CreditCard {
   balanceBase?: number;
   reconciledBalance?: number;
   reconciledDate?: string;
+  reconciledAt?: string;
   linkedAccountId?: string;
   annualFeeAmount?: number;
   annualFeeDate?: string;

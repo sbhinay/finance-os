@@ -325,6 +325,7 @@ export function BankAccountsSection() {
                 balanceBase: toFixed2(reconAmt),
                 reconciledBalance: toFixed2(reconAmt),
                 reconciledDate: reconDate,
+                reconciledAt: new Date().toISOString(),
               };
               updateAccount(updated);
 
@@ -575,6 +576,7 @@ export function CreditCardsSection() {
                 balanceBase: toFixed2(cardReconAmt),
                 reconciledBalance: toFixed2(cardReconAmt),
                 reconciledDate: cardReconDate,
+                reconciledAt: new Date().toISOString(),
               };
               creditCardRepository.saveAll(
                 creditCardRepository.getAll().map((c) => c.id === updated.id ? updated : c)

@@ -6,6 +6,7 @@ import { toFixed2 } from "@/utils/finance";
 type BalanceFields = {
   reconciledBalance?: number;
   reconciledDate?: string | null;
+  reconciledAt?: string | null;
   balanceBase?: number;
 };
 
@@ -32,8 +33,35 @@ function getReplayBase<T extends { id: string; openingBalance: number }>(
   return toFixed2(item.openingBalance ?? 0);
 }
 
-function shouldApplyTransaction(item: { reconciledDate?: string | null }, txDate: string) {
-  return !item.reconciledDate || txDate > item.reconciledDate;
+function getReconciledAtCutoff(
+  item: { id: string; reconciledDate?: string | null; reconciledAt?: string | null },
+  transactions: Transaction[]
+): string | null {
+  if (item.reconciledAt) return item.reconciledAt;
+  if (!item.reconciledDate) return null;
+
+  return transactions
+    .filter((t) => {
+      const txDate = t.date ?? t.createdAt?.slice(0, 10) ?? "";
+      return (t.sourceId === item.id || t.destinationId === item.id) && txDate === item.reconciledDate;
+    })
+    .map((t) => t.createdAt)
+    .filter(Boolean)
+    .sort()
+    .slice(-1)[0] ?? null;
+}
+
+function shouldApplyTransaction(
+  item: { reconciledDate?: string | null; reconciledAt?: string | null },
+  txDate: string,
+  txCreatedAt: string,
+  reconciledAtCutoff: string | null
+) {
+  if (!item.reconciledDate) return true;
+  if (txDate > item.reconciledDate) return true;
+  if (txDate < item.reconciledDate) return false;
+  if (!reconciledAtCutoff) return false;
+  return txCreatedAt > reconciledAtCutoff;
 }
 
 export function recalculateBalances(transactions: Transaction[]) {
@@ -65,6 +93,7 @@ export function recalculateBalances(transactions: Transaction[]) {
     if (t.status === "pending") continue;
 
     const txDate = t.date ?? t.createdAt?.slice(0, 10) ?? "";
+    const txCreatedAt = t.createdAt ?? `${txDate}T00:00:00.000Z`;
     if (txDate > today) continue;
 
     const srcAcc = accounts.find((a) => a.id === t.sourceId);
@@ -72,10 +101,15 @@ export function recalculateBalances(transactions: Transaction[]) {
     const toAcc = t.destinationId ? accounts.find((a) => a.id === t.destinationId) : undefined;
     const toCard = t.destinationId ? cards.find((c) => c.id === t.destinationId) : undefined;
 
-    const applySrcAcc = srcAcc && shouldApplyTransaction(srcAcc, txDate);
-    const applySrcCard = srcCard && shouldApplyTransaction(srcCard, txDate);
-    const applyToAcc = toAcc && shouldApplyTransaction(toAcc, txDate);
-    const applyToCard = toCard && shouldApplyTransaction(toCard, txDate);
+    const srcAccCutoff = srcAcc ? getReconciledAtCutoff(srcAcc, transactions) : null;
+    const srcCardCutoff = srcCard ? getReconciledAtCutoff(srcCard, transactions) : null;
+    const toAccCutoff = toAcc ? getReconciledAtCutoff(toAcc, transactions) : null;
+    const toCardCutoff = toCard ? getReconciledAtCutoff(toCard, transactions) : null;
+
+    const applySrcAcc = srcAcc && shouldApplyTransaction(srcAcc, txDate, txCreatedAt, srcAccCutoff);
+    const applySrcCard = srcCard && shouldApplyTransaction(srcCard, txDate, txCreatedAt, srcCardCutoff);
+    const applyToAcc = toAcc && shouldApplyTransaction(toAcc, txDate, txCreatedAt, toAccCutoff);
+    const applyToCard = toCard && shouldApplyTransaction(toCard, txDate, txCreatedAt, toCardCutoff);
 
     switch (t.type) {
       case "expense":
