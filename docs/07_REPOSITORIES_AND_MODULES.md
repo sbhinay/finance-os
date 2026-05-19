@@ -47,6 +47,7 @@ export const [domain]Repository = {
 | Bank Accounts | `modules/business/CoreSections.tsx` | Includes account reconcile flow |
 | Credit Cards | `modules/business/CoreSections.tsx` | Includes card payment and reconcile flows |
 | Dashboard / Projection | `modules/business/DashboardProjectionSections.tsx` | Monthly actuals, projections, top categories |
+| Health Report | `modules/business/HealthReportSection.tsx` | Warning-first integrity scan with inline repair/open actions |
 | Recurring Payments | `modules/business/FixedPaymentsSection.tsx` | Shared recurring engine, filtered recurring views, pending alerts |
 | Subscriptions | `modules/business/FixedPaymentsSection.tsx` | Dedicated subscription view backed by the recurring engine |
 | Planned Payments | `modules/business/FixedPaymentsSection.tsx` | Planned recurring commitments with record-driven expense/transfer posting |
@@ -57,6 +58,16 @@ export const [domain]Repository = {
 | Import / Export | `modules/business/ImportExportSection.tsx` | Current-app export plus legacy migration support |
 
 ### Transition Notes
+- The sidebar is now intentionally simplified around stronger hubs rather than exposing every detail page as a primary tab.
+- The current top-level hub direction is:
+  - `Daily Log`
+  - `Dashboard`
+  - `Accounts & Cards`
+  - `Assets & Liabilities`
+  - `Recurring Payments`
+  - `Business`
+  - `Data & Health`
+- Detail pages like `Transaction History`, `Projection`, `Subscriptions`, `Planned Payments`, `Vehicles`, `House Loans`, `Property Tax`, and `Import / Export` remain active, but they are now intended to be reached from their parent hubs.
 - `Assets & Liabilities` is now the new cross-domain shell for asset and debt workflows.
 - Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
 - New actions should prefer launching the canonical `TransactionForm` from the unified page rather than inventing separate transaction-entry behavior.

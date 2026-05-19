@@ -61,6 +61,17 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning rather than relying only on generic expense rows.
 - Transaction descriptions are now system-first and notes are secondary/collapsed instead of equally prominent.
 - Transaction History is no longer category-only for findability; it now supports richer debt-oriented lookup and subtype-aware display.
+- Transaction History is now explicitly paginated with user-visible page controls instead of silently clipping to a hidden row limit.
+- Health Report is now live as a warning-first repair surface rather than a deferred concept.
+- The sidebar has been simplified around seven hubs:
+  - `Daily Log`
+  - `Dashboard`
+  - `Accounts & Cards`
+  - `Assets & Liabilities`
+  - `Recurring Payments`
+  - `Business`
+  - `Data & Health`
+- Secondary pages remain available, but they are increasingly treated as subviews under those stronger destinations.
 
 ## 4. Documentation Structure
 The docs are organized into the following cross-linked files:
@@ -84,4 +95,4 @@ The docs are organized into the following cross-linked files:
 - This set is a v3 refresh of the repo docs.
 - Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.
 - FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.
-- The current navigation still contains both legacy pages and newer destination pages; this is intentional during transition and is documented in deferred items rather than treated as final information architecture.
+- The current navigation now deliberately emphasizes a reduced hub set while still preserving older detail pages behind sub-navigation during transition.

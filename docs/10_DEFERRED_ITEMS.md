@@ -125,6 +125,13 @@ The items below preserve earlier backlog items while regrouping them under the c
   - fewer primary tabs
   - more filtered subviews within strong destination pages
   - clearer demotion of legacy pages
+- Continue folding redundant destinations into the agreed hub structure:
+  - `Transaction History` under `Daily Log`
+  - `Projection` under `Dashboard`
+  - `Health Report` and `Import / Export` under `Data & Health`
+  - detail recurring pages into `Recurring Payments`
+  - legacy asset tabs into `Assets & Liabilities`
+- Finish redistributing `Overview` content and remove the leftover route once `Dashboard` and `Accounts & Cards` fully cover its value.
 
 ## Preserved Older Backlog Themes
 

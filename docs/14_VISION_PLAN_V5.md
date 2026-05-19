@@ -100,13 +100,12 @@ Current direction:
 
 ### Stronger long-term destinations
 - Daily Log
-- Transaction History
-- Reports / Projection
+- Dashboard
 - Accounts & Cards
 - Assets & Liabilities
 - Recurring Payments
 - Business
-- Import / Export / Settings
+- Data & Health
 
 ### Transitional reality
 Some standalone pages still exist today because:
@@ -115,6 +114,13 @@ Some standalone pages still exist today because:
 - recurring redesign is still being folded into stronger destinations
 
 That is acceptable as long as the direction is intentional.
+
+Current active simplification pattern:
+- `Transaction History` now sits under `Daily Log`
+- `Projection` now sits under `Dashboard`
+- `Health Report` and `Import / Export` now sit under `Data & Health`
+- `Subscriptions` and `Planned Payments` remain detail views of the shared recurring engine
+- `Overview` is now considered weak and should be absorbed rather than restored as a primary tab
 
 ## What We Already Learned
 
@@ -196,5 +202,7 @@ As of this version:
 - debt payments support regular-first UX
 - transaction descriptions are system-first
 - transaction history is more subtype/findability aware
+- transaction history is now explicitly paginated instead of silently truncating to a hidden cap
+- health reporting is live and actionable, not just planned
 
 The next major challenge is not adding raw capability. It is consolidating capability into fewer, clearer destinations while maintaining the integrity of the ledger.

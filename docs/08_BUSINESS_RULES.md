@@ -42,6 +42,7 @@
   - card fees
 - Parent-owned recurring rows should be auto-created from their parent records when that parent owns the schedule data.
 - `Planned Payments` must behave by record-declared posting type rather than page-level hardcoded assumptions.
+- `Recurring Payments` is the primary recurring hub; `Subscriptions` and `Planned Payments` are focused views over the same shared engine, not separate scheduling engines.
 
 ### Asset Payment Rules
 - Vehicle and house loan `nextPaymentDate` advance by schedule after confirmation.
@@ -79,3 +80,9 @@
 - Regular projections must include full scheduled outflows for mortgages, vehicle payments, fixed payments, and CRA obligations even when those rows are not standard expense types.
 - Detailed financing reports may later use `principalAmount`, `interestAmount`, rate, amortization, and term data when available, but regular projections must not depend on them.
 - Subscription rows should default to `Subscriptions` category when that category exists in the dedicated subscription workflow.
+- Transaction History is explicitly paginated for usability; exports still operate on the full filtered result set rather than only the visible page.
+
+### Navigation Rules
+- Top-level navigation should prefer a small number of strong hubs over many sibling utility tabs.
+- Secondary/detail pages may still exist during transition, but they should be reached from parent hub views whenever practical.
+- `Overview` is no longer treated as a strong primary destination and should be folded into `Dashboard` and `Accounts & Cards` over time.

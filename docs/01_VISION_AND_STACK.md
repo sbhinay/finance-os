@@ -25,9 +25,23 @@ One tool that grows with the user: from simple personal tracking to business-rea
 - Support two user levels:
   - regular mode for cash-first planning with minimal required inputs
   - detailed mode for richer financing, tax, and amortization analysis only when the user opts in
+- Gradually simplify the app into a smaller set of stronger destinations instead of many sibling utility tabs.
+- Treat Health Report as a warning-first system surface for integrity, stale schedules, and recurring ownership issues.
 - Let the product answer both:
   - "What do I need ready for the next payment?"
   - "What is really expense versus transfer or liability reduction?"
+
+### Current Navigation Direction
+The active navigation is converging toward these hubs:
+- `Daily Log`
+- `Dashboard`
+- `Accounts & Cards`
+- `Assets & Liabilities`
+- `Recurring Payments`
+- `Business`
+- `Data & Health`
+
+Detail views such as `Transaction History`, `Projection`, `Vehicles`, `House Loans`, `Property Tax`, `Subscriptions`, and `Planned Payments` still exist, but they are now treated as subviews under stronger parent destinations rather than as permanent primary tabs.
 
 ---
 
