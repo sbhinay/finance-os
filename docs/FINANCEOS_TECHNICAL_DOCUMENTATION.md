@@ -32,6 +32,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Current-app JSON export/import with asset restoration.
 - Reconciliation metadata on accounts and credit cards.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
+- New `CRA Review` business subview that combines current ledger and business data with saved tax questionnaire inputs to produce warning-first CRA working-paper guidance.
 - Initial unified `Assets & Liabilities` page with upcoming-obligation actions.
 - Parent-owned recurring workflows for:
   - bank-account fees
@@ -75,6 +76,12 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - The current UX modernization uses a shared theme/token layer in `lib/theme.ts` rather than a UI framework migration.
 - Mobile navigation now uses an off-canvas drawer so narrow screens are not dominated by the sidebar.
 - Dashboard, Daily Log, Transaction History, Assets, and Recurring surfaces are in active visual refresh so desktop and phone layouts stay usable from the same code path.
+- The `Business` hub now separates:
+  - operational business tracking
+  - corporation income snapshots
+  - CRA review and missing-input guidance
+  - tax obligations
+  - tax/rate settings
 
 ## 4. Documentation Structure
 The docs are organized into the following cross-linked files:

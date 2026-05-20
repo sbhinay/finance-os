@@ -1,6 +1,20 @@
-import { Business } from "@/types/business";
+import { Business, CRAReviewProfile } from "@/types/business";
 
 const STORAGE_KEY = "finance_os_business";
+
+const DEFAULT_CRA_REVIEW_PROFILE: CRAReviewProfile = {
+  province: "ON",
+  filingProfile: "corporation",
+  gstRegistered: "unknown",
+  gstFilingFrequency: "unknown",
+  hasEmploymentIncome: "unknown",
+  hasSpouseOrPartner: "unknown",
+  phoneBusinessUsePct: 100,
+  internetBusinessUsePct: 100,
+  vehicleBusinessUsePct: 0,
+  homeOfficeUsePct: 0,
+  notes: "",
+};
 
 /**
  * Default empty Business object — mirrors prototype's defaultBusiness.
@@ -22,6 +36,7 @@ const DEFAULT_BUSINESS: Business = {
     payrollDraw: [],
     corpTaxInstalment: [],
   },
+  craReviewProfile: { ...DEFAULT_CRA_REVIEW_PROFILE },
 };
 
 export const businessRepository = {
@@ -29,7 +44,15 @@ export const businessRepository = {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_BUSINESS };
     try {
-      return { ...DEFAULT_BUSINESS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw) as Partial<Business>;
+      return {
+        ...DEFAULT_BUSINESS,
+        ...parsed,
+        craReviewProfile: {
+          ...DEFAULT_CRA_REVIEW_PROFILE,
+          ...(parsed.craReviewProfile ?? {}),
+        },
+      };
     } catch {
       return { ...DEFAULT_BUSINESS };
     }
@@ -53,6 +76,10 @@ export const businessRepository = {
     const imported: Business = {
       ...DEFAULT_BUSINESS,
       ...(biz as Partial<Business>),
+      craReviewProfile: {
+        ...DEFAULT_CRA_REVIEW_PROFILE,
+        ...((biz as Partial<Business>).craReviewProfile ?? {}),
+      },
     };
 
     // Migrate legacy scalar payrollDraw/payrollRemittance → rateSettings

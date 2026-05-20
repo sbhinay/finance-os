@@ -26,6 +26,7 @@ import { ImportExportSection } from "@/modules/business/ImportExportSection";
 import { CategoriesSection } from "@/modules/business/CategoriesSection";
 import { AssetsLiabilitiesSection } from "@/modules/business/AssetsLiabilitiesSection";
 import { HealthReportSection } from "@/modules/business/HealthReportSection";
+import { CRAReviewSection } from "@/modules/business/CRAReviewSection";
 import { syncBalances } from "@/utils/syncBalances";
 import { notifyDataChanged } from "@/utils/events";
 import { fmtCAD } from "@/utils/finance";
@@ -45,6 +46,7 @@ type SectionId =
   | "houseloans"
   | "hourscontracts"
   | "corpincome"
+  | "crareview"
   | "cra"
   | "ratesettings"
   | "dashboard"
@@ -67,6 +69,7 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "categories", label: "Categories", group: "Personal Finance", icon: "*" },
   { id: "hourscontracts", label: "Hours & Contracts", group: "Business / CRA", icon: "*" },
   { id: "corpincome", label: "Corp Income", group: "Business / CRA", icon: "*" },
+  { id: "crareview", label: "CRA Review", group: "Business / CRA", icon: "*" },
   { id: "cra", label: "Tax Obligations", group: "Business / CRA", icon: "*" },
   { id: "ratesettings", label: "Tax & Rate Settings", group: "Business / CRA", icon: "*" },
 ];
@@ -93,6 +96,7 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   houseloans: "assetsliabilities",
   hourscontracts: "hourscontracts",
   corpincome: "hourscontracts",
+  crareview: "hourscontracts",
   cra: "hourscontracts",
   ratesettings: "hourscontracts",
   dashboard: "dashboard",
@@ -142,24 +146,35 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
   hourscontracts: [
     { id: "hourscontracts", label: "Hours & Contracts" },
     { id: "corpincome", label: "Corp Income" },
+    { id: "crareview", label: "CRA Review" },
     { id: "cra", label: "Tax Obligations" },
     { id: "ratesettings", label: "Tax & Rate Settings" },
   ],
   corpincome: [
     { id: "hourscontracts", label: "Hours & Contracts" },
     { id: "corpincome", label: "Corp Income" },
+    { id: "crareview", label: "CRA Review" },
+    { id: "cra", label: "Tax Obligations" },
+    { id: "ratesettings", label: "Tax & Rate Settings" },
+  ],
+  crareview: [
+    { id: "hourscontracts", label: "Hours & Contracts" },
+    { id: "corpincome", label: "Corp Income" },
+    { id: "crareview", label: "CRA Review" },
     { id: "cra", label: "Tax Obligations" },
     { id: "ratesettings", label: "Tax & Rate Settings" },
   ],
   cra: [
     { id: "hourscontracts", label: "Hours & Contracts" },
     { id: "corpincome", label: "Corp Income" },
+    { id: "crareview", label: "CRA Review" },
     { id: "cra", label: "Tax Obligations" },
     { id: "ratesettings", label: "Tax & Rate Settings" },
   ],
   ratesettings: [
     { id: "hourscontracts", label: "Hours & Contracts" },
     { id: "corpincome", label: "Corp Income" },
+    { id: "crareview", label: "CRA Review" },
     { id: "cra", label: "Tax Obligations" },
     { id: "ratesettings", label: "Tax & Rate Settings" },
   ],
@@ -499,6 +514,7 @@ export default function Home() {
         )}
         {section === "hourscontracts" && wrap(<HoursContractsSection accounts={accounts} />)}
         {section === "corpincome"     && wrap(<CorporationIncomeSection transactions={transactions} />)}
+        {section === "crareview"      && wrap(<CRAReviewSection transactions={transactions} accounts={accounts} />)}
         {section === "cra"            && wrap(<TaxObligationsSection accounts={accounts} />)}
         {section === "ratesettings"   && wrap(<TaxRateSettingsSection />)}
         {section === "dashboard"      && wrap(<DashboardSection />)}

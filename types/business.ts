@@ -14,6 +14,20 @@ export interface PayrollDrawEntry {
   note?: string;
 }
 
+export interface CRAReviewProfile {
+  province: string;
+  filingProfile: "sole_prop" | "corporation" | "both";
+  gstRegistered: "yes" | "no" | "unknown";
+  gstFilingFrequency: "monthly" | "quarterly" | "annual" | "unknown";
+  hasEmploymentIncome: "yes" | "no" | "unknown";
+  hasSpouseOrPartner: "yes" | "no" | "unknown";
+  phoneBusinessUsePct: number;
+  internetBusinessUsePct: number;
+  vehicleBusinessUsePct: number;
+  homeOfficeUsePct: number;
+  notes?: string;
+}
+
 export interface RateSettings {
   hstRate: RateEntry[];
   quickMethodRate: RateEntry[];
@@ -140,6 +154,7 @@ export interface Business {
   arrearsCorp: number;
   arrearsPayments: ArrearsPayment[];
   rateSettings: RateSettings;
+  craReviewProfile?: CRAReviewProfile;
   // Legacy scalar fields (kept for migration compatibility)
   hourlyRate?: number;
   annualHours?: number;

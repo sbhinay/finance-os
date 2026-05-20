@@ -8,6 +8,32 @@ FinanceOS is now moving toward a clearer product structure:
 
 The items below preserve earlier backlog items while regrouping them under the current architecture direction so older planned work is not lost.
 
+## Recently Landed
+
+The following items are no longer purely deferred because they are complete or materially in progress:
+- `Health Report` now exists as a warning-first data-quality surface.
+- Top-level navigation has been simplified into stronger hub pages:
+  - `Daily Log`
+  - `Dashboard`
+  - `Accounts & Cards`
+  - `Assets & Liabilities`
+  - `Recurring Payments`
+  - `Business`
+  - `Data & Health`
+- `Transaction History` now lives under `Daily Log`.
+- `Projection` now lives under `Dashboard`.
+- `Health Report`, `Import / Export`, and `Categories` now live under `Data & Health`.
+- Standalone `Overview` and standalone `Property Tax` routes have been removed.
+- Parent-owned recurring flows are now materially in place for:
+  - account fees
+  - card annual fees
+  - vehicle insurance
+  - property tax
+- `Subscriptions` and `Planned Payments` now exist as recurring-domain workflows.
+- The mobile shell and core finance views have had a major modernization pass.
+
+The remaining sections below focus on what is still open.
+
 ## 1. Recurring Architecture
 
 ### High priority
@@ -23,11 +49,11 @@ The items below preserve earlier backlog items while regrouping them under the c
   - vehicle insurance
   - property tax when needed
 
-### Parent-owned recurring items to move out of generic fixed payments
-- Vehicle insurance should continue moving from generic recurring setup toward richer vehicle-owned modeling.
-- Property tax should continue moving from standalone schedules toward property-owned modeling.
+### Parent-owned recurring items to deepen further
+- Vehicle insurance should continue moving from basic vehicle-owned recurring setup toward richer vehicle-owned modeling.
+- Property tax should continue moving from basic house-loan-owned recurring setup toward fuller property-owned modeling.
 
-### First-class recurring domains to add
+### First-class recurring domains to deepen
 - Expand `Subscriptions`
   - examples: YouTube, Apple, ChatGPT, gym, memberships, recurring car wash plans
   - later: cancellation / renewal metadata, provider detail, and richer insights
@@ -109,29 +135,57 @@ The items below preserve earlier backlog items while regrouping them under the c
 - Add Excel/PDF export of reports.
 - Improve debt-payment and carrying-cost reporting for properties, financed vehicles, and recurring commitments.
 
+### CRA and filing intelligence
+- Continue deepening the new CRA-focused tax review mode so it can explain:
+  - which transactions are likely tax-relevant
+  - which figures are only bookkeeping totals
+  - which CRA form or line a figure may belong to
+- Keep the first version warning-first and questionnaire-driven rather than pretending to be filing-ready.
+- Start with cautious guidance only:
+  - identify likely T2125 business-income and business-expense candidates
+  - identify likely HST/GST remittance transactions
+  - identify likely home-office, phone, internet, vehicle, and other partial-business-use categories
+- Require explicit user inputs before giving stronger filing guidance where needed:
+  - province of residence
+  - residency status
+  - employment income and T-slip context
+  - spouse/household context where relevant
+  - business-use percentages
+  - CCA / capital asset intent
+  - GST/HST registration and filing frequency
+- Keep the system warning-first:
+  - do not present bookkeeping categories as guaranteed CRA filing lines without the required context
+  - clearly distinguish:
+    - likely mapping
+    - user-confirmed mapping
+    - accountant-required judgment areas
+- Add a future tax review page that can show:
+  - proposed CRA line/form mappings
+  - missing inputs blocking reliable advice
+  - unresolved classification risks
+  - exportable tax working papers
+
 ## 7. Integrity, QA, And Tooling
 
-- Add a data health / integrity page for orphaned references and cleanup review.
+- Continue expanding the data health / integrity page for orphaned references and cleanup review.
 - Add stronger import review UI for unresolved stale references.
 - Complete manual QA on the newer vehicle, property-tax, and asset-launched actions.
 - Add a small developer worklog / change-log file in repo for branch and bot traceability.
 
 ## 8. UI And Product Modernization
 
-- Modernize the overall visual system after the structural model is more stable.
-- Improve typography, spacing, form density, card layout, and mobile responsiveness.
-- Reduce old admin-panel feel and make recurring / payment flows feel more guided and modern.
-- Simplify top-level navigation once the new parent-owned recurring structure is stable:
-  - fewer primary tabs
-  - more filtered subviews within strong destination pages
-  - clearer demotion of legacy pages
-- Continue folding redundant destinations into the agreed hub structure:
-  - `Transaction History` under `Daily Log`
-  - `Projection` under `Dashboard`
-  - `Health Report` and `Import / Export` under `Data & Health`
-  - detail recurring pages into `Recurring Payments`
-  - legacy asset tabs into `Assets & Liabilities`
-- Finish redistributing `Overview` content and remove the leftover route once `Dashboard` and `Accounts & Cards` fully cover its value.
+- Continue the visual modernization pass across remaining older surfaces and interactions.
+- Keep improving typography, spacing, form density, card layout, and mobile responsiveness.
+- Continue reducing old admin-panel feel and make recurring / payment flows feel more guided and modern.
+- Keep refining the simplified hub structure:
+  - fewer redundant buttons leading to the same place
+  - clearer subviews within strong destination pages
+  - less duplicated “detail view” navigation
+- Continue folding older detail behavior more naturally into:
+  - `Accounts & Cards`
+  - `Assets & Liabilities`
+  - `Recurring Payments`
+- Add deeper drill-down from balances, category totals, and report summaries into the underlying transactions.
 
 ## Preserved Older Backlog Themes
 

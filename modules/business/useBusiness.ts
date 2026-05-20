@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Business,
   Invoice,
@@ -14,6 +14,7 @@ import {
   RateSettings,
   RateEntry,
   PayrollDrawEntry,
+  CRAReviewProfile,
 } from "@/types/business";
 import { Transaction } from "@/types/transaction";
 import { Account } from "@/types/account";
@@ -127,6 +128,20 @@ function applyArrearsBalance(
   };
 }
 
+const DEFAULT_CRA_REVIEW_PROFILE: CRAReviewProfile = {
+  province: "ON",
+  filingProfile: "corporation",
+  gstRegistered: "unknown",
+  gstFilingFrequency: "unknown",
+  hasEmploymentIncome: "unknown",
+  hasSpouseOrPartner: "unknown",
+  phoneBusinessUsePct: 100,
+  internetBusinessUsePct: 100,
+  vehicleBusinessUsePct: 0,
+  homeOfficeUsePct: 0,
+  notes: "",
+};
+
 const EMPTY_BUSINESS: Business = {
   clientName: "",
   contracts: [],
@@ -143,6 +158,7 @@ const EMPTY_BUSINESS: Business = {
     payrollDraw: [],
     corpTaxInstalment: [],
   },
+  craReviewProfile: { ...DEFAULT_CRA_REVIEW_PROFILE },
 };
 
 function normalizeBusiness(biz?: Partial<Business> | null): Business {
@@ -163,6 +179,10 @@ function normalizeBusiness(biz?: Partial<Business> | null): Business {
       payrollDraw: biz?.rateSettings?.payrollDraw ?? [],
       corpTaxInstalment: biz?.rateSettings?.corpTaxInstalment ?? [],
     },
+    craReviewProfile: {
+      ...DEFAULT_CRA_REVIEW_PROFILE,
+      ...(biz?.craReviewProfile ?? {}),
+    },
   };
 }
 
@@ -170,7 +190,9 @@ function normalizeBusiness(biz?: Partial<Business> | null): Business {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useBusiness() {
-  const [business, setBusiness] = useState<Business>(EMPTY_BUSINESS);
+  const [business, setBusiness] = useState<Business>(() =>
+    normalizeBusiness(businessRepository.get())
+  );
   const [error, setError] = useState<string | null>(null);
 
   const getBusiness = useCallback((): Business => {
@@ -179,13 +201,8 @@ export function useBusiness() {
 
 
   const load = useCallback(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBusiness(getBusiness());
   }, [getBusiness]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   // Persist + update local state atomically
     const commit = useCallback((biz: Business) => {
@@ -482,7 +499,7 @@ export function useBusiness() {
         .map((n) => parseInt(n.replace(prefix, "")) || 0);
       return `${prefix}${String(Math.max(0, ...nums) + 1).padStart(3, "0")}`;
     },
-    []
+    [getBusiness]
   );
 
   const saveInvoice = useCallback(
@@ -697,7 +714,7 @@ export function useBusiness() {
       );
       addTransactionAndDebit(txn, accountId);
     },
-    [commit, addTransactionAndDebit]
+    [commit, addTransactionAndDebit, getBusiness]
   );
 
   /**
@@ -740,7 +757,7 @@ export function useBusiness() {
       }
       // Legacy records without txnId — caller should warn user
     },
-    [commit, deleteTransactionAndCredit]
+    [commit, deleteTransactionAndCredit, getBusiness]
   );
 
   const updateObligationPlannedDate = useCallback(
@@ -927,7 +944,7 @@ export function useBusiness() {
         addTransactionAndDebit(txn, accountId);
       }
     },
-    [commit, addTransactionAndDebit]
+    [commit, addTransactionAndDebit, getBusiness]
   );
 
   /**
@@ -979,7 +996,7 @@ export function useBusiness() {
         addTransactionAndDebit(txn, accountId);
       }
     },
-    [commit, addTransactionAndDebit, deleteTransactionAndCredit]
+    [commit, addTransactionAndDebit, deleteTransactionAndCredit, getBusiness]
   );
 
   /**
@@ -1003,7 +1020,7 @@ export function useBusiness() {
 
       if (p.txnId) deleteTransactionAndCredit(p.txnId);
     },
-    [commit, deleteTransactionAndCredit]
+    [commit, deleteTransactionAndCredit, getBusiness]
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1016,6 +1033,20 @@ export function useBusiness() {
       commit({
         ...biz,
         rateSettings: { ...biz.rateSettings, [key]: entries },
+      });
+    },
+    [commit, getBusiness]
+  );
+
+  const updateCRAReviewProfile = useCallback(
+    (profile: CRAReviewProfile) => {
+      const biz = getBusiness();
+      commit({
+        ...biz,
+        craReviewProfile: {
+          ...DEFAULT_CRA_REVIEW_PROFILE,
+          ...profile,
+        },
       });
     },
     [commit, getBusiness]
@@ -1172,5 +1203,6 @@ export function useBusiness() {
     addPayrollDrawEntry,
     updatePayrollDrawEntry,
     deletePayrollDrawEntry,
+    updateCRAReviewProfile,
   };
 }
