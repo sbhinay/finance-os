@@ -16,6 +16,7 @@ import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 import { SUB_TYPE_LABELS } from "@/types/transaction";
+import { theme } from "@/lib/theme";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // --- Primitives ---------------------------------------------------------------
@@ -75,13 +76,15 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
     </div>
   );
 }
-function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
+function Grid2({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>{children}</div>;
+}
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 110, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: color ?? "#1a1a1a" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
+    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 150, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
+      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -749,6 +752,21 @@ export function TransactionHistorySection() {
   });
   const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
+  function drillIntoCategory(categoryId: string) {
+    setCatFilter(categoryId === "uncategorized" ? "" : categoryId);
+    setFilter("expense");
+    setPage(1);
+  }
+
+  function clearFilters() {
+    setFilter("all");
+    setCatFilter("");
+    setSubTypeFilter("");
+    setLinkedFilter("");
+    setSearch("");
+    setPage(1);
+  }
+
   function exportCSV() {
     const rows = [["Date", "Type", "Amount", "Category", "Account", "Mode", "Tag", "Description", "Vehicle", "Property"]];
     filtered.forEach((t) => {
@@ -768,10 +786,10 @@ export function TransactionHistorySection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Transaction History</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Transaction History</div>
 
       {/* Filters */}
-      <div style={{ background: "#fff", border: "1px solid #1a5fa8", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+      <div style={{ ...theme.cardStyle(theme.colors.primary), padding: "16px 18px", marginBottom: 14, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>
         <Grid2>
           <Inp label="From Date" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
           <Inp label="To Date" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
@@ -800,11 +818,14 @@ export function TransactionHistorySection() {
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search..."
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
           <Btn variant="secondary" small onClick={exportCSV}>Export CSV</Btn>
+          {(filter !== "all" || !!catFilter || !!subTypeFilter || !!linkedFilter || !!search) && (
+            <Btn variant="secondary" small onClick={clearFilters}>Clear Filters</Btn>
+          )}
         </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
         <StatBox label="Income" value={fmtCAD(totalIn)} color="#1a7f3c" />
         <StatBox label="Outflows" value={fmtCAD(totalOut)} color="#a31515" />
         <StatBox label="Transfers" value={fmtCAD(totalTransfers)} color="#6b7280" sub="not counted in net" />
@@ -814,10 +835,17 @@ export function TransactionHistorySection() {
 
       {/* Category chart */}
       {topCats.length > 0 && (
-        <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Spending by Category</div>
+        <div style={{ ...theme.cardStyle(), padding: "16px 18px", marginBottom: 14, background: theme.colors.surface }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Spending by Category</div>
+            <div style={{ fontSize: 11, color: theme.colors.textSoft }}>Tap a category to filter the list below.</div>
+          </div>
           {topCats.map(([catId, amt]) => (
-            <div key={catId} style={{ marginBottom: 8 }}>
+            <button
+              key={catId}
+              onClick={() => drillIntoCategory(catId)}
+              style={{ marginBottom: 8, width: "100%", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
                 <span>{catName(catId)}</span>
                 <span style={{ fontWeight: 600 }}>{fmtCAD(amt)}</span>
@@ -825,20 +853,20 @@ export function TransactionHistorySection() {
               <div style={{ height: 3, background: "#e5e7eb", borderRadius: 99 }}>
                 <div style={{ height: "100%", width: `${(amt / topCats[0][1]) * 100}%`, background: "#1a5fa8", borderRadius: 99 }} />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
       {/* Transaction list */}
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ ...theme.cardStyle(), overflow: "hidden", background: theme.colors.surface }}>
         {filtered.length > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", borderBottom: "1px solid #f3f4f6", background: "#f9fafb" }}>
-            <div style={{ fontSize: 12, color: "#6b7280" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "12px 16px", borderBottom: "1px solid #edf2f7", background: theme.colors.surfaceAlt }}>
+            <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
               Showing <strong>{startIndex + 1}</strong>-<strong>{endIndex}</strong> of <strong>{filtered.length}</strong>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: "#6b7280" }}>Per page</span>
+              <span style={{ fontSize: 12, color: theme.colors.textSoft }}>Per page</span>
               <select
                 value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
@@ -860,10 +888,10 @@ export function TransactionHistorySection() {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
           return (
-            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 14px", borderBottom: "1px solid #f3f4f6" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500 }}>{t.description || catName(t.categoryId) || "--"}</div>
-                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 16px", borderBottom: "1px solid #edf2f7", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.text }}>{t.description || catName(t.categoryId) || "--"}</div>
+                <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span>{(t.date ?? t.createdAt ?? "").slice(0, 10)}</span>
                   {catName(t.categoryId) && <span>- {catName(t.categoryId)}</span>}
                   {t.subType && <span>- {SUB_TYPE_LABELS[t.subType] ?? t.subType}</span>}
@@ -874,7 +902,7 @@ export function TransactionHistorySection() {
                   {prop && <Pill color="purple">{prop.name}</Pill>}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginLeft: "auto" }}>
                 <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
                   {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{fmtCAD(t.amount)}
                 </Pill>

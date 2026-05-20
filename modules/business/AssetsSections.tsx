@@ -12,12 +12,13 @@ import { transactionRepository } from "@/repositories/transactionRepository";
 import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 import { calculateBackfillDates } from "./useFixedPayments";
+import { theme } from "@/lib/theme";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // Primitives
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
+  return <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 6 }}>{children}</label>;
 }
 function Inp({ label, type = "text", value, onChange, placeholder }: {
   label?: string; type?: string; value: string | number;
@@ -27,7 +28,7 @@ function Inp({ label, type = "text", value, onChange, placeholder }: {
     <div>
       {label && <Label>{label}</Label>}
       <input type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13, boxSizing: "border-box" as const }} />
+        style={{ width: "100%", padding: "10px 12px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md, background: "#fff", fontSize: 13, boxSizing: "border-box" as const, color: theme.colors.text }} />
     </div>
   );
 }
@@ -40,7 +41,7 @@ function Sel({ label, value, onChange, options }: {
     <div>
       {label && <Label>{label}</Label>}
       <select value={value ?? ""} onChange={onChange}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}>
+        style={{ width: "100%", padding: "10px 12px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md, background: "#fff", fontSize: 13, color: theme.colors.text }}>
         {options.map((o) => {
           const v = typeof o === "string" ? o : o.value;
           const l = typeof o === "string" ? o : o.label;
@@ -54,30 +55,39 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "green"; small?: boolean; style?: React.CSSProperties;
 }) {
-  const c = { primary: { bg: "#1a5fa8", color: "#fff" }, secondary: { bg: "#f3f4f6", color: "#374151" }, danger: { bg: "#fef2f2", color: "#a31515" }, green: { bg: "#1a7f3c", color: "#fff" } }[variant];
-  return <button onClick={onClick} style={{ padding: small ? "4px 10px" : "8px 16px", fontSize: small ? 12 : 13, fontWeight: 600, borderRadius: 8, border: "1px solid transparent", cursor: "pointer", background: c.bg, color: c.color, ...style }}>{children}</button>;
+  const c = {
+    primary: { bg: theme.colors.primary, color: "#fff", border: theme.colors.primary },
+    secondary: { bg: "rgba(255,255,255,0.92)", color: theme.colors.text, border: theme.colors.border },
+    danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger, border: "#f7c8c4" },
+    green: { bg: theme.colors.success, color: "#fff", border: theme.colors.success },
+  }[variant];
+  return <button onClick={onClick} style={{ padding: small ? "6px 12px" : "10px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: 999, border: `1px solid ${c.border}`, cursor: "pointer", background: c.bg, color: c.color, boxShadow: variant === "secondary" ? "none" : theme.shadow.soft, ...style }}>{children}</button>;
 }
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 680 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
+      <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: wide ? 720 : 520, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
+        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
+          <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text }}>{title}</div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
         </div>
-        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
+        <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
       </div>
     </div>
   );
 }
-function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
-function Grid3({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>{children}</div>; }
+function Grid2({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>{children}</div>;
+}
+function Grid3({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>{children}</div>;
+}
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 120, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: color ?? "#1a1a1a" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
+    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 150, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
+      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -308,10 +318,21 @@ export function VehiclesSection({
     return accounts.find((a) => a.id === accountId)?.name ?? accountId;
   };
 
+  function getVehicleSpendByCategory(vehicleId: string) {
+    const totals = new Map<string, number>();
+    transactions
+      .filter((t) => t.linkedVehicleId === vehicleId && t.type === "expense")
+      .forEach((t) => {
+        const key = categories.find((c) => c.id === t.categoryId)?.name ?? "Uncategorized";
+        totals.set(key, (totals.get(key) ?? 0) + t.amount);
+      });
+    return Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+  }
+
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Vehicles</div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Vehicles</div>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 18 }}>
         <StatBox label="Total Vehicles" value={String(vehicles.length)} />
         <StatBox label="Active Leases" value={String(vehicles.filter((v) => v.vtype === "Lease" && getVehicleStatus(v) !== "Ended").length)} />
         <StatBox label="Financed" value={String(vehicles.filter((v) => v.vtype === "Finance").length)} />
@@ -325,10 +346,12 @@ export function VehiclesSection({
         const st = getVehicleStatus(v);
         const mp = mileageProjection(v);
         const next = getNextOccurrence(v.nextPaymentDate, v.schedule);
+        const categorySpend = getVehicleSpendByCategory(v.id);
+        const totalSpent = categorySpend.reduce((sum, [, amount]) => sum + amount, 0);
         return (
-          <div key={v.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
+          <div key={v.id} style={{ ...theme.cardStyle(), padding: "16px 18px", marginBottom: 12, background: theme.colors.surface }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{v.name}</div>
                   <Pill color={statusColor[st] ?? "gray"}>{st}</Pill>
@@ -364,8 +387,21 @@ export function VehiclesSection({
                     </div>
                   </div>
                 )}
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: categorySpend.length ? 8 : 0 }}>
+                    <StatBox label="Spent To Date" value={fmtCAD(totalSpent)} sub="logged expenses only" color="#a31515" />
+                    <StatBox label="Expense Entries" value={String(transactions.filter((t) => t.linkedVehicleId === v.id && t.type === "expense").length)} />
+                  </div>
+                  {categorySpend.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {categorySpend.slice(0, 4).map(([name, amount]) => (
+                        <Pill key={`${v.id}-${name}`} color="gray">{name}: {fmtCAD(toFixed2(amount))}</Pill>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", marginLeft: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", marginLeft: "auto", minWidth: 120 }}>
                 <Btn variant="green" small onClick={() => openLog(v)}>Log Payment</Btn>
                 <Btn variant="secondary" small onClick={() => openBackfill(v)}>Backfill</Btn>
                 <Btn variant="secondary" small onClick={() => setDetail(v)}>View History</Btn>
@@ -489,13 +525,31 @@ export function VehiclesSection({
                 if (bTime !== aTime) return bTime - aTime;
                 return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
               });
-            const total = txns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+            const expenseTxns = txns.filter((t) => t.type === "expense");
+            const total = expenseTxns.reduce((s, t) => s + t.amount, 0);
+            const spendByCategory = expenseTxns.reduce<Record<string, number>>((acc, t) => {
+              const key = categories.find((c) => c.id === t.categoryId)?.name ?? "Uncategorized";
+              acc[key] = (acc[key] ?? 0) + t.amount;
+              return acc;
+            }, {});
+            const categoryRows = Object.entries(spendByCategory).sort((a, b) => b[1] - a[1]);
             return (
               <>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <StatBox label="Total Spent" value={fmtCAD(total + detail.payment)} sub="incl. monthly payments" />
                   <StatBox label="Expense Entries" value={String(txns.length)} />
                 </div>
+                {categoryRows.length > 0 && (
+                  <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Spent By Category</div>
+                    {categoryRows.map(([name, amount]) => (
+                      <div key={name} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
+                        <span>{name}</span>
+                        <span style={{ fontWeight: 600 }}>{fmtCAD(toFixed2(amount))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {txns.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No expenses logged for this vehicle yet.</div>}
                 {txns.map((t) => (
                   <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
@@ -706,11 +760,11 @@ export function HouseLoansSection({
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>House Loans / Mortgages</div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>House Loans / Mortgages</div>
+      <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 14, background: "#f0f9ff", padding: "10px 14px", borderRadius: 12, border: `1px solid ${theme.colors.border}` }}>
         Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
       </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 18 }}>
         <StatBox label="Total Remaining" value={fmtCAD(totalRemaining)} color="#a31515" />
         <StatBox label="Monthly Equiv." value={fmtCAD(toFixed2(totalMonthly))} color="#a05c00" />
         <StatBox label="Properties" value={String(houseLoans.length)} />
@@ -723,12 +777,12 @@ export function HouseLoansSection({
         const next = getNextOccurrence(l.nextPaymentDate, l.schedule);
         const acct = accounts.find((a) => a.id === l.source);
         return (
-          <div key={l.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{l.name}</div>
-                {l.address && <div style={{ fontSize: 12, color: "#6b7280" }}>{l.address}</div>}
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+          <div key={l.id} style={{ ...theme.cardStyle(), padding: "16px 18px", marginBottom: 12, background: theme.colors.surface }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: theme.colors.text }}>{l.name}</div>
+                {l.address && <div style={{ fontSize: 12, color: theme.colors.textSoft }}>{l.address}</div>}
+                <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>
                   {fmtCAD(l.payment)}/{l.schedule}
                   {l.source ? ` - From: ${getAccountName(l.source)}` : ""}
                   {l.nextPaymentDate
@@ -741,12 +795,12 @@ export function HouseLoansSection({
                   </div>
                 )}
                 {acct && (
-                  <div style={{ fontSize: 12, color: acct.openingBalance >= l.payment ? "#1a7f3c" : "#a31515", marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: acct.openingBalance >= l.payment ? "#1a7f3c" : "#a31515", marginTop: 4 }}>
                     Account balance: {fmtCAD(acct.openingBalance)}
                   </div>
                 )}
                 {!!l.propertyTaxAmount && (
-                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>
                     Property tax: {fmtCAD(l.propertyTaxAmount)}/{l.propertyTaxSchedule ?? "Monthly"}
                     {l.propertyTaxSource ? ` - From: ${getAccountName(l.propertyTaxSource)}` : ""}
                     {l.propertyTaxDate ? ` - Next: ${fmtDate(l.propertyTaxDate)}` : ""}
@@ -758,13 +812,13 @@ export function HouseLoansSection({
                     <div style={{ height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
                       <div style={{ height: "100%", width: `${Math.min(100 - ((l.remaining / l.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4 }}>
                       {fmtCAD(l.principal - l.remaining)} paid - {fmtCAD(l.remaining)} remaining
                     </div>
                   </div>
                 )}
               </div>
-              <div style={{ textAlign: "right", marginLeft: 12 }}>
+              <div style={{ textAlign: "right", marginLeft: "auto", minWidth: 150 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, color: "#a31515" }}>{fmtCAD(l.remaining)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 4, justifyContent: "flex-end" }}>
                   <Btn variant="green" small onClick={() => openLog(l)}>Log Payment</Btn>

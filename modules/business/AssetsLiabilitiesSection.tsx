@@ -7,6 +7,7 @@ import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
 import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 import { PaymentSchedule, type PropertyTaxPayment, type Vehicle, type HouseLoan, type PropertyTax } from "@/types/domain";
+import { theme } from "@/lib/theme";
 
 type NavTarget = "accounts" | "cards" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
@@ -19,10 +20,10 @@ type UpcomingItem =
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 150, padding: "14px 16px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 12 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 20, color: color ?? "#111827" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>{sub}</div>}
+    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
+      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 22, color: color ?? theme.colors.text }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -39,8 +40,8 @@ function SectionCard({
   actions?: ReactNode;
 }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 14, overflow: "hidden" }}>
-      <div style={{ borderTop: `4px solid ${accent}`, padding: "16px 18px 14px" }}>
+    <div style={{ ...theme.cardStyle(accent), borderTop: `3px solid ${accent}`, overflow: "hidden", background: theme.colors.surface }}>
+      <div style={{ padding: "16px 18px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{title}</div>
           {actions}
@@ -254,17 +255,17 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Assets & Liabilities</div>
-          <div style={{ fontSize: 13, color: "#6b7280", maxWidth: 760 }}>
+          <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", marginBottom: 8, color: theme.colors.text }}>Assets & Liabilities</div>
+          <div style={{ fontSize: 13, color: theme.colors.textSoft, maxWidth: 760, lineHeight: 1.5 }}>
             This is the unified command area for asset, debt, and net worth tracking. Detail views remain available while we fold more of the workflow into this hub.
           </div>
         </div>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>
+        <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
           Use the tabs above to jump into vehicle and house-loan details.
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
         <StatBox label="Liquid Assets" value={fmtCAD(liquidAssets)} color="#1a7f3c" sub="active bank and cash accounts" />
         <StatBox label="Tracked Liabilities" value={fmtCAD(totalLiabilities)} color="#a31515" sub="credit cards + house loans" />
         <StatBox label="Net Worth Snapshot" value={fmtCAD(netWorth)} color={netWorth >= 0 ? "#1a7f3c" : "#a31515"} sub="market values not modeled yet" />

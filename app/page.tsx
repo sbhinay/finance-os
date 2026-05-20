@@ -30,6 +30,7 @@ import { syncBalances } from "@/utils/syncBalances";
 import { notifyDataChanged } from "@/utils/events";
 import { fmtCAD } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
+import { theme } from "@/lib/theme";
 
 type SectionId =
   | "accounts"
@@ -199,26 +200,26 @@ function AccountsCardsSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Accounts & Cards</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Accounts & Cards</div>
 
       {/* Summary bar */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 24 }}>
         {[
           { label: "Total Bank Balance", value: fmtCAD(totalBankBalance), color: totalBankBalance >= 0 ? "#1a7f3c" : "#a31515" },
           { label: "Total CC Owing", value: fmtCAD(totalOwed), color: "#a31515" },
           { label: "Total CC Available", value: fmtCAD(totalAvailable), color: "#1a5fa8" },
           { label: "Net Position", value: fmtCAD(totalBankBalance - totalOwed), color: (totalBankBalance - totalOwed) >= 0 ? "#1a7f3c" : "#a31515" },
         ].map((s) => (
-          <div key={s.label} style={{ flex: 1, minWidth: 140, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-            <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: s.color }}>{s.value}</div>
+          <div key={s.label} style={{ ...theme.cardStyle(), flex: 1, minWidth: 180, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
+            <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{s.label}</div>
+            <div style={{ fontWeight: 800, fontSize: 21, color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Bank Accounts */}
-      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>Bank Accounts</div>
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
+      <div style={{ fontWeight: 700, fontSize: 15, color: theme.colors.primary, marginBottom: 10 }}>Bank Accounts</div>
+      <div style={{ ...theme.cardStyle(theme.colors.primary), marginBottom: 24, overflow: "hidden" }}>
         {accounts.length === 0 && (
           <div style={{ padding: 16, color: "#6b7280", fontSize: 13, textAlign: "center" }}>No accounts yet.</div>
         )}
@@ -239,8 +240,8 @@ function AccountsCardsSection() {
       </div>
 
       {/* Credit Cards */}
-      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>Credit Cards</div>
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ fontWeight: 700, fontSize: 15, color: theme.colors.primary, marginBottom: 10 }}>Credit Cards</div>
+      <div style={{ ...theme.cardStyle(theme.colors.primary), overflow: "hidden" }}>
         {cards.length === 0 && (
           <div style={{ padding: 16, color: "#6b7280", fontSize: 13, textAlign: "center" }}>No cards yet.</div>
         )}
@@ -282,6 +283,8 @@ export default function Home() {
   const [section, setSection] = useState<SectionId>("dailylog");
   const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
   const [editHouseLoanId, setEditHouseLoanId] = useState<string | null>(null);
+  const [isMobileNav, setIsMobileNav] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { accounts } = useAccounts();
   const { transactions } = useTransactions();
@@ -289,6 +292,17 @@ export default function Home() {
   useEffect(() => {
     syncBalances();
     notifyDataChanged();
+  }, []);
+
+  useEffect(() => {
+    const applyViewport = () => {
+      const mobile = window.innerWidth < 980;
+      setIsMobileNav(mobile);
+      setSidebarOpen((prev) => (mobile ? prev : true));
+    };
+    applyViewport();
+    window.addEventListener("resize", applyViewport);
+    return () => window.removeEventListener("resize", applyViewport);
   }, []);
 
   const primaryNav = NAV.filter((item) => PRIMARY_NAV_IDS.has(item.id)).map((item) => ({
@@ -319,39 +333,63 @@ export default function Home() {
   const currentHubLinks = PRIMARY_SECTION_BY_SECTION[section] === "fixedpayments" ? [] : (HUB_LINKS[section] ?? []);
 
   const wrap = (children: React.ReactNode) => (
-    <div className="bg-white rounded-lg border shadow-sm p-5">{children}</div>
+    <div style={{ ...theme.cardStyle(), padding: 24, background: theme.colors.surface }}>{children}</div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", color: "#000", display: "flex", background: "#f3f4f6" }}>
+    <div style={{ minHeight: "100vh", color: theme.colors.text, display: "flex", background: theme.colors.pageGlow }}>
+      {isMobileNav && sidebarOpen && (
+        <button
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            border: "none",
+            background: "rgba(10, 18, 30, 0.45)",
+            zIndex: 20,
+            cursor: "pointer",
+          }}
+        />
+      )}
       {/* Sidebar */}
       <aside style={{
-        width: 220, flexShrink: 0, background: "#1e2530",
-        minHeight: "100vh", padding: "0 0 24px 0",
+        width: isMobileNav ? 276 : 244,
+        flexShrink: 0,
+        background: theme.colors.sidebar,
+        minHeight: "100vh",
+        padding: "0 0 24px 0",
         display: "flex", flexDirection: "column",
+        boxShadow: theme.shadow.shell,
+        position: isMobileNav ? "fixed" : "sticky",
+        top: 0,
+        left: 0,
+        zIndex: 30,
+        transform: isMobileNav ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none",
+        transition: "transform .22s ease",
       }}>
-        <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 17, letterSpacing: "-.01em" }}>Finance OS</div>
-          <div style={{ color: "rgba(255,255,255,.4)", fontSize: 11, marginTop: 2 }}>Personal workspace</div>
+        <div style={{ padding: "24px 18px 18px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 22, letterSpacing: "-.03em" }}>Finance OS</div>
+          <div style={{ color: theme.colors.sidebarMuted, fontSize: 12, marginTop: 4 }}>Personal workspace</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
           {groupOrder.map((group) => (
             <div key={group} style={{ marginBottom: 4 }}>
-              <div style={{ padding: "10px 16px 4px", fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "rgba(255,255,255,.35)" }}>
+              <div style={{ padding: "14px 18px 6px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: theme.colors.sidebarMuted }}>
                 {group}
               </div>
               {(navGroups[group] ?? []).map((item) => {
                 const active = PRIMARY_SECTION_BY_SECTION[section] === item.id;
                 return (
-                  <button key={item.id} onClick={() => setSection(item.id)} style={{
+                  <button key={item.id} onClick={() => { setSection(item.id); if (isMobileNav) setSidebarOpen(false); }} style={{
                     width: "100%", textAlign: "left",
-                    padding: "7px 16px", display: "flex", alignItems: "center", gap: 9,
-                    background: active ? "rgba(255,255,255,.1)" : "transparent",
+                    padding: "10px 18px", display: "flex", alignItems: "center", gap: 10,
+                    background: active ? "linear-gradient(90deg, rgba(31,94,255,0.22), rgba(255,255,255,0.04))" : "transparent",
                     border: "none",
-                    borderLeft: active ? "3px solid #4a9eff" : "3px solid transparent",
+                    borderLeft: active ? `3px solid ${theme.colors.primary}` : "3px solid transparent",
                     cursor: "pointer",
-                    color: active ? "#fff" : "rgba(255,255,255,.6)",
+                    color: active ? "#fff" : theme.colors.sidebarText,
                     fontSize: 13, fontWeight: active ? 600 : 400,
                     transition: "all .15s",
                   }}>
@@ -366,25 +404,56 @@ export default function Home() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, minWidth: 0, padding: 24 }}>
+      <main style={{ flex: 1, minWidth: 0, padding: "28px clamp(16px, 3vw, 32px)" }}>
+        {isMobileNav && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: `1px solid ${theme.colors.border}`,
+                background: "rgba(255,255,255,0.86)",
+                color: theme.colors.text,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: theme.shadow.soft,
+              }}
+            >
+              <span style={{ fontSize: 16, lineHeight: 1 }}>≡</span>
+              <span>Menu</span>
+            </button>
+            <div style={{ fontSize: 12, color: theme.colors.textSoft, fontWeight: 600 }}>
+              {NAV.find((item) => item.id === PRIMARY_SECTION_BY_SECTION[section])?.label ?? "Finance OS"}
+            </div>
+          </div>
+        )}
         {currentHubLinks.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 18 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {currentHubLinks.map((item) => {
               const active = section === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setSection(item.id)}
+                  onClick={() => {
+                    setSection(item.id);
+                    if (isMobileNav) setSidebarOpen(false);
+                  }}
                   style={{
-                    padding: "8px 14px",
-                    borderRadius: 10,
-                    border: "none",
-                    background: active ? "#1a5fa8" : "#f3f4f6",
-                    color: active ? "#fff" : "#374151",
+                    padding: "10px 16px",
+                    borderRadius: 999,
+                    border: active ? `1px solid ${theme.colors.primary}` : `1px solid ${theme.colors.border}`,
+                    background: active ? theme.colors.primary : "rgba(255,255,255,0.82)",
+                    color: active ? "#fff" : theme.colors.text,
                     fontSize: 13,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
+                    boxShadow: active ? theme.shadow.soft : "none",
                   }}
                 >
                   {item.label}

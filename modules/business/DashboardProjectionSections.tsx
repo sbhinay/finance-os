@@ -11,23 +11,24 @@ import { useBusiness } from "./useBusiness";
 import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { useEffect } from "react";
+import { theme } from "@/lib/theme";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 130, padding: "14px 16px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 18, color: color ?? "#1a1a1a" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
+    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
+      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 22, color: color ?? theme.colors.text }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
 
 function Card({ title, children, accent }: { title?: string; children: React.ReactNode; accent?: string }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderLeft: accent ? `4px solid ${accent}` : "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
-      {title && <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{title}</div>}
+    <div style={{ ...theme.cardStyle(accent), padding: "16px 18px", marginBottom: 14, background: theme.colors.surface }}>
+      {title && <div style={{ fontWeight: 800, fontSize: 15, color: theme.colors.text, marginBottom: 12 }}>{title}</div>}
       {children}
     </div>
   );
@@ -38,7 +39,7 @@ function Btn({ children, onClick, variant = "primary", small }: {
   variant?: "primary" | "secondary"; small?: boolean;
 }) {
   const c = { primary: { bg: "#1a5fa8", color: "#fff" }, secondary: { bg: "#f3f4f6", color: "#374151" } }[variant];
-  return <button onClick={onClick} style={{ padding: small ? "4px 10px" : "8px 16px", fontSize: small ? 12 : 13, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: c.bg, color: c.color }}>{children}</button>;
+  return <button onClick={onClick} style={{ padding: small ? "6px 12px" : "10px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: 999, border: "none", cursor: "pointer", background: c.bg, color: c.color }}>{children}</button>;
 }
 
 function useAutoReload(reload: () => void) {
@@ -351,7 +352,7 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
 
   return (
     <div>
-      {!hideHeader && <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Financial Dashboard</div>}
+      {!hideHeader && <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Financial Dashboard</div>}
 
       {/* Net Worth */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
@@ -852,12 +853,12 @@ export function DashboardSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Dashboard</div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 6 }}>Dashboard</div>
+      <div style={{ fontSize: 13, color: theme.colors.textSoft, marginBottom: 16, lineHeight: 1.5 }}>
         Current financial snapshot and forward-looking projection in one place.
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
         <Btn variant={tab === "overview" ? "primary" : "secondary"} small onClick={() => setTab("overview")}>
           Overview
         </Btn>

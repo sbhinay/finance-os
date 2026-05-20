@@ -17,6 +17,7 @@ import { CreditCard } from "@/types/creditCard";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
+import { theme } from "@/lib/theme";
 
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -59,14 +60,14 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
 }
 
 function Grid2({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>;
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>{children}</div>;
 }
 
 function StatBox({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 110, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: color ?? "#1a1a1a" }}>{value}</div>
+    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 150, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
+      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
     </div>
   );
 }
@@ -197,7 +198,7 @@ export function DailyLogSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Daily Log</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Daily Log</div>
 
       {fixedHooks.pending.length > 0 && (
         <PendingBanner
@@ -208,16 +209,16 @@ export function DailyLogSection() {
         />
       )}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
         <StatBox label="Today In" value={fmtCAD(tIn)} color="#1a7f3c" />
         <StatBox label="Today Out" value={fmtCAD(tOut)} color="#a31515" />
         <StatBox label="Month In" value={fmtCAD(mIn)} color="#1a7f3c" />
         <StatBox label="Month Out" value={fmtCAD(mOut)} color="#a31515" />
       </div>
 
-      <div style={{ background: "#fff", border: "2px solid #1a5fa8", borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>New Entry</div>
-        <div style={{ fontSize: 13, color: "#4b5563", marginBottom: 12 }}>
+      <div style={{ ...theme.cardStyle(theme.colors.primary), padding: "18px 20px", marginBottom: 18, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>
+        <div style={{ fontWeight: 800, fontSize: 15, color: theme.colors.primary, marginBottom: 8 }}>New Entry</div>
+        <div style={{ fontSize: 13, color: theme.colors.textSoft, marginBottom: 12, maxWidth: 720, lineHeight: 1.5 }}>
           Open the shared transaction form so labels, validation, and balance updates stay consistent with the rest of FinanceOS.
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
@@ -225,8 +226,8 @@ export function DailyLogSection() {
         </div>
       </div>
 
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "10px 12px", marginBottom: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280" }}>Viewing:</div>
+      <div style={{ ...theme.cardStyle(), padding: "12px 14px", marginBottom: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", background: theme.colors.surface }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft, letterSpacing: ".05em", textTransform: "uppercase" }}>Viewing</div>
         <input
           type="date"
           value={viewDate}
@@ -239,7 +240,7 @@ export function DailyLogSection() {
         <Btn variant="secondary" small onClick={() => { setViewDate(todayStr); setShowAll(false); }}>Today</Btn>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
         {(["all", "income", "expense", "transfer"] as const).map((v) => (
           <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
             {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
@@ -253,7 +254,7 @@ export function DailyLogSection() {
         />
       </div>
 
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ ...theme.cardStyle(), overflow: "hidden", background: theme.colors.surface }}>
         {filtered.slice(0, 60).map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
@@ -262,13 +263,13 @@ export function DailyLogSection() {
           return (
             <div
               key={t.id}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 14px", borderBottom: "1px solid #f3f4f6", background: "transparent" }}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 16px", borderBottom: "1px solid #edf2f7", background: "transparent", gap: 10, flexWrap: "wrap" }}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500 }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.text }}>
                   {t.description || catName(t.categoryId) || "-"}
                 </div>
-                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span>{fmtDate(dateStr)}</span>
                   {t.mode && <span>- {t.mode}</span>}
                   {t.sourceId && <span>- {acctName(t.sourceId)}</span>}
@@ -279,7 +280,7 @@ export function DailyLogSection() {
                   {t.odometer && <span>- {Number(t.odometer).toLocaleString()} km</span>}
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexWrap: "wrap" }}>
                 <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
                   {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{fmtCAD(t.amount)}
                 </Pill>
