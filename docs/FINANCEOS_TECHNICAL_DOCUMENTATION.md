@@ -1,4 +1,4 @@
-# FinanceOS — Technical Documentation
+# FinanceOS - Technical Documentation
 **Version:** 3.0
 **Last Updated:** May 2026
 **Status:** Active Development
@@ -72,6 +72,9 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
   - `Business`
   - `Data & Health`
 - Secondary pages remain available, but they are increasingly treated as subviews under those stronger destinations.
+- The current UX modernization uses a shared theme/token layer in `lib/theme.ts` rather than a UI framework migration.
+- Mobile navigation now uses an off-canvas drawer so narrow screens are not dominated by the sidebar.
+- Dashboard, Daily Log, Transaction History, Assets, and Recurring surfaces are in active visual refresh so desktop and phone layouts stay usable from the same code path.
 
 ## 4. Documentation Structure
 The docs are organized into the following cross-linked files:
@@ -96,3 +99,4 @@ The docs are organized into the following cross-linked files:
 - Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.
 - FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.
 - The current navigation now deliberately emphasizes a reduced hub set while still preserving older detail pages behind sub-navigation during transition.
+

@@ -43,6 +43,13 @@ The active navigation is converging toward these hubs:
 
 Detail views such as `Transaction History`, `Projection`, `Vehicles`, `House Loans`, `Property Tax`, `Subscriptions`, and `Planned Payments` still exist, but they are now treated as subviews under stronger parent destinations rather than as permanent primary tabs.
 
+### Current UX Direction
+- Keep the product mobile-first even while preserving a strong desktop workspace.
+- Use a shared internal theme/token layer instead of introducing a new UI framework.
+- Prefer responsive cards, pill tabs, and lighter action hierarchy over old admin-style dense panels.
+- Use an off-canvas navigation drawer on narrow screens so content keeps the available width.
+- Improve trust in reporting by making summary areas easier to drill into instead of only showing static totals.
+
 ---
 
 ## 2. Technology Stack
@@ -51,7 +58,7 @@ Detail views such as `Transaction History`, `Projection`, `Vehicles`, `House Loa
 |---|---|
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
-| Styling | Inline styles for portability |
+| Styling | Inline styles + internal theme tokens (`lib/theme.ts`) |
 | State | React state + custom event bus |
 | Storage (current) | Browser localStorage |
 | Storage (future) | Supabase / PostgreSQL |
@@ -62,5 +69,6 @@ Detail views such as `Transaction History`, `Projection`, `Vehicles`, `House Loa
 - No `src/` directory; path aliases are configured via `tsconfig.json`.
 - `@/*` resolves to the repository root.
 - No external component UI library is used.
+- No Tailwind, Chakra, MUI, or CSS-in-JS framework has been added; the current overhaul stays inside the existing stack.
 - No global state library; cross-module updates happen through repository writes and event notifications.
 - The current live app is deployed to Vercel, while core data still remains local-first with safe manual Supabase cloud backup/restore.

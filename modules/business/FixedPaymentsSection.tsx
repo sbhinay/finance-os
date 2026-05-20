@@ -67,7 +67,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
         <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Ãƒâ€”</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Close</button>
         </div>
         <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
       </div>
@@ -535,7 +535,7 @@ export function FixedPaymentsSection({
           <Sel label="Pay From" value={form.source} onChange={f("source")} options={acctOpts} />
           {isTransferPlannedPayment && (
             <Grid2>
-              <Sel label="Transfer Sub-type" value={form.subType} onChange={f("subType")} options={[{ value: "", label: "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Select transfer type ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" }, ...plannedTransferSubTypes]} />
+              <Sel label="Transfer Sub-type" value={form.subType} onChange={f("subType")} options={[{ value: "", label: "-- Select transfer type --" }, ...plannedTransferSubTypes]} />
               <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")} options={acctOpts} />
             </Grid2>
           )}
@@ -552,7 +552,7 @@ export function FixedPaymentsSection({
                   disabled={isCategoryLocked}
                   onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${(lockedCategoryId || form.categoryId) ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: isCategoryLocked ? "#f9fafb" : "#fff", fontSize: 13, color: isCategoryLocked ? "#374151" : "#111827" }}>
-                  {!isCategoryLocked && <option value="">ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Select category ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</option>}
+                  {!isCategoryLocked && <option value="">-- Select category --</option>}
                   {categories.filter((c) => c.type === "expense" || c.type === "both").map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -638,3 +638,4 @@ export function FixedPaymentsSection({
     </div>
   );
 }
+

@@ -69,7 +69,7 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 640 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Ã—</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -181,7 +181,7 @@ export function BankAccountsSection() {
     notifyDataChanged("accounts");
   }
 
-  // Outflow calculation â€” next 30 days from fixed payments, vehicles, house loans
+  // Outflow calculation - next 30 days from fixed payments, vehicles, house loans
   function getOutflows(accountId: string, days: number) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const end = new Date(today.getTime() + days * 86400000);
@@ -294,7 +294,7 @@ export function BankAccountsSection() {
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
                       <span>{item.label}</span>
                       <span style={{ color: "#a31515", fontWeight: 500 }}>
-                        {fmtCAD(item.amount)} Â· {item.date.toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
+                        {fmtCAD(item.amount)} - {item.date.toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
                       </span>
                     </div>
                   ))}
@@ -307,7 +307,7 @@ export function BankAccountsSection() {
       {accounts.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No accounts yet.</div>}
 
       {reconcile && (
-        <Modal title={`Reconcile Statement â€” ${reconcile.name}`} onClose={() => setReconcile(null)}>
+        <Modal title={`Reconcile Statement - ${reconcile.name}`} onClose={() => setReconcile(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
             Set the actual statement balance as of the selected date. This aligns the ledger baseline without creating a normal spending or income entry.
           </div>
@@ -342,7 +342,7 @@ export function BankAccountsSection() {
                   type: "adjustment",
                   subType: "reconciliation",
                   amount: Math.abs(diff),
-                  description: `Reconciliation â€” ${reconcile.name}`,
+                  description: `Reconciliation - ${reconcile.name}`,
                   sourceId: reconcile.id,
                   destinationId: reconcile.id,
                   date: reconDate,
@@ -478,7 +478,7 @@ export function CreditCardsSection() {
       type: "transfer",
       subType: "cc_payment",
       amount: c.openingBalance > 0 ? toFixed2(c.openingBalance) : undefined,
-      description: `Credit card payment â€” ${c.name}`,
+      description: `Credit card payment - ${c.name}`,
       sourceId: c.linkedAccountId ?? "",
       destinationId: c.id,
       tag: linkedAccount?.type === "business" || c.type === "business" ? "Business" : "Personal",
@@ -519,7 +519,7 @@ export function CreditCardsSection() {
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, alignItems: "center" }}>
                   {c.issuer}
                   <Pill color={c.type === "business" ? "blue" : "purple"}>{c.type}</Pill>
-                  {linked && <span>Â· {linked.name}</span>}
+                  {linked && <span>- {linked.name}</span>}
                 </div>
                 <div style={{ marginTop: 8, height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
                   <div style={{ height: "100%", width: `${Math.min(u, 100)}%`, background: u > 80 ? "#a31515" : u > 30 ? "#EF9F27" : "#1a7f3c", borderRadius: 99 }} />
@@ -555,7 +555,7 @@ export function CreditCardsSection() {
         onClose={() => { setTxFormOpen(false); setPendingPayCard(null); setTxFormInitial(undefined); }}
         initial={txFormInitial}
         lockType="transfer"
-        title={pendingPayCard ? `Pay â€” ${pendingPayCard.name}` : "Card Payment"}
+        title={pendingPayCard ? `Pay - ${pendingPayCard.name}` : "Card Payment"}
         onSaved={() => {
           // syncBalances() in TransactionForm already updated all balances
           reloadCards();
@@ -566,7 +566,7 @@ export function CreditCardsSection() {
       />
 
       {reconcileCard && (
-        <Modal title={`Reconcile Statement â€” ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
+        <Modal title={`Reconcile Statement - ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
             Set the actual statement balance owing as of the selected date. This aligns the card baseline without creating a normal spending or income entry.
           </div>
@@ -598,7 +598,7 @@ export function CreditCardsSection() {
                   type: "adjustment",
                   subType: "reconciliation",
                   amount: Math.abs(diff),
-                  description: `Reconciliation â€” ${reconcileCard.name}`,
+                  description: `Reconciliation - ${reconcileCard.name}`,
                   sourceId: reconcileCard.id,
                   destinationId: reconcileCard.id,
                   date: cardReconDate,
@@ -622,13 +622,13 @@ export function CreditCardsSection() {
       {showForm && (
         <Modal title={form.id ? "Edit Card" : "Add Credit Card"} onClose={() => setShowForm(false)}>
           <Inp label="Card Name" value={form.name} onChange={f("name")} />
-          <Inp label="Issuer" value={form.issuer} onChange={f("issuer")} placeholder="TD, Rogers, Costcoâ€¦" />
+          <Inp label="Issuer" value={form.issuer} onChange={f("issuer")} placeholder="TD, Rogers, Costco..." />
           <Sel label="Type" value={form.type} onChange={f("type")} options={[
             { value: "personal", label: "Personal Credit Card" },
             { value: "business", label: "Business Credit Card" },
           ]} />
           <Sel label="Linked Bank Account" value={form.linkedAccountId ?? ""} onChange={f("linkedAccountId")}
-            options={[{ value: "", label: "â€” None â€”" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]} />
+            options={[{ value: "", label: "-- None --" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]} />
           <Grid2>
             <Inp label="Credit Limit ($)" type="number" value={form.limitAmount} onChange={f("limitAmount")} />
             <Inp label="Balance Owing ($)" type="number" value={form.openingBalance} onChange={f("openingBalance")} />

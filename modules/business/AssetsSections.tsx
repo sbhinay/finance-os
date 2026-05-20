@@ -69,7 +69,7 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
       <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: wide ? 720 : 520, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
         <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Close</button>
         </div>
         <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
       </div>
@@ -929,4 +929,5 @@ export function HouseLoansSection({
     </div>
   );
 }
+
 
