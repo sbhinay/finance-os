@@ -11,7 +11,6 @@ import { FixedPaymentsSection } from "@/modules/business/FixedPaymentsSection";
 import {
   VehiclesSection,
   HouseLoansSection,
-  PropertyTaxSection,
 } from "@/modules/business/AssetsSections";
 import { DailyLogSection } from "@/modules/business/DailyLogSection";
 import {
@@ -43,7 +42,6 @@ type SectionId =
   | "fixedpayments"
   | "vehicles"
   | "houseloans"
-  | "propertytax"
   | "hourscontracts"
   | "corpincome"
   | "cra"
@@ -54,25 +52,25 @@ type SectionId =
   | "assetsliabilities";
 
 const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> = [
-  { id: "dailylog",       label: "Daily Log",           group: "Daily Activity",  icon: "📓" },
-  { id: "healthreport",   label: "Health Report",       group: "Daily Activity",  icon: "🩺" },
-  { id: "transactions",   label: "Transaction History", group: "Daily Activity",  icon: "📋" },
-  { id: "dashboard",      label: "Dashboard",           group: "Daily Activity",  icon: "🏠" },
-  { id: "projection",     label: "Projection",          group: "Daily Activity",  icon: "📈" },
-  { id: "importexport",   label: "Import / Export",     group: "Daily Activity",  icon: "💾" },  { id: "accountscards",  label: "Accounts & Cards",    group: "Personal Finance", icon: "💰" },
-  { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "📊" },
-  { id: "accounts",       label: "Bank Accounts",       group: "Personal Finance", icon: "🏦" },
-  { id: "cards",          label: "Credit Cards",        group: "Personal Finance", icon: "💳" },
-  { id: "fixedpayments",  label: "Recurring Payments",  group: "Personal Finance", icon: "📅" },  { id: "vehicles",       label: "Vehicles",            group: "Personal Finance", icon: "🚗" },
-  { id: "houseloans",     label: "House Loans",         group: "Personal Finance", icon: "🏡" },
-  { id: "propertytax",    label: "Property Tax",        group: "Personal Finance", icon: "🏛" },
-  { id: "categories",     label: "Categories",          group: "Personal Finance", icon: "🏷" },
-  { id: "hourscontracts", label: "Hours & Contracts",   group: "Business / CRA",   icon: "⏱" },
-  { id: "corpincome",     label: "Corp Income",         group: "Business / CRA",   icon: "💼" },
-  { id: "cra",            label: "Tax Obligations",     group: "Business / CRA",   icon: "📊" },
-  { id: "ratesettings",   label: "Tax & Rate Settings", group: "Business / CRA",   icon: "⚙️" },
+  { id: "dailylog", label: "Daily Log", group: "Daily Activity", icon: "*" },
+  { id: "healthreport", label: "Health Report", group: "Daily Activity", icon: "*" },
+  { id: "transactions", label: "Transaction History", group: "Daily Activity", icon: "*" },
+  { id: "dashboard", label: "Dashboard", group: "Daily Activity", icon: "*" },
+  { id: "projection", label: "Projection", group: "Daily Activity", icon: "*" },
+  { id: "importexport", label: "Import / Export", group: "Daily Activity", icon: "*" },
+  { id: "accountscards", label: "Accounts & Cards", group: "Personal Finance", icon: "*" },
+  { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "*" },
+  { id: "accounts", label: "Bank Accounts", group: "Personal Finance", icon: "*" },
+  { id: "cards", label: "Credit Cards", group: "Personal Finance", icon: "*" },
+  { id: "fixedpayments", label: "Recurring Payments", group: "Personal Finance", icon: "*" },
+  { id: "vehicles", label: "Vehicles", group: "Personal Finance", icon: "*" },
+  { id: "houseloans", label: "House Loans", group: "Personal Finance", icon: "*" },
+  { id: "categories", label: "Categories", group: "Personal Finance", icon: "*" },
+  { id: "hourscontracts", label: "Hours & Contracts", group: "Business / CRA", icon: "*" },
+  { id: "corpincome", label: "Corp Income", group: "Business / CRA", icon: "*" },
+  { id: "cra", label: "Tax Obligations", group: "Business / CRA", icon: "*" },
+  { id: "ratesettings", label: "Tax & Rate Settings", group: "Business / CRA", icon: "*" },
 ];
-
 const SECONDARY_SECTION_IDS = new Set<SectionId>([
   "accounts",
   "cards",
@@ -80,7 +78,6 @@ const SECONDARY_SECTION_IDS = new Set<SectionId>([
   "transactions",
   "vehicles",
   "houseloans",
-  "propertytax",
   "corpincome",
   "cra",
   "ratesettings",
@@ -109,7 +106,6 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   fixedpayments: "fixedpayments",
   vehicles: "assetsliabilities",
   houseloans: "assetsliabilities",
-  propertytax: "assetsliabilities",
   hourscontracts: "hourscontracts",
   corpincome: "hourscontracts",
   cra: "hourscontracts",
@@ -156,25 +152,16 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
     { id: "assetsliabilities", label: "Net Worth Hub" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
-    { id: "propertytax", label: "Property Tax" },
   ],
   vehicles: [
     { id: "assetsliabilities", label: "Net Worth Hub" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
-    { id: "propertytax", label: "Property Tax" },
   ],
   houseloans: [
     { id: "assetsliabilities", label: "Net Worth Hub" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
-    { id: "propertytax", label: "Property Tax" },
-  ],
-  propertytax: [
-    { id: "assetsliabilities", label: "Net Worth Hub" },
-    { id: "vehicles", label: "Vehicles" },
-    { id: "houseloans", label: "House Loans" },
-    { id: "propertytax", label: "Property Tax" },
   ],
   hourscontracts: [
     { id: "hourscontracts", label: "Hours & Contracts" },
@@ -210,7 +197,7 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
   ],
 };
 
-// ─── Accounts & Cards combined view ──────────────────────────────────────────
+// Accounts & Cards combined view
 function AccountsCardsSection() {
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
@@ -248,7 +235,7 @@ function AccountsCardsSection() {
       </div>
 
       {/* Bank Accounts */}
-      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>🏦 Bank Accounts</div>
+      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>Bank Accounts</div>
       <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
         {accounts.length === 0 && (
           <div style={{ padding: 16, color: "#6b7280", fontSize: 13, textAlign: "center" }}>No accounts yet.</div>
@@ -260,7 +247,7 @@ function AccountsCardsSection() {
                 <span style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</span>
                 {a.primary && <span style={{ fontSize: 10, fontWeight: 700, background: "#1a7f3c", color: "#fff", padding: "1px 7px", borderRadius: 99 }}>PRIMARY</span>}
               </div>
-              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{a.type} · {a.currency}</div>
+              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{a.type} - {a.currency}</div>
             </div>
             <div style={{ fontWeight: 700, fontSize: 16, color: a.openingBalance >= 0 ? "#1a7f3c" : "#a31515" }}>
               {fmtCAD(a.openingBalance)}
@@ -270,7 +257,7 @@ function AccountsCardsSection() {
       </div>
 
       {/* Credit Cards */}
-      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>💳 Credit Cards</div>
+      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a5fa8", marginBottom: 8 }}>Credit Cards</div>
       <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
         {cards.length === 0 && (
           <div style={{ padding: 16, color: "#6b7280", fontSize: 13, textAlign: "center" }}>No cards yet.</div>
@@ -286,7 +273,7 @@ function AccountsCardsSection() {
                     <span style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</span>
                     {c.primary && <span style={{ fontSize: 10, fontWeight: 700, background: "#1a7f3c", color: "#fff", padding: "1px 7px", borderRadius: 99 }}>PRIMARY</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{c.issuer} · Limit {fmtCAD(c.limitAmount)}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{c.issuer} - Limit {fmtCAD(c.limitAmount)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: c.openingBalance > 0 ? "#a31515" : "#1a7f3c" }}>
@@ -308,7 +295,7 @@ function AccountsCardsSection() {
   );
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
+// Main App
 export default function Home() {
   const [section, setSection] = useState<SectionId>("dailylog");
   const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
@@ -316,7 +303,7 @@ export default function Home() {
 
   const { accounts } = useAccounts();
   const { transactions } = useTransactions();
-  // ── Sync balances on startup — single source of truth ──────────────────────
+  // Sync balances on startup so all sections read the same source of truth.
   useEffect(() => {
     syncBalances();
     notifyDataChanged();
@@ -356,7 +343,7 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: "100vh", color: "#000", display: "flex", background: "#f3f4f6" }}>
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside style={{
         width: 220, flexShrink: 0, background: "#1e2530",
         minHeight: "100vh", padding: "0 0 24px 0",
@@ -397,7 +384,7 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <main style={{ flex: 1, minWidth: 0, padding: 24 }}>
         {currentHubLinks.length > 0 && (
           <div style={{
@@ -476,7 +463,6 @@ export default function Home() {
             onEditHandled={() => setEditHouseLoanId(null)}
           />
         )}
-        {section === "propertytax"    && wrap(<PropertyTaxSection />)}
         {section === "hourscontracts" && wrap(<HoursContractsSection accounts={accounts} />)}
         {section === "corpincome"     && wrap(<CorporationIncomeSection transactions={transactions} />)}
         {section === "cra"            && wrap(<TaxObligationsSection accounts={accounts} />)}

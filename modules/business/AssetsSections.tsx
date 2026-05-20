@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Vehicle, HouseLoan, PaymentSchedule } from "@/types/domain";
 import { Account } from "@/types/account";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
+import { useVehicles, useHouseLoans } from "./useAssets";
 import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly, uid } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
 import { transactionRepository } from "@/repositories/transactionRepository";
@@ -14,7 +14,7 @@ import { syncBalances } from "@/utils/syncBalances";
 import { calculateBackfillDates } from "./useFixedPayments";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
-// ─── Primitives ───────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Primitives Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
@@ -63,7 +63,7 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 680 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Ãƒâ€”</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -94,7 +94,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual"];
 
-// ─── Mileage projection (mirrors prototype exactly) ───────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Mileage projection (mirrors prototype exactly) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function mileageProjection(v: Vehicle) {
   if (!v.leaseStart || !v.leaseEnd || !v.mileageAllowance) return null;
@@ -131,9 +131,9 @@ function pickLeaseVehicleCategoryId(categories: Array<{ id: string; name: string
   return undefined;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 // VEHICLES SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 export function VehiclesSection({
   accounts,
@@ -225,7 +225,7 @@ export function VehiclesSection({
     const pastDates = dates.filter((d) => d <= cutoff);
 
     if (pastDates.length === 0) {
-      alert("No historical vehicle payments to backfill — all scheduled dates are in the future.");
+      alert("No historical vehicle payments to backfill Ã¢â‚¬â€ all scheduled dates are in the future.");
       return;
     }
 
@@ -299,7 +299,7 @@ export function VehiclesSection({
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "— Select account —" }, ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` }))];
+  const acctOpts = [{ value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" }, ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` }))];
   const statusColor: Record<string, string> = { Active: "green", "Ending Soon": "amber", Ended: "gray", "Paid Off": "teal" };
   const totalMonthly = vehicles.reduce((s, v) => s + toMonthly(v.payment, v.schedule), 0);
 
@@ -337,21 +337,21 @@ export function VehiclesSection({
                 <div style={{ fontSize: 12, color: "#6b7280" }}>{v.year} {v.make} {v.model}</div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {fmtCAD(v.payment)}/{v.schedule}
-                  {v.source ? ` · From: ${getAccountName(v.source)}` : ""}
+                  {v.source ? ` Ã‚Â· From: ${getAccountName(v.source)}` : ""}
                   {v.nextPaymentDate
-                    ? ` · Next: ${fmtDate(next ?? v.nextPaymentDate)}`
-                    : " · ⚠ Set next payment date"}
+                    ? ` Ã‚Â· Next: ${fmtDate(next ?? v.nextPaymentDate)}`
+                    : " Ã‚Â· Ã¢Å¡Â  Set next payment date"}
                 </div>
                 {!!v.insuranceAmount && (
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                     Insurance: {fmtCAD(v.insuranceAmount)}/{v.insuranceSchedule ?? "Monthly"}
-                    {v.insuranceSource ? ` Â· From: ${getAccountName(v.insuranceSource)}` : ""}
-                    {v.insuranceDate ? ` Â· Next: ${fmtDate(v.insuranceDate)}` : ""}
+                    {v.insuranceSource ? ` Ã‚Â· From: ${getAccountName(v.insuranceSource)}` : ""}
+                    {v.insuranceDate ? ` Ã‚Â· Next: ${fmtDate(v.insuranceDate)}` : ""}
                   </div>
                 )}
                 {v.vtype === "Lease" && v.leaseEnd && (
                   <div style={{ fontSize: 12, color: "#6b7280" }}>
-                    Lease ends: {fmtDate(v.leaseEnd)}{mp && mp.daysLeft > 0 ? ` · ${mp.daysLeft} days left` : ""}
+                    Lease ends: {fmtDate(v.leaseEnd)}{mp && mp.daysLeft > 0 ? ` Ã‚Â· ${mp.daysLeft} days left` : ""}
                   </div>
                 )}
                 {v.vtype === "Finance" && v.principal > 0 && (
@@ -360,7 +360,7 @@ export function VehiclesSection({
                       <div style={{ height: "100%", width: `${Math.min(100 - ((v.remaining / v.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-                      {fmtCAD(v.principal - v.remaining)} paid · {fmtCAD(v.remaining)} remaining
+                      {fmtCAD(v.principal - v.remaining)} paid Ã‚Â· {fmtCAD(v.remaining)} remaining
                     </div>
                   </div>
                 )}
@@ -370,7 +370,7 @@ export function VehiclesSection({
                 <Btn variant="secondary" small onClick={() => openBackfill(v)}>Backfill</Btn>
                 <Btn variant="secondary" small onClick={() => setDetail(v)}>View History</Btn>
                 <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...v }); setShowForm(true); }}>Edit</Btn>
-                <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${v.name}?`)) deleteVehicle(v.id); }}>✕</Btn>
+                <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${v.name}?`)) deleteVehicle(v.id); }}>Ã¢Å“â€¢</Btn>
               </div>
             </div>
           </div>
@@ -431,10 +431,10 @@ export function VehiclesSection({
       )}
 
       {backfillModal && (
-        <Modal title={`Backfill — ${backfillModal.vehicle.name}`} onClose={() => setBackfillModal(null)}>
+        <Modal title={`Backfill Ã¢â‚¬â€ ${backfillModal.vehicle.name}`} onClose={() => setBackfillModal(null)}>
           {backfillDone !== null ? (
             <div style={{ textAlign: "center", padding: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>Ã¢Å“â€¦</div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical vehicle payments have been added to your transaction log.</div>
               <div style={{ marginTop: 16 }}>
@@ -461,7 +461,7 @@ export function VehiclesSection({
                   onChange={(e) => setBackfillAccountId(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${backfillAccountId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}
                 >
-                  <option value="">— Select account —</option>
+                  <option value="">Ã¢â‚¬â€ Select account Ã¢â‚¬â€</option>
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({fmtCAD(a.openingBalance)})</option>)}
                 </select>
               </div>
@@ -479,7 +479,7 @@ export function VehiclesSection({
       )}
 
       {detail && (
-        <Modal title={`${detail.name} — Expense History`} onClose={() => setDetail(null)} wide>
+        <Modal title={`${detail.name} Ã¢â‚¬â€ Expense History`} onClose={() => setDetail(null)} wide>
           {(() => {
             const txns = transactions
               .filter((t) => t.linkedVehicleId === detail.id && t.type !== "adjustment")
@@ -500,9 +500,9 @@ export function VehiclesSection({
                 {txns.map((t) => (
                   <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
                     <div>
-                      <span style={{ fontWeight: 500 }}>{t.description || t.categoryId || "—"}</span>
-                      <span style={{ color: "#6b7280", fontSize: 11 }}> · {fmtDate((t.date ?? t.createdAt ?? "").slice(0, 10))}</span>
-                      {t.odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> · {Number(t.odometer).toLocaleString()} km</span>}
+                      <span style={{ fontWeight: 500 }}>{t.description || t.categoryId || "Ã¢â‚¬â€"}</span>
+                      <span style={{ color: "#6b7280", fontSize: 11 }}> Ã‚Â· {fmtDate((t.date ?? t.createdAt ?? "").slice(0, 10))}</span>
+                      {t.odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> Ã‚Â· {Number(t.odometer).toLocaleString()} km</span>}
                     </div>
                     <Pill color="red">{fmtCAD(t.amount)}</Pill>
                   </div>
@@ -524,9 +524,9 @@ export function VehiclesSection({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 // HOUSE LOANS SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 export function HouseLoansSection({
   accounts,
@@ -590,7 +590,7 @@ export function HouseLoansSection({
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "— Select account —" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
+  const acctOpts = [{ value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
   const totalRemaining = houseLoans.reduce((s, l) => s + l.remaining, 0);
   const totalMonthly = houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0);
 
@@ -605,14 +605,14 @@ export function HouseLoansSection({
   const formAcctOpts = sourceExists
     ? acctOpts
     : [
-        { value: "", label: "— Select account —" },
+        { value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" },
         { value: form.source, label: `Legacy source (${form.source})` },
         ...accounts.map((a) => ({ value: a.id, label: a.name })),
       ];
   const formPropertyTaxAcctOpts = propertyTaxSourceExists
     ? acctOpts
     : [
-        { value: "", label: "— Select account —" },
+        { value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" },
         { value: form.propertyTaxSource ?? "", label: `Legacy source (${form.propertyTaxSource})` },
         ...accounts.map((a) => ({ value: a.id, label: a.name })),
       ];
@@ -650,7 +650,7 @@ export function HouseLoansSection({
     const pastDates = dates.filter((d) => d <= cutoff);
 
     if (pastDates.length === 0) {
-      alert("No historical mortgage payments to backfill — all scheduled dates are in the future.");
+      alert("No historical mortgage payments to backfill Ã¢â‚¬â€ all scheduled dates are in the future.");
       return;
     }
 
@@ -708,7 +708,7 @@ export function HouseLoansSection({
     <div>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>House Loans / Mortgages</div>
       <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        💡 Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
+        Ã°Å¸â€™Â¡ Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
         <StatBox label="Total Remaining" value={fmtCAD(totalRemaining)} color="#a31515" />
@@ -730,10 +730,10 @@ export function HouseLoansSection({
                 {l.address && <div style={{ fontSize: 12, color: "#6b7280" }}>{l.address}</div>}
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {fmtCAD(l.payment)}/{l.schedule}
-                  {l.source ? ` · From: ${getAccountName(l.source)}` : ""}
+                  {l.source ? ` Ã‚Â· From: ${getAccountName(l.source)}` : ""}
                   {l.nextPaymentDate
-                    ? ` · Next: ${fmtDate(next ?? l.nextPaymentDate)}`
-                    : " · ⚠ Set next payment date"}
+                    ? ` Ã‚Â· Next: ${fmtDate(next ?? l.nextPaymentDate)}`
+                    : " Ã‚Â· Ã¢Å¡Â  Set next payment date"}
                 </div>
                 {l.source && !accounts.some((a) => a.id === l.source) && (
                   <div style={{ fontSize: 11, color: "#a05c00", marginTop: 3 }}>
@@ -748,9 +748,9 @@ export function HouseLoansSection({
                 {!!l.propertyTaxAmount && (
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                     Property tax: {fmtCAD(l.propertyTaxAmount)}/{l.propertyTaxSchedule ?? "Monthly"}
-                    {l.propertyTaxSource ? ` · From: ${getAccountName(l.propertyTaxSource)}` : ""}
-                    {l.propertyTaxDate ? ` · Next: ${fmtDate(l.propertyTaxDate)}` : ""}
-                    {l.propertyTaxRollNumber ? ` · Roll #: ${l.propertyTaxRollNumber}` : ""}
+                    {l.propertyTaxSource ? ` Ã‚Â· From: ${getAccountName(l.propertyTaxSource)}` : ""}
+                    {l.propertyTaxDate ? ` Ã‚Â· Next: ${fmtDate(l.propertyTaxDate)}` : ""}
+                    {l.propertyTaxRollNumber ? ` Ã‚Â· Roll #: ${l.propertyTaxRollNumber}` : ""}
                   </div>
                 )}
                 {l.principal > 0 && (
@@ -759,7 +759,7 @@ export function HouseLoansSection({
                       <div style={{ height: "100%", width: `${Math.min(100 - ((l.remaining / l.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-                      {fmtCAD(l.principal - l.remaining)} paid · {fmtCAD(l.remaining)} remaining
+                      {fmtCAD(l.principal - l.remaining)} paid Ã‚Â· {fmtCAD(l.remaining)} remaining
                     </div>
                   </div>
                 )}
@@ -770,7 +770,7 @@ export function HouseLoansSection({
                   <Btn variant="green" small onClick={() => openLog(l)}>Log Payment</Btn>
                   <Btn variant="secondary" small onClick={() => openBackfill(l)}>Backfill</Btn>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...l, id: l.id }); setShowForm(true); }}>Edit</Btn>
-                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${l.name}?`)) deleteHouseLoan(l.id); }}>✕</Btn>
+                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${l.name}?`)) deleteHouseLoan(l.id); }}>Ã¢Å“â€¢</Btn>
                 </div>
               </div>
             </div>
@@ -817,10 +817,10 @@ export function HouseLoansSection({
         </Modal>
       )}
       {backfillModal && (
-        <Modal title={`Backfill — ${backfillModal.loan.name}`} onClose={() => setBackfillModal(null)}>
+        <Modal title={`Backfill Ã¢â‚¬â€ ${backfillModal.loan.name}`} onClose={() => setBackfillModal(null)}>
           {backfillDone !== null ? (
             <div style={{ textAlign: "center", padding: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>Ã¢Å“â€¦</div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical mortgage payments have been added to your transaction log.</div>
               <div style={{ marginTop: 16 }}>
@@ -847,7 +847,7 @@ export function HouseLoansSection({
                   onChange={(e) => setBackfillAccountId(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${backfillAccountId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}
                 >
-                  <option value="">— Select account —</option>
+                  <option value="">-- Select account --</option>
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({fmtCAD(a.openingBalance)})</option>)}
                 </select>
               </div>
@@ -876,166 +876,3 @@ export function HouseLoansSection({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PROPERTY TAX SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export function PropertyTaxSection() {
-  const { propertyTaxes, addProperty, updateProperty, deleteProperty, addPayment, deletePayment, markPaid } = usePropertyTax();
-
-  const [showPropForm, setShowPropForm] = useState(false);
-  const [showPayForm, setShowPayForm] = useState(false);
-  const [propForm, setPropForm] = useState({ id: "", name: "", accountNumber: "" });
-  const [payForm, setPayForm] = useState({ propertyId: "", amount: 0, date: new Date().toISOString().split("T")[0], note: "" });
-  const [markingPaid, setMarkingPaid] = useState<{ propId: string; payId: string; amount: number; propName: string } | null>(null);
-  const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
-
-  const allPayments = propertyTaxes.flatMap((p) =>
-    (p.payments ?? []).map((pay) => ({ ...pay, propertyName: p.name }))
-  );
-  const totalPaid = toFixed2(allPayments.filter((p) => p.paid).reduce((s, p) => s + p.amount, 0));
-  const totalPlanned = toFixed2(allPayments.filter((p) => !p.paid).reduce((s, p) => s + p.amount, 0));
-  const today = new Date().toISOString().split("T")[0];
-  const upcoming = allPayments.filter((p) => !p.paid && p.date >= today).sort((a, b) => a.date > b.date ? 1 : -1);
-
-  return (
-    <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Property Tax</div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-        <StatBox label="Total Paid" value={fmtCAD(totalPaid)} color="#1a7f3c" />
-        <StatBox label="Upcoming Planned" value={fmtCAD(totalPlanned)} color="#a05c00" />
-        <StatBox label="Properties" value={String(propertyTaxes.length)} />
-      </div>
-
-      {upcoming.length > 0 && (
-        <div style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: "#a05c00", marginBottom: 8 }}>Upcoming Property Tax Payments</div>
-          {upcoming.slice(0, 5).map((p) => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", borderBottom: "1px solid #fef3e2" }}>
-              <span>{p.propertyName}{p.note ? ` · ${p.note}` : ""}</span>
-              <span style={{ fontWeight: 600, color: "#a05c00" }}>{fmtCAD(p.amount)} · {fmtDate(p.date)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginBottom: 12 }}>
-        <Btn variant="secondary" small onClick={() => { setPropForm({ id: "", name: "", accountNumber: "" }); setShowPropForm(true); }}>+ Add Property</Btn>
-      </div>
-
-      {propertyTaxes.map((prop) => (
-        <div key={prop.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{prop.name}</div>
-              <div style={{ fontSize: 12, color: "#6b7280" }}>Roll # {prop.accountNumber}</div>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <Btn small onClick={() => { setPayForm({ propertyId: prop.id, amount: 0, date: today, note: "" }); setShowPayForm(true); }}>+ Schedule</Btn>
-              <Btn variant="secondary" small onClick={() => { setPropForm({ id: prop.id, name: prop.name, accountNumber: prop.accountNumber }); setShowPropForm(true); }}>Edit</Btn>
-              <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${prop.name}?`)) deleteProperty(prop.id); }}>✕</Btn>
-            </div>
-          </div>
-
-          {[...(prop.payments ?? [])].sort((a, b) => b.date > a.date ? 1 : -1).map((pay) => (
-            <div key={pay.id} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "6px 10px", background: pay.paid ? "#f0fdf4" : "#fffbeb",
-              borderRadius: 8, marginBottom: 6,
-              border: `1px solid ${pay.paid ? "#bbf7d0" : "#fde68a"}`,
-            }}>
-              <div>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>{fmtCAD(pay.amount)}</span>
-                <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 8 }}>
-                  {pay.paid ? `Paid: ${fmtDate(pay.paidDate ?? pay.date)}` : `Planned: ${fmtDate(pay.date)}`}
-                </span>
-                {pay.note && <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6 }}>· {pay.note}</span>}
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {!pay.paid ? (
-                  <Btn variant="green" small onClick={() => {
-                    setMarkingPaid({ propId: prop.id, payId: pay.id, amount: pay.amount, propName: prop.name });
-                    setTxFormInitial({
-                      type: "expense",
-                      amount: pay.amount,
-                      date: pay.date,
-                      description: `Property Tax — ${prop.name}`,
-                      mode: "Bank Transfer",
-                      tag: "Personal",
-                    });
-                    setTxFormOpen(true);
-                  }}>Mark Paid</Btn>
-                ) : (
-                  <Btn variant="secondary" small onClick={() => markPaid(prop.id, pay.id, false)}>Undo</Btn>
-                )}
-                <Btn variant="danger" small onClick={() => deletePayment(prop.id, pay.id)}>✕</Btn>
-              </div>
-            </div>
-          ))}
-          {!prop.payments?.length && (
-            <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center", padding: 12 }}>No payments logged yet.</div>
-          )}
-        </div>
-      ))}
-
-      {propertyTaxes.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No properties yet.</div>}
-
-      {showPropForm && (
-        <Modal title={propForm.id ? "Edit Property" : "Add Property"} onClose={() => setShowPropForm(false)}>
-          <Inp label="Property Name" value={propForm.name} onChange={(e) => setPropForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Primary Residence" />
-          <Inp label="Account / Roll Number" value={propForm.accountNumber} onChange={(e) => setPropForm((p) => ({ ...p, accountNumber: e.target.value }))} />
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <Btn variant="secondary" onClick={() => setShowPropForm(false)}>Cancel</Btn>
-            <Btn onClick={() => {
-              if (!propForm.name) return;
-              if (propForm.id) updateProperty(propForm.id, propForm.name, propForm.accountNumber);
-              else addProperty(propForm.name, propForm.accountNumber);
-              setShowPropForm(false);
-            }}>Save Property</Btn>
-          </div>
-        </Modal>
-      )}
-
-      {/* TransactionForm handles mark paid */}
-      <TransactionForm
-        open={txFormOpen}
-        onClose={() => { setTxFormOpen(false); setMarkingPaid(null); setTxFormInitial(undefined); }}
-        initial={txFormInitial}
-        scheduledAmount={markingPaid?.amount}
-        title={markingPaid ? `Mark Paid — ${markingPaid.propName}` : "Mark Paid"}
-        onSaved={(txn) => {
-          if (markingPaid) {
-            markPaid(markingPaid.propId, markingPaid.payId, true, txn.date ?? new Date().toISOString().split("T")[0]);
-          }
-          setTxFormOpen(false);
-          setMarkingPaid(null);
-          setTxFormInitial(undefined);
-        }}
-      />
-
-            {showPayForm && (
-        <Modal title="Schedule Property Tax Payment" onClose={() => setShowPayForm(false)}>
-          <Sel label="Property" value={payForm.propertyId} onChange={(e) => setPayForm((p) => ({ ...p, propertyId: e.target.value }))}
-            options={[{ value: "", label: "— Select property —" }, ...propertyTaxes.map((p) => ({ value: p.id, label: p.name }))]} />
-          <Grid2>
-            <Inp label="Amount ($)" type="number" value={payForm.amount} onChange={(e) => setPayForm((p) => ({ ...p, amount: Number(e.target.value) }))} />
-            <Inp label="Date (paid or planned)" type="date" value={payForm.date} onChange={(e) => setPayForm((p) => ({ ...p, date: e.target.value }))} />
-          </Grid2>
-          <Inp label="Note (optional)" value={payForm.note} onChange={(e) => setPayForm((p) => ({ ...p, note: e.target.value }))} placeholder="e.g. Q1 instalment" />
-          <div style={{ fontSize: 12, color: "#6b7280", background: "#f0f9ff", padding: "8px 12px", borderRadius: 8 }}>
-            💡 This schedules a planned payment. Click <strong>Mark Paid</strong> on the entry when you actually pay it — that creates the transaction.
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <Btn variant="secondary" onClick={() => setShowPayForm(false)}>Cancel</Btn>
-            <Btn onClick={() => {
-              if (!payForm.amount || !payForm.propertyId) return;
-              addPayment(payForm.propertyId, { amount: payForm.amount, date: payForm.date, paid: false, note: payForm.note });
-              setShowPayForm(false);
-            }}>Save Payment</Btn>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}

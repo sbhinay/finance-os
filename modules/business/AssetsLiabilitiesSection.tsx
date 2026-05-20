@@ -8,7 +8,7 @@ import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
 import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 import { PaymentSchedule, type PropertyTaxPayment, type Vehicle, type HouseLoan, type PropertyTax } from "@/types/domain";
 
-type NavTarget = "accounts" | "cards" | "vehicles" | "houseloans" | "propertytax";
+type NavTarget = "accounts" | "cards" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
 
 type UpcomingItem =
@@ -262,7 +262,6 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <ActionBtn onClick={() => onNavigate("vehicles")}>Vehicles</ActionBtn>
           <ActionBtn onClick={() => onNavigate("houseloans")}>House Loans</ActionBtn>
-          <ActionBtn onClick={() => onNavigate("propertytax")}>Property Tax</ActionBtn>
         </div>
       </div>
 
@@ -277,7 +276,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Upcoming Obligations"
           accent="#a05c00"
-          actions={<ActionBtn onClick={() => onNavigate("propertytax")}>Open Schedules</ActionBtn>}
+          actions={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Schedules</ActionBtn>}
         >
           {upcomingObligations.length === 0 ? (
             <EmptyNote>No upcoming obligations are scheduled yet. Add next payment dates in the related detail views to make this page actionable.</EmptyNote>
@@ -323,7 +322,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           actions={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Details</ActionBtn>}
         >
           {houseLoans.length === 0 && propertyTaxes.length === 0 ? (
-            <EmptyNote>No real estate items yet. Use House Loans and Property Tax detail views while this area absorbs more of that workflow.</EmptyNote>
+            <EmptyNote>No real estate items yet. Use the House Loans detail view while this area absorbs more of that workflow.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {houseLoans.slice(0, 3).map((loan) => (
