@@ -281,9 +281,9 @@ export function DailyLogSection() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
                 <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
-                  {t.type === "income" ? "+" : t.type === "transfer" ? "<>" : "-"}{fmtCAD(t.amount)}
+                  {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{fmtCAD(t.amount)}
                 </Pill>
-                <Btn variant="ghost" small onClick={() => setAddToFixed(t)} style={{ fontSize: 11 }}>+ Fixed</Btn>
+                <Btn variant="ghost" small onClick={() => setAddToFixed(t)} style={{ fontSize: 11 }}>Recurring</Btn>
                 <Btn variant="secondary" small onClick={() => startEdit(t)}>Edit</Btn>
                 <Btn variant="danger" small onClick={() => del(t)}>x</Btn>
               </div>
@@ -311,7 +311,7 @@ export function DailyLogSection() {
       />
 
       {addToFixed && (
-        <Modal title="Add to Fixed Payments" onClose={() => setAddToFixed(null)}>
+        <Modal title="Add to Recurring Payments" onClose={() => setAddToFixed(null)}>
           <div style={{ background: "#f0f9ff", borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>
             Creating a recurring entry based on: <strong>{addToFixed.description || catName(addToFixed.categoryId)}</strong> - {fmtCAD(addToFixed.amount)}
           </div>
