@@ -83,7 +83,7 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   accounts: "accountscards",
   cards: "accountscards",
   accountscards: "accountscards",
-  categories: "fixedpayments",
+  categories: "healthreport",
   dailylog: "dailylog",
   healthreport: "healthreport",
   transactions: "dailylog",
@@ -165,10 +165,17 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
   healthreport: [
     { id: "healthreport", label: "Health Report" },
     { id: "importexport", label: "Import / Export" },
+    { id: "categories", label: "Categories" },
   ],
   importexport: [
     { id: "healthreport", label: "Health Report" },
     { id: "importexport", label: "Import / Export" },
+    { id: "categories", label: "Categories" },
+  ],
+  categories: [
+    { id: "healthreport", label: "Health Report" },
+    { id: "importexport", label: "Import / Export" },
+    { id: "categories", label: "Categories" },
   ],
 };
 

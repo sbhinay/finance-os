@@ -259,9 +259,8 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
             This is the unified command area for asset, debt, and net worth tracking. Detail views remain available while we fold more of the workflow into this hub.
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <ActionBtn onClick={() => onNavigate("vehicles")}>Vehicles</ActionBtn>
-          <ActionBtn onClick={() => onNavigate("houseloans")}>House Loans</ActionBtn>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>
+          Use the tabs above to jump into vehicle and house-loan details.
         </div>
       </div>
 
@@ -276,7 +275,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Upcoming Obligations"
           accent="#a05c00"
-          actions={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Schedules</ActionBtn>}
+          actions={undefined}
         >
           {upcomingObligations.length === 0 ? (
             <EmptyNote>No upcoming obligations are scheduled yet. Add next payment dates in the related detail views to make this page actionable.</EmptyNote>
@@ -306,7 +305,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                     <div style={{ fontWeight: 800, color: "#111827", minWidth: 88, textAlign: "right" }}>{fmtCAD(item.amount)}</div>
                     {item.kind === "vehicle" && <ActionBtn variant="green" onClick={() => openVehiclePayment(item.vehicle)}>Log Payment</ActionBtn>}
                     {item.kind === "propertyTax" && <ActionBtn variant="green" onClick={() => openPropertyTaxPayment(item.property, item.payment)}>Mark Paid</ActionBtn>}
-                    {(item.kind === "house" || item.kind === "housePropertyTax") && <ActionBtn onClick={() => onNavigate("houseloans")}>Open Details</ActionBtn>}
+                    {(item.kind === "house" || item.kind === "housePropertyTax") && null}
                   </div>
                 </div>
               ))}
@@ -319,7 +318,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Real Estate"
           accent="#b45309"
-          actions={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Details</ActionBtn>}
+          actions={undefined}
         >
           {houseLoans.length === 0 && propertyTaxes.length === 0 ? (
             <EmptyNote>No real estate items yet. Use the House Loans detail view while this area absorbs more of that workflow.</EmptyNote>

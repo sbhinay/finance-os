@@ -14,7 +14,7 @@ import { syncBalances } from "@/utils/syncBalances";
 import { calculateBackfillDates } from "./useFixedPayments";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Primitives Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// Primitives
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
@@ -63,7 +63,7 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 680 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Ãƒâ€”</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -94,7 +94,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual"];
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Mileage projection (mirrors prototype exactly) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// Mileage projection (mirrors prototype exactly)
 
 function mileageProjection(v: Vehicle) {
   if (!v.leaseStart || !v.leaseEnd || !v.mileageAllowance) return null;
@@ -131,9 +131,9 @@ function pickLeaseVehicleCategoryId(categories: Array<{ id: string; name: string
   return undefined;
 }
 
-// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+// -----------------------------------------------------------------------------
 // VEHICLES SECTION
-// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+// -----------------------------------------------------------------------------
 
 export function VehiclesSection({
   accounts,
@@ -225,7 +225,7 @@ export function VehiclesSection({
     const pastDates = dates.filter((d) => d <= cutoff);
 
     if (pastDates.length === 0) {
-      alert("No historical vehicle payments to backfill Ã¢â‚¬â€ all scheduled dates are in the future.");
+      alert("No historical vehicle payments to backfill - all scheduled dates are in the future.");
       return;
     }
 
@@ -299,7 +299,7 @@ export function VehiclesSection({
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" }, ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` }))];
+  const acctOpts = [{ value: "", label: "-- Select account --" }, ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` }))];
   const statusColor: Record<string, string> = { Active: "green", "Ending Soon": "amber", Ended: "gray", "Paid Off": "teal" };
   const totalMonthly = vehicles.reduce((s, v) => s + toMonthly(v.payment, v.schedule), 0);
 
@@ -337,21 +337,21 @@ export function VehiclesSection({
                 <div style={{ fontSize: 12, color: "#6b7280" }}>{v.year} {v.make} {v.model}</div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {fmtCAD(v.payment)}/{v.schedule}
-                  {v.source ? ` Ã‚Â· From: ${getAccountName(v.source)}` : ""}
+                  {v.source ? ` - From: ${getAccountName(v.source)}` : ""}
                   {v.nextPaymentDate
-                    ? ` Ã‚Â· Next: ${fmtDate(next ?? v.nextPaymentDate)}`
-                    : " Ã‚Â· Ã¢Å¡Â  Set next payment date"}
+                    ? ` - Next: ${fmtDate(next ?? v.nextPaymentDate)}`
+                    : " - Set next payment date"}
                 </div>
                 {!!v.insuranceAmount && (
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                     Insurance: {fmtCAD(v.insuranceAmount)}/{v.insuranceSchedule ?? "Monthly"}
-                    {v.insuranceSource ? ` Ã‚Â· From: ${getAccountName(v.insuranceSource)}` : ""}
-                    {v.insuranceDate ? ` Ã‚Â· Next: ${fmtDate(v.insuranceDate)}` : ""}
+                    {v.insuranceSource ? ` - From: ${getAccountName(v.insuranceSource)}` : ""}
+                    {v.insuranceDate ? ` - Next: ${fmtDate(v.insuranceDate)}` : ""}
                   </div>
                 )}
                 {v.vtype === "Lease" && v.leaseEnd && (
                   <div style={{ fontSize: 12, color: "#6b7280" }}>
-                    Lease ends: {fmtDate(v.leaseEnd)}{mp && mp.daysLeft > 0 ? ` Ã‚Â· ${mp.daysLeft} days left` : ""}
+                    Lease ends: {fmtDate(v.leaseEnd)}{mp && mp.daysLeft > 0 ? ` - ${mp.daysLeft} days left` : ""}
                   </div>
                 )}
                 {v.vtype === "Finance" && v.principal > 0 && (
@@ -360,7 +360,7 @@ export function VehiclesSection({
                       <div style={{ height: "100%", width: `${Math.min(100 - ((v.remaining / v.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-                      {fmtCAD(v.principal - v.remaining)} paid Ã‚Â· {fmtCAD(v.remaining)} remaining
+                      {fmtCAD(v.principal - v.remaining)} paid - {fmtCAD(v.remaining)} remaining
                     </div>
                   </div>
                 )}
@@ -370,7 +370,7 @@ export function VehiclesSection({
                 <Btn variant="secondary" small onClick={() => openBackfill(v)}>Backfill</Btn>
                 <Btn variant="secondary" small onClick={() => setDetail(v)}>View History</Btn>
                 <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...v }); setShowForm(true); }}>Edit</Btn>
-                <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${v.name}?`)) deleteVehicle(v.id); }}>Ã¢Å“â€¢</Btn>
+                <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${v.name}?`)) deleteVehicle(v.id); }}>Delete</Btn>
               </div>
             </div>
           </div>
@@ -431,10 +431,10 @@ export function VehiclesSection({
       )}
 
       {backfillModal && (
-        <Modal title={`Backfill Ã¢â‚¬â€ ${backfillModal.vehicle.name}`} onClose={() => setBackfillModal(null)}>
+        <Modal title={`Backfill - ${backfillModal.vehicle.name}`} onClose={() => setBackfillModal(null)}>
           {backfillDone !== null ? (
             <div style={{ textAlign: "center", padding: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>Ã¢Å“â€¦</div>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>Done</div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical vehicle payments have been added to your transaction log.</div>
               <div style={{ marginTop: 16 }}>
@@ -461,7 +461,7 @@ export function VehiclesSection({
                   onChange={(e) => setBackfillAccountId(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${backfillAccountId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}
                 >
-                  <option value="">Ã¢â‚¬â€ Select account Ã¢â‚¬â€</option>
+                  <option value="">-- Select account --</option>
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({fmtCAD(a.openingBalance)})</option>)}
                 </select>
               </div>
@@ -479,7 +479,7 @@ export function VehiclesSection({
       )}
 
       {detail && (
-        <Modal title={`${detail.name} Ã¢â‚¬â€ Expense History`} onClose={() => setDetail(null)} wide>
+        <Modal title={`${detail.name} - Expense History`} onClose={() => setDetail(null)} wide>
           {(() => {
             const txns = transactions
               .filter((t) => t.linkedVehicleId === detail.id && t.type !== "adjustment")
@@ -500,9 +500,9 @@ export function VehiclesSection({
                 {txns.map((t) => (
                   <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
                     <div>
-                      <span style={{ fontWeight: 500 }}>{t.description || t.categoryId || "Ã¢â‚¬â€"}</span>
-                      <span style={{ color: "#6b7280", fontSize: 11 }}> Ã‚Â· {fmtDate((t.date ?? t.createdAt ?? "").slice(0, 10))}</span>
-                      {t.odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> Ã‚Â· {Number(t.odometer).toLocaleString()} km</span>}
+                      <span style={{ fontWeight: 500 }}>{t.description || t.categoryId || "--"}</span>
+                      <span style={{ color: "#6b7280", fontSize: 11 }}> - {fmtDate((t.date ?? t.createdAt ?? "").slice(0, 10))}</span>
+                      {t.odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> - {Number(t.odometer).toLocaleString()} km</span>}
                     </div>
                     <Pill color="red">{fmtCAD(t.amount)}</Pill>
                   </div>
@@ -524,9 +524,9 @@ export function VehiclesSection({
   );
 }
 
-// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+// -----------------------------------------------------------------------------
 // HOUSE LOANS SECTION
-// Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+// -----------------------------------------------------------------------------
 
 export function HouseLoansSection({
   accounts,
@@ -590,7 +590,7 @@ export function HouseLoansSection({
     setShowForm(false); setForm(emptyForm);
   }
 
-  const acctOpts = [{ value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
+  const acctOpts = [{ value: "", label: "-- Select account --" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
   const totalRemaining = houseLoans.reduce((s, l) => s + l.remaining, 0);
   const totalMonthly = houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0);
 
@@ -605,14 +605,14 @@ export function HouseLoansSection({
   const formAcctOpts = sourceExists
     ? acctOpts
     : [
-        { value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" },
+        { value: "", label: "-- Select account --" },
         { value: form.source, label: `Legacy source (${form.source})` },
         ...accounts.map((a) => ({ value: a.id, label: a.name })),
       ];
   const formPropertyTaxAcctOpts = propertyTaxSourceExists
     ? acctOpts
     : [
-        { value: "", label: "Ã¢â‚¬â€ Select account Ã¢â‚¬â€" },
+        { value: "", label: "-- Select account --" },
         { value: form.propertyTaxSource ?? "", label: `Legacy source (${form.propertyTaxSource})` },
         ...accounts.map((a) => ({ value: a.id, label: a.name })),
       ];
@@ -650,7 +650,7 @@ export function HouseLoansSection({
     const pastDates = dates.filter((d) => d <= cutoff);
 
     if (pastDates.length === 0) {
-      alert("No historical mortgage payments to backfill Ã¢â‚¬â€ all scheduled dates are in the future.");
+      alert("No historical mortgage payments to backfill - all scheduled dates are in the future.");
       return;
     }
 
@@ -708,7 +708,7 @@ export function HouseLoansSection({
     <div>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>House Loans / Mortgages</div>
       <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        Ã°Å¸â€™Â¡ Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
+        Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
         <StatBox label="Total Remaining" value={fmtCAD(totalRemaining)} color="#a31515" />
@@ -730,10 +730,10 @@ export function HouseLoansSection({
                 {l.address && <div style={{ fontSize: 12, color: "#6b7280" }}>{l.address}</div>}
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                   {fmtCAD(l.payment)}/{l.schedule}
-                  {l.source ? ` Ã‚Â· From: ${getAccountName(l.source)}` : ""}
+                  {l.source ? ` - From: ${getAccountName(l.source)}` : ""}
                   {l.nextPaymentDate
-                    ? ` Ã‚Â· Next: ${fmtDate(next ?? l.nextPaymentDate)}`
-                    : " Ã‚Â· Ã¢Å¡Â  Set next payment date"}
+                    ? ` - Next: ${fmtDate(next ?? l.nextPaymentDate)}`
+                    : " - Set next payment date"}
                 </div>
                 {l.source && !accounts.some((a) => a.id === l.source) && (
                   <div style={{ fontSize: 11, color: "#a05c00", marginTop: 3 }}>
@@ -748,9 +748,9 @@ export function HouseLoansSection({
                 {!!l.propertyTaxAmount && (
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                     Property tax: {fmtCAD(l.propertyTaxAmount)}/{l.propertyTaxSchedule ?? "Monthly"}
-                    {l.propertyTaxSource ? ` Ã‚Â· From: ${getAccountName(l.propertyTaxSource)}` : ""}
-                    {l.propertyTaxDate ? ` Ã‚Â· Next: ${fmtDate(l.propertyTaxDate)}` : ""}
-                    {l.propertyTaxRollNumber ? ` Ã‚Â· Roll #: ${l.propertyTaxRollNumber}` : ""}
+                    {l.propertyTaxSource ? ` - From: ${getAccountName(l.propertyTaxSource)}` : ""}
+                    {l.propertyTaxDate ? ` - Next: ${fmtDate(l.propertyTaxDate)}` : ""}
+                    {l.propertyTaxRollNumber ? ` - Roll #: ${l.propertyTaxRollNumber}` : ""}
                   </div>
                 )}
                 {l.principal > 0 && (
@@ -759,7 +759,7 @@ export function HouseLoansSection({
                       <div style={{ height: "100%", width: `${Math.min(100 - ((l.remaining / l.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-                      {fmtCAD(l.principal - l.remaining)} paid Ã‚Â· {fmtCAD(l.remaining)} remaining
+                      {fmtCAD(l.principal - l.remaining)} paid - {fmtCAD(l.remaining)} remaining
                     </div>
                   </div>
                 )}
@@ -770,7 +770,7 @@ export function HouseLoansSection({
                   <Btn variant="green" small onClick={() => openLog(l)}>Log Payment</Btn>
                   <Btn variant="secondary" small onClick={() => openBackfill(l)}>Backfill</Btn>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...l, id: l.id }); setShowForm(true); }}>Edit</Btn>
-                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${l.name}?`)) deleteHouseLoan(l.id); }}>Ã¢Å“â€¢</Btn>
+                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${l.name}?`)) deleteHouseLoan(l.id); }}>Delete</Btn>
                 </div>
               </div>
             </div>
@@ -817,10 +817,10 @@ export function HouseLoansSection({
         </Modal>
       )}
       {backfillModal && (
-        <Modal title={`Backfill Ã¢â‚¬â€ ${backfillModal.loan.name}`} onClose={() => setBackfillModal(null)}>
+        <Modal title={`Backfill - ${backfillModal.loan.name}`} onClose={() => setBackfillModal(null)}>
           {backfillDone !== null ? (
             <div style={{ textAlign: "center", padding: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>Ã¢Å“â€¦</div>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>Done</div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical mortgage payments have been added to your transaction log.</div>
               <div style={{ marginTop: 16 }}>

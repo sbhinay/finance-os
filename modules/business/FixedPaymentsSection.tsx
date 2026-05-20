@@ -66,7 +66,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Ãƒâ€”</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -116,9 +116,9 @@ const KIND_PLACEHOLDERS: Record<RecurringKind, string> = {
   card_fee: "e.g. Annual Fee - Avion",
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 // PENDING BANNER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 
 export function PendingBanner({
   pending, accounts, cards, hooks,
@@ -136,15 +136,15 @@ export function PendingBanner({
   if (!pending.length) return null;
 
   const typeIcon: Record<string, string> = {
-    fixed: "📅", vehicle: "🚗", loan: "🏠",
-    cra_payroll: "💼", cra_corp: "🏛", cra_hst: "📊", propertytax: "🏡",
+    fixed: "Recurring", vehicle: "Vehicle", loan: "Home Loan",
+    cra_payroll: "Payroll", cra_corp: "Corp Tax", cra_hst: "HST", propertytax: "Property Tax",
   };
 
   const isCRA = (p: PendingTransaction) =>
     ["cra_payroll", "cra_corp", "cra_hst"].includes(p.sourceType);
 
   const acctOpts = [
-    { value: "", label: "— Select account —" },
+    { value: "", label: "-- Select account --" },
     ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
     ...cards.map((c) => ({ value: c.id, label: `${c.name} (CC)` })),
   ];
@@ -157,9 +157,9 @@ export function PendingBanner({
     <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 10, marginBottom: 16, overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #fde68a", background: "#fef3c7" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 16 }}>⏳</span>
+          <span style={{ fontSize: 16 }}>Pending</span>
           <span style={{ fontWeight: 700, fontSize: 13, color: "#92400e" }}>
-            {pending.length} Pending {pending.length === 1 ? "Transaction" : "Transactions"} — Confirm or Dismiss
+            {pending.length} Pending {pending.length === 1 ? "Transaction" : "Transactions"} - Confirm or Dismiss
           </span>
         </div>
         <Btn variant="secondary" small onClick={hooks.dismissAllPending}
@@ -173,7 +173,7 @@ export function PendingBanner({
           {editingId === p.id ? (
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#92400e", marginBottom: 8 }}>
-                {typeIcon[p.sourceType] ?? "📋"} Editing: {p.name} — {fmtDate(p.dueDate)}
+                {typeIcon[p.sourceType] ?? "Recurring"} Editing: {p.name} - {fmtDate(p.dueDate)}
               </div>
               <Grid2>
                 <Inp label="Amount ($)" type="number" value={editForm.amount}
@@ -194,7 +194,7 @@ export function PendingBanner({
                 <Btn onClick={() => {
                   hooks.confirmPending({ ...p, ...editForm, amount: toFixed2(editForm.amount) });
                   setEditingId(null);
-                }}>✓ Confirm</Btn>
+                }}>Confirm</Btn>
                 <Btn variant="secondary" onClick={() => setEditingId(null)}>Cancel</Btn>
               </div>
             </div>
@@ -202,15 +202,15 @@ export function PendingBanner({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#1c1c1e" }}>
-                  {typeIcon[p.sourceType] ?? "📋"} {p.name}
+                  {typeIcon[p.sourceType] ?? "Recurring"} {p.name}
                 </div>
                 <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
                   {fmtDate(p.dueDate)}
-                  {p.account ? ` · ${resolveAccount(p.account)}` : isCRA(p) ? " · Select account to confirm" : ""}
+                  {p.account ? ` - ${resolveAccount(p.account)}` : isCRA(p) ? " - Select account to confirm" : ""}
                 </div>
                 {isCRA(p) && (
                   <div style={{ fontSize: 11, color: "#4a3ab5", marginTop: 2 }}>
-                    ℹ Confirm via Tax Obligations page for full tracking
+                    Confirm via Tax Obligations page for full tracking
                   </div>
                 )}
               </div>
@@ -229,10 +229,10 @@ export function PendingBanner({
                         return;
                       }
                       hooks.confirmPending(p);
-                    }}>✓ Confirm</Btn>
+                    }}>Confirm</Btn>
                   </>
                 )}
-                <Btn variant="danger" small onClick={() => hooks.dismissPending(p.key)}>✕</Btn>
+                <Btn variant="danger" small onClick={() => hooks.dismissPending(p.key)}>Dismiss</Btn>
               </div>
             </div>
           )}
@@ -242,15 +242,15 @@ export function PendingBanner({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 // RECURRING PAYMENTS SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 
 export function FixedPaymentsSection({
   title = "Recurring Payments",
   introText = "Shared recurring engine for subscriptions, utilities, insurance, planned payments, and legacy recurring items that do not yet live under a stronger parent record.",
 }: FixedPaymentsSectionProps = {}) {
-  // Internal hooks — no props needed
+  // Internal hooks ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no props needed
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
   const { categories } = useCategories();
@@ -304,7 +304,7 @@ export function FixedPaymentsSection({
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
   const acctOpts = [
-    { value: "", label: "— No account —" },
+    { value: "", label: "-- No account --" },
     ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
     ...cards.map((c) => ({ value: c.id, label: `${c.name} (CC)` })),
   ];
@@ -391,7 +391,7 @@ export function FixedPaymentsSection({
     yesterday.setDate(yesterday.getDate() - 1);
     const pastDates = dates.filter((d) => d <= yesterday.toISOString().split("T")[0]);
     if (pastDates.length === 0) {
-      alert("No historical payments to backfill — all dates are in the future.");
+      alert("No historical payments to backfill - all dates are in the future.");
       return;
     }
     setBackfillAccountId(fp.source ?? "");
@@ -431,7 +431,7 @@ export function FixedPaymentsSection({
       </div>
 
       <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        💡 {introText}
+        {introText}
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
@@ -454,7 +454,7 @@ export function FixedPaymentsSection({
       {visiblePayments.map((p) => {
         const isEnded = !!p.endDate && new Date(p.endDate + "T12:00:00") < new Date();
         const next = getNextOccurrence(p.date, p.schedule);
-        const nextLabel = p.schedule === "One-time" ? fmtDate(p.date) : (next ? fmtDate(next) : "—");
+        const nextLabel = p.schedule === "One-time" ? fmtDate(p.date) : (next ? fmtDate(next) : "--");
         const linkedAcct = accounts.find((a) => a.id === p.source);
         const recurringKind = getFixedPaymentKind(p);
 
@@ -469,9 +469,9 @@ export function FixedPaymentsSection({
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-                  {p.schedule} · Next: {nextLabel}
-                  {p.endDate ? ` · Ends: ${fmtDate(p.endDate)}` : ""}
-                  {linkedAcct ? ` · From: ${linkedAcct.name}` : ""}
+                  {p.schedule} - Next: {nextLabel}
+                  {p.endDate ? ` - Ends: ${fmtDate(p.endDate)}` : ""}
+                  {linkedAcct ? ` - From: ${linkedAcct.name}` : ""}
                 </div>
                 {isEnded && <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>Ended</span>}
                 {!isEnded && linkedAcct && (
@@ -485,12 +485,12 @@ export function FixedPaymentsSection({
                 {!isEnded && (
                   <Btn variant="secondary" small onClick={() => openLog(p)} style={{ fontSize: 11, color: "#1a7f3c" }}>+ Log</Btn>
                 )}
-                <Btn variant="amber" small onClick={() => openBackfill(p)} style={{ fontSize: 11 }}>⟳ Backfill</Btn>
+                <Btn variant="amber" small onClick={() => openBackfill(p)} style={{ fontSize: 11 }}>Backfill</Btn>
                 <Btn variant="secondary" small onClick={() => {
                   setForm({ ...emptyForm, ...p, id: p.id, startDate: p.date, endDate: p.endDate ?? "", tag: (p.tag ?? "Personal") as "Personal" | "Business", categoryId: lockedCategoryId || p.categoryId || "" });
                   setShowForm(true);
                 }}>Edit</Btn>
-                <Btn variant="danger" small onClick={() => { if (confirm(`Delete "${p.name}"?`)) hooks.deleteFixedPayment(p.id); }}>✕</Btn>
+                <Btn variant="danger" small onClick={() => { if (confirm(`Delete "${p.name}"?`)) hooks.deleteFixedPayment(p.id); }}>Delete</Btn>
               </div>
             </div>
           </div>
@@ -534,7 +534,7 @@ export function FixedPaymentsSection({
           <Sel label="Pay From" value={form.source} onChange={f("source")} options={acctOpts} />
           {isTransferPlannedPayment && (
             <Grid2>
-              <Sel label="Transfer Sub-type" value={form.subType} onChange={f("subType")} options={[{ value: "", label: "— Select transfer type —" }, ...plannedTransferSubTypes]} />
+              <Sel label="Transfer Sub-type" value={form.subType} onChange={f("subType")} options={[{ value: "", label: "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Select transfer type ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" }, ...plannedTransferSubTypes]} />
               <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")} options={acctOpts} />
             </Grid2>
           )}
@@ -551,7 +551,7 @@ export function FixedPaymentsSection({
                   disabled={isCategoryLocked}
                   onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${(lockedCategoryId || form.categoryId) ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: isCategoryLocked ? "#f9fafb" : "#fff", fontSize: 13, color: isCategoryLocked ? "#374151" : "#111827" }}>
-                  {!isCategoryLocked && <option value="">— Select category —</option>}
+                  {!isCategoryLocked && <option value="">ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Select category ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</option>}
                   {categories.filter((c) => c.type === "expense" || c.type === "both").map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -571,10 +571,10 @@ export function FixedPaymentsSection({
 
       {/* Backfill modal */}
       {backfillModal && (
-        <Modal title={`Backfill — ${backfillModal.fp.name}`} onClose={() => setBackfillModal(null)}>
+        <Modal title={`Backfill - ${backfillModal.fp.name}`} onClose={() => setBackfillModal(null)}>
           {backfillDone !== null ? (
             <div style={{ textAlign: "center", padding: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>Done</div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{backfillDone} transaction{backfillDone !== 1 ? "s" : ""} logged</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Historical payments have been added to your transaction log.</div>
               <div style={{ marginTop: 16 }}>
@@ -602,14 +602,14 @@ export function FixedPaymentsSection({
                 <Label>Pay From Account</Label>
                 <select value={backfillAccountId} onChange={(e) => setBackfillAccountId(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${backfillAccountId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}>
-                  <option value="">— Select account —</option>
+                  <option value="">-- Select account --</option>
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({fmtCAD(a.openingBalance)})</option>)}
                   {cards.map((c) => <option key={c.id} value={c.id}>{c.name} (CC)</option>)}
                 </select>
               </div>
 
               <div style={{ fontSize: 12, color: "#6b7280" }}>
-                ⚠ Existing transactions with the same description and date will be skipped automatically.
+                Existing transactions with the same description and date will be skipped automatically.
               </div>
 
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -631,7 +631,7 @@ export function FixedPaymentsSection({
         onClose={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
         initial={txFormInitial}
         scheduledAmount={txScheduledAmount}
-        title="Log Fixed Payment"
+        title="Log Recurring Payment"
         onSaved={() => { setTxFormOpen(false); setTxFormInitial(undefined); setTxScheduledAmount(undefined); }}
       />
     </div>
