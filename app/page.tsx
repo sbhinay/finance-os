@@ -21,7 +21,7 @@ import {
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useTransactions } from "@/modules/transactions/useTransactions";
-import { DashboardSection, ProjectionSection } from "@/modules/business/DashboardProjectionSections";
+import { DashboardSection } from "@/modules/business/DashboardProjectionSections";
 import { ImportExportSection } from "@/modules/business/ImportExportSection";
 import { CategoriesSection } from "@/modules/business/CategoriesSection";
 import { AssetsLiabilitiesSection } from "@/modules/business/AssetsLiabilitiesSection";
@@ -47,7 +47,6 @@ type SectionId =
   | "cra"
   | "ratesettings"
   | "dashboard"
-  | "projection"
   | "importexport"
   | "assetsliabilities";
 
@@ -56,7 +55,6 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "healthreport", label: "Health Report", group: "Daily Activity", icon: "*" },
   { id: "transactions", label: "Transaction History", group: "Daily Activity", icon: "*" },
   { id: "dashboard", label: "Dashboard", group: "Daily Activity", icon: "*" },
-  { id: "projection", label: "Projection", group: "Daily Activity", icon: "*" },
   { id: "importexport", label: "Import / Export", group: "Daily Activity", icon: "*" },
   { id: "accountscards", label: "Accounts & Cards", group: "Personal Finance", icon: "*" },
   { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "*" },
@@ -71,20 +69,6 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "cra", label: "Tax Obligations", group: "Business / CRA", icon: "*" },
   { id: "ratesettings", label: "Tax & Rate Settings", group: "Business / CRA", icon: "*" },
 ];
-const SECONDARY_SECTION_IDS = new Set<SectionId>([
-  "accounts",
-  "cards",
-  "categories",
-  "transactions",
-  "vehicles",
-  "houseloans",
-  "corpincome",
-  "cra",
-  "ratesettings",
-  "projection",
-  "importexport",
-]);
-
 const PRIMARY_NAV_IDS = new Set<SectionId>([
   "dailylog",
   "dashboard",
@@ -111,7 +95,6 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   cra: "hourscontracts",
   ratesettings: "hourscontracts",
   dashboard: "dashboard",
-  projection: "dashboard",
   importexport: "healthreport",
   assetsliabilities: "assetsliabilities",
 };
@@ -124,14 +107,6 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
   transactions: [
     { id: "dailylog", label: "Daily Log" },
     { id: "transactions", label: "Transaction History" },
-  ],
-  dashboard: [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "projection", label: "Projection" },
-  ],
-  projection: [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "projection", label: "Projection" },
   ],
   accountscards: [
     { id: "accountscards", label: "Combined View" },
@@ -149,17 +124,17 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
     { id: "cards", label: "Credit Cards" },
   ],
   assetsliabilities: [
-    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "assetsliabilities", label: "Overview" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
   ],
   vehicles: [
-    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "assetsliabilities", label: "Overview" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
   ],
   houseloans: [
-    { id: "assetsliabilities", label: "Net Worth Hub" },
+    { id: "assetsliabilities", label: "Overview" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
   ],
@@ -335,7 +310,6 @@ export default function Home() {
 
   const groupOrder = ["Core", "Finance", "Business", "System"];
   const currentHubLinks = PRIMARY_SECTION_BY_SECTION[section] === "fixedpayments" ? [] : (HUB_LINKS[section] ?? []);
-  const showingSecondaryView = SECONDARY_SECTION_IDS.has(section);
 
   const wrap = (children: React.ReactNode) => (
     <div className="bg-white rounded-lg border shadow-sm p-5">{children}</div>
@@ -387,20 +361,8 @@ export default function Home() {
       {/* Main */}
       <main style={{ flex: 1, minWidth: 0, padding: 24 }}>
         {currentHubLinks.length > 0 && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            marginBottom: 16,
-            padding: "12px 14px",
-            background: "#fff",
-            border: "1px solid #e2e4e8",
-            borderRadius: 12,
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".05em" }}>
-              {showingSecondaryView ? "Detail View" : "Hub View"}
-            </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {currentHubLinks.map((item) => {
               const active = section === item.id;
               return (
@@ -408,13 +370,13 @@ export default function Home() {
                   key={item.id}
                   onClick={() => setSection(item.id)}
                   style={{
-                    padding: "7px 12px",
-                    borderRadius: 999,
-                    border: active ? "1px solid #1a5fa8" : "1px solid #d1d5db",
-                    background: active ? "#eaf3ff" : "#fff",
-                    color: active ? "#1a5fa8" : "#374151",
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: active ? "#1a5fa8" : "#f3f4f6",
+                    color: active ? "#fff" : "#374151",
                     fontSize: 13,
-                    fontWeight: active ? 700 : 500,
+                    fontWeight: 600,
                     cursor: "pointer",
                   }}
                 >
@@ -422,11 +384,7 @@ export default function Home() {
                 </button>
               );
             })}
-            {showingSecondaryView && (
-              <div style={{ marginLeft: "auto", fontSize: 12, color: "#6b7280" }}>
-                This is still available, but it now sits under a stronger parent hub.
-              </div>
-            )}
+            </div>
           </div>
         )}
         {section === "dailylog"       && wrap(<DailyLogSection />)}
@@ -468,7 +426,6 @@ export default function Home() {
         {section === "cra"            && wrap(<TaxObligationsSection accounts={accounts} />)}
         {section === "ratesettings"   && wrap(<TaxRateSettingsSection />)}
         {section === "dashboard"      && wrap(<DashboardSection />)}
-        {section === "projection"     && wrap(<ProjectionSection />)}
         {section === "importexport"   && wrap(<ImportExportSection />)}
         {section === "categories"     && wrap(<CategoriesSection />)}
       </main>

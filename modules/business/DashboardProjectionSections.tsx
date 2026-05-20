@@ -274,7 +274,7 @@ const TYPE_COLORS: Record<string, string> = {
 // DASHBOARD SECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function DashboardSection() {
+function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const { accounts, reloadAccounts } = useAccounts();
   const { cards } = useCreditCards();
   const { transactions } = useTransactions();
@@ -289,7 +289,6 @@ export function DashboardSection() {
   useAutoReload(reloadAccounts);
 
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
   const monthStr = today.toISOString().slice(0, 7);
   const in30 = new Date(today.getTime() + 30 * 86400000);
 
@@ -352,7 +351,7 @@ export function DashboardSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Financial Dashboard</div>
+      {!hideHeader && <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Financial Dashboard</div>}
 
       {/* Net Worth */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
@@ -480,7 +479,7 @@ export function DashboardSection() {
 // PROJECTION SECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function ProjectionSection() {
+function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
   const { vehicles } = useVehicles();
@@ -518,19 +517,24 @@ export function ProjectionSection() {
       }].sort((a, b) => a.date.getTime() - b.date.getTime());
     }
     return evts;
-  }, [vehicles, houseLoans, fixedPayments, business, today, whatIf, wiAmount, wiDate, wiType]);
+  }, [vehicles, houseLoans, fixedPayments, business, incomes, today, whatIf, wiAmount, wiDate, wiType]);
 
   // Build 30-day with running balance
   const days30 = useMemo(() => {
-    let runBal = totalBankNow;
-    return Array.from({ length: 30 }, (_, i) => {
+    const dailyFlows = Array.from({ length: 30 }, (_, i) => {
       const d = new Date(today.getTime() + (i + 1) * 86400000);
       const dateStr = d.toISOString().split("T")[0];
       const dayEvents = events30.filter((e) => e.date.toISOString().split("T")[0] === dateStr);
       const flow = toFixed2(dayEvents.reduce((s, e) => s + e.amount, 0));
-      runBal = toFixed2(runBal + flow);
-      return { date: d, dateStr, events: dayEvents, flow, balance: runBal, warning: runBal < threshold };
+      return { date: d, dateStr, events: dayEvents, flow };
     });
+
+    return dailyFlows.reduce<Array<{ date: Date; dateStr: string; events: ProjectionEvent[]; flow: number; balance: number; warning: boolean }>>((acc, day) => {
+      const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : totalBankNow;
+      const balance = toFixed2(previousBalance + day.flow);
+      acc.push({ ...day, balance, warning: balance < threshold });
+      return acc;
+    }, []);
   }, [events30, totalBankNow, threshold, today]);
 
   const projected30 = days30[29]?.balance ?? totalBankNow;
@@ -627,10 +631,14 @@ export function ProjectionSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Financial Projection</div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
-        Based on all scheduled payments, CRA deadlines, and expected invoice income. Starting balance: {fmtCAD(totalBankNow)}
-      </div>
+      {!hideHeader && (
+        <>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Financial Projection</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+            Based on all scheduled payments, CRA deadlines, and expected invoice income. Starting balance: {fmtCAD(totalBankNow)}
+          </div>
+        </>
+      )}
 
       {/* Summary stats */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
@@ -835,6 +843,30 @@ export function ProjectionSection() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export function DashboardSection() {
+  const [tab, setTab] = useState<"overview" | "projection">("overview");
+
+  return (
+    <div>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Dashboard</div>
+      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+        Current financial snapshot and forward-looking projection in one place.
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        <Btn variant={tab === "overview" ? "primary" : "secondary"} small onClick={() => setTab("overview")}>
+          Overview
+        </Btn>
+        <Btn variant={tab === "projection" ? "primary" : "secondary"} small onClick={() => setTab("projection")}>
+          Projection
+        </Btn>
+      </div>
+
+      {tab === "overview" ? <DashboardOverviewPanel hideHeader /> : <ProjectionPanel hideHeader />}
     </div>
   );
 }

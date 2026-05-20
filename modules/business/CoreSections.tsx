@@ -146,6 +146,8 @@ export function BankAccountsSection() {
     if (!form.name) return;
     if (form.id) {
       const existing = accounts.find((a) => a.id === form.id);
+      const nextOpening = toFixed2(Number(form.openingBalance));
+      const balanceChanged = existing ? nextOpening !== toFixed2(existing.openingBalance) : true;
       updateAccount({
         ...(existing ?? {}),
         id: form.id!,
@@ -153,10 +155,11 @@ export function BankAccountsSection() {
         bank: form.bank,
         accountNumber: form.accountNumber,
         type: form.type as Account["type"],
-        openingBalance: toFixed2(Number(form.openingBalance)),
-        balanceBase: toFixed2(Number(form.openingBalance)),
-        reconciledBalance: undefined,
-        reconciledDate: undefined,
+        openingBalance: nextOpening,
+        balanceBase: balanceChanged ? nextOpening : (existing?.balanceBase ?? nextOpening),
+        reconciledBalance: balanceChanged ? undefined : existing?.reconciledBalance,
+        reconciledDate: balanceChanged ? undefined : existing?.reconciledDate,
+        reconciledAt: balanceChanged ? undefined : existing?.reconciledAt,
         monthlyFeeAmount: Number(form.monthlyFeeAmount) > 0 ? toFixed2(Number(form.monthlyFeeAmount)) : undefined,
         monthlyFeeDate: Number(form.monthlyFeeAmount) > 0 ? form.monthlyFeeDate : undefined,
         active: true,
@@ -253,15 +256,15 @@ export function BankAccountsSection() {
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <Btn variant="secondary" small onClick={() => setExpanded(expanded === a.id ? null : a.id)}>
-                    {expanded === a.id ? "? Hide" : "? Outflows"}
+                    {expanded === a.id ? "Hide" : "Outflows"}
                   </Btn>
                   <Btn variant="secondary" small onClick={() => { setReconcile(a); setReconAmt(a.openingBalance); setReconDate(a.reconciledDate ?? todayLocal); }}>Reconcile</Btn>
                   <button onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}
                     style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: a.primary ? "#1a7f3c" : "#f3f4f6", color: a.primary ? "#fff" : "#6b7280" }}>
-                    {a.primary ? "? Primary" : "? Primary"}
+                    {a.primary ? "Primary" : "Set Primary"}
                   </button>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...a, id: a.id }); setShowForm(true); }}>Edit</Btn>
-                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${a.name}?`)) { deleteAccount(a.id); notifyDataChanged("accounts"); } }}>?</Btn>
+                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${a.name}?`)) { deleteAccount(a.id); notifyDataChanged("accounts"); } }}>Delete</Btn>
                 </div>
               </div>
             </div>
@@ -423,6 +426,8 @@ export function CreditCardsSection() {
     if (!form.name) return;
     if (form.id) {
       const existing = cards.find((c) => c.id === form.id);
+      const nextOpening = toFixed2(Number(form.openingBalance));
+      const balanceChanged = existing ? nextOpening !== toFixed2(existing.openingBalance) : true;
       updateCard({
         ...(existing ?? {}),
         id: form.id!,
@@ -430,10 +435,11 @@ export function CreditCardsSection() {
         issuer: form.issuer,
         type: form.type,
         limitAmount: toFixed2(Number(form.limitAmount)),
-        openingBalance: toFixed2(Number(form.openingBalance)),
-        balanceBase: toFixed2(Number(form.openingBalance)),
-        reconciledBalance: undefined,
-        reconciledDate: undefined,
+        openingBalance: nextOpening,
+        balanceBase: balanceChanged ? nextOpening : (existing?.balanceBase ?? nextOpening),
+        reconciledBalance: balanceChanged ? undefined : existing?.reconciledBalance,
+        reconciledDate: balanceChanged ? undefined : existing?.reconciledDate,
+        reconciledAt: balanceChanged ? undefined : existing?.reconciledAt,
         linkedAccountId: form.linkedAccountId,
         annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
         annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
@@ -528,10 +534,10 @@ export function CreditCardsSection() {
                     creditCardRepository.saveAll(all.map((x) => ({ ...x, primary: x.id === c.id ? !c.primary : x.primary })));
                     reloadCards(); notifyDataChanged("cards");
                   }} style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: c.primary ? "#1a7f3c" : "#f3f4f6", color: c.primary ? "#fff" : "#6b7280" }}>
-                    {c.primary ? "? Primary" : "? Primary"}
+                    {c.primary ? "Primary" : "Set Primary"}
                   </button>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...c, id: c.id }); setShowForm(true); }}>Edit</Btn>
-                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${c.name}?`)) { deleteCard(c.id); notifyDataChanged("cards"); } }}>?</Btn>
+                  <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${c.name}?`)) { deleteCard(c.id); notifyDataChanged("cards"); } }}>Delete</Btn>
                 </div>
               </div>
             </div>
