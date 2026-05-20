@@ -68,7 +68,7 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 640 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Ã—</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -178,7 +178,7 @@ export function BankAccountsSection() {
     notifyDataChanged("accounts");
   }
 
-  // Outflow calculation — next 30 days from fixed payments, vehicles, house loans
+  // Outflow calculation â€” next 30 days from fixed payments, vehicles, house loans
   function getOutflows(accountId: string, days: number) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const end = new Date(today.getTime() + days * 86400000);
@@ -291,7 +291,7 @@ export function BankAccountsSection() {
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
                       <span>{item.label}</span>
                       <span style={{ color: "#a31515", fontWeight: 500 }}>
-                        {fmtCAD(item.amount)} · {item.date.toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
+                        {fmtCAD(item.amount)} Â· {item.date.toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
                       </span>
                     </div>
                   ))}
@@ -304,7 +304,7 @@ export function BankAccountsSection() {
       {accounts.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No accounts yet.</div>}
 
       {reconcile && (
-        <Modal title={`Reconcile Statement — ${reconcile.name}`} onClose={() => setReconcile(null)}>
+        <Modal title={`Reconcile Statement â€” ${reconcile.name}`} onClose={() => setReconcile(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
             Set the actual statement balance as of the selected date. This aligns the ledger baseline without creating a normal spending or income entry.
           </div>
@@ -339,7 +339,7 @@ export function BankAccountsSection() {
                   type: "adjustment",
                   subType: "reconciliation",
                   amount: Math.abs(diff),
-                  description: `Reconciliation — ${reconcile.name}`,
+                  description: `Reconciliation â€” ${reconcile.name}`,
                   sourceId: reconcile.id,
                   destinationId: reconcile.id,
                   date: reconDate,
@@ -475,7 +475,7 @@ export function CreditCardsSection() {
       type: "transfer",
       subType: "cc_payment",
       amount: c.openingBalance > 0 ? toFixed2(c.openingBalance) : undefined,
-      description: `Credit card payment — ${c.name}`,
+      description: `Credit card payment â€” ${c.name}`,
       sourceId: c.linkedAccountId ?? "",
       destinationId: c.id,
       tag: linkedAccount?.type === "business" || c.type === "business" ? "Business" : "Personal",
@@ -516,7 +516,7 @@ export function CreditCardsSection() {
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, alignItems: "center" }}>
                   {c.issuer}
                   <Pill color={c.type === "business" ? "blue" : "purple"}>{c.type}</Pill>
-                  {linked && <span>· {linked.name}</span>}
+                  {linked && <span>Â· {linked.name}</span>}
                 </div>
                 <div style={{ marginTop: 8, height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
                   <div style={{ height: "100%", width: `${Math.min(u, 100)}%`, background: u > 80 ? "#a31515" : u > 30 ? "#EF9F27" : "#1a7f3c", borderRadius: 99 }} />
@@ -552,7 +552,7 @@ export function CreditCardsSection() {
         onClose={() => { setTxFormOpen(false); setPendingPayCard(null); setTxFormInitial(undefined); }}
         initial={txFormInitial}
         lockType="transfer"
-        title={pendingPayCard ? `Pay — ${pendingPayCard.name}` : "Card Payment"}
+        title={pendingPayCard ? `Pay â€” ${pendingPayCard.name}` : "Card Payment"}
         onSaved={() => {
           // syncBalances() in TransactionForm already updated all balances
           reloadCards();
@@ -563,7 +563,7 @@ export function CreditCardsSection() {
       />
 
       {reconcileCard && (
-        <Modal title={`Reconcile Statement — ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
+        <Modal title={`Reconcile Statement â€” ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
             Set the actual statement balance owing as of the selected date. This aligns the card baseline without creating a normal spending or income entry.
           </div>
@@ -595,7 +595,7 @@ export function CreditCardsSection() {
                   type: "adjustment",
                   subType: "reconciliation",
                   amount: Math.abs(diff),
-                  description: `Reconciliation — ${reconcileCard.name}`,
+                  description: `Reconciliation â€” ${reconcileCard.name}`,
                   sourceId: reconcileCard.id,
                   destinationId: reconcileCard.id,
                   date: cardReconDate,
@@ -619,13 +619,13 @@ export function CreditCardsSection() {
       {showForm && (
         <Modal title={form.id ? "Edit Card" : "Add Credit Card"} onClose={() => setShowForm(false)}>
           <Inp label="Card Name" value={form.name} onChange={f("name")} />
-          <Inp label="Issuer" value={form.issuer} onChange={f("issuer")} placeholder="TD, Rogers, Costco…" />
+          <Inp label="Issuer" value={form.issuer} onChange={f("issuer")} placeholder="TD, Rogers, Costcoâ€¦" />
           <Sel label="Type" value={form.type} onChange={f("type")} options={[
             { value: "personal", label: "Personal Credit Card" },
             { value: "business", label: "Business Credit Card" },
           ]} />
           <Sel label="Linked Bank Account" value={form.linkedAccountId ?? ""} onChange={f("linkedAccountId")}
-            options={[{ value: "", label: "— None —" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]} />
+            options={[{ value: "", label: "â€” None â€”" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]} />
           <Grid2>
             <Inp label="Credit Limit ($)" type="number" value={form.limitAmount} onChange={f("limitAmount")} />
             <Inp label="Balance Owing ($)" type="number" value={form.openingBalance} onChange={f("openingBalance")} />
@@ -797,9 +797,9 @@ export function TransactionHistorySection() {
             <option value="">All Linked Items</option>
             {availableLinks.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search…"
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search..."
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
-          <Btn variant="secondary" small onClick={exportCSV}>? Export CSV</Btn>
+          <Btn variant="secondary" small onClick={exportCSV}>Export CSV</Btn>
         </div>
       </div>
 
@@ -835,7 +835,7 @@ export function TransactionHistorySection() {
         {filtered.length > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", borderBottom: "1px solid #f3f4f6", background: "#f9fafb" }}>
             <div style={{ fontSize: 12, color: "#6b7280" }}>
-              Showing <strong>{startIndex + 1}</strong>–<strong>{endIndex}</strong> of <strong>{filtered.length}</strong>
+              Showing <strong>{startIndex + 1}</strong>-<strong>{endIndex}</strong> of <strong>{filtered.length}</strong>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12, color: "#6b7280" }}>Per page</span>
@@ -848,11 +848,11 @@ export function TransactionHistorySection() {
                   <option key={size} value={size}>{size}</option>
                 ))}
               </select>
-              <Btn variant="secondary" small disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>? Prev</Btn>
+              <Btn variant="secondary" small disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</Btn>
               <div style={{ fontSize: 12, color: "#374151", minWidth: 64, textAlign: "center" }}>
                 Page {currentPage} / {totalPages}
               </div>
-              <Btn variant="secondary" small disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next ?</Btn>
+              <Btn variant="secondary" small disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next</Btn>
             </div>
           </div>
         )}
@@ -862,13 +862,13 @@ export function TransactionHistorySection() {
           return (
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 14px", borderBottom: "1px solid #f3f4f6" }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500 }}>{t.description || catName(t.categoryId) || "—"}</div>
+                <div style={{ fontSize: 13, fontWeight: 500 }}>{t.description || catName(t.categoryId) || "--"}</div>
                 <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span>{(t.date ?? t.createdAt ?? "").slice(0, 10)}</span>
-                  {catName(t.categoryId) && <span>· {catName(t.categoryId)}</span>}
-                  {t.subType && <span>· {SUB_TYPE_LABELS[t.subType] ?? t.subType}</span>}
-                  {t.mode && <span>· {t.mode}</span>}
-                  {t.sourceId && <span>· {acctName(t.sourceId)}</span>}
+                  {catName(t.categoryId) && <span>- {catName(t.categoryId)}</span>}
+                  {t.subType && <span>- {SUB_TYPE_LABELS[t.subType] ?? t.subType}</span>}
+                  {t.mode && <span>- {t.mode}</span>}
+                  {t.sourceId && <span>- {acctName(t.sourceId)}</span>}
                   {t.tag === "Business" && <Pill color="blue">Biz</Pill>}
                   {veh && <Pill color="orange">{veh.name}</Pill>}
                   {prop && <Pill color="purple">{prop.name}</Pill>}
@@ -876,7 +876,7 @@ export function TransactionHistorySection() {
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
-                  {t.type === "income" ? "+" : t.type === "transfer" ? "?" : "-"}{fmtCAD(t.amount)}
+                  {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{fmtCAD(t.amount)}
                 </Pill>
                 <button onClick={() => {
                   setEditTx({
