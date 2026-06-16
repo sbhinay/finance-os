@@ -21,6 +21,8 @@ export interface Vehicle {
   endOfLeaseOption: EndOfLeaseOption;
   principal: number;
   remaining: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   interestRate: number;
   insuranceAmount?: number;
   insuranceSchedule?: PaymentSchedule;
@@ -36,6 +38,8 @@ export interface HouseLoan {
   address?: string;
   principal: number;
   remaining: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   payment: number;
   schedule: PaymentSchedule;
   source: string;

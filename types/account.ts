@@ -8,6 +8,8 @@ export interface Account {
   accountNumber?: string;
   currency: string;
   openingBalance: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   balanceBase?: number;
   reconciledBalance?: number;
   reconciledDate?: string;

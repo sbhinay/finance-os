@@ -7,9 +7,14 @@ import { useCategories } from "@/modules/categories/useCategories";
 import { useFixedPayments } from "@/modules/business/useFixedPayments";
 import { useHouseLoans, usePropertyTax, useVehicles } from "@/modules/business/useAssets";
 import { useTransactions } from "@/modules/transactions/useTransactions";
+import { transactionRepository } from "@/repositories/transactionRepository";
 import { FixedPayment, getFixedPaymentKind } from "@/types/domain";
 import { SUB_TYPE_LABELS, TYPE_LABELS, type Transaction } from "@/types/transaction";
 import type { Category } from "@/types/category";
+import { notifyDataChanged } from "@/utils/events";
+import { syncBalances } from "@/utils/syncBalances";
+
+const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
 type HealthSeverity = "high" | "medium" | "low";
 
@@ -21,9 +26,23 @@ type HealthIssue = {
   hint?: string;
   transactionId?: string;
   transactionType?: Transaction["type"];
+  duplicateTransactions?: Transaction[];
   vehicleId?: string;
   houseLoanId?: string;
 };
+
+function loadDismissedHealthIssues() {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED_HEALTH_ISSUES_KEY) ?? "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+
+function saveDismissedHealthIssues(ids: string[]) {
+  localStorage.setItem(DISMISSED_HEALTH_ISSUES_KEY, JSON.stringify(ids));
+}
 
 function latestDate(dates: string[]): string | null {
   if (dates.length === 0) return null;
@@ -33,7 +52,19 @@ function latestDate(dates: string[]): string | null {
 function summarizeTx(tx: Transaction): string {
   const type = TYPE_LABELS[tx.type];
   const subType = tx.subType ? SUB_TYPE_LABELS[tx.subType] : undefined;
-  return `${tx.date} · ${type}${subType ? ` / ${subType}` : ""} · ${tx.description}`;
+  return `${tx.date} - ${type}${subType ? ` / ${subType}` : ""} - ${tx.description}`;
+}
+
+function duplicateKey(tx: Transaction) {
+  const date = tx.date ?? tx.createdAt?.slice(0, 10) ?? "";
+  return [
+    date,
+    tx.type,
+    tx.subType ?? "",
+    Number(tx.amount).toFixed(2),
+    tx.sourceId ?? "",
+    tx.destinationId ?? "",
+  ].join("|");
 }
 
 function recurringLabel(fp: FixedPayment): string {
@@ -79,7 +110,7 @@ export function HealthReportSection({
   onOpenVehicle?: (id: string) => void;
   onOpenHouseLoan?: (id: string) => void;
 }) {
-  const { transactions, updateTransaction } = useTransactions();
+  const { transactions, updateTransaction, reloadTransactions } = useTransactions();
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
   const { categories } = useCategories();
@@ -88,6 +119,7 @@ export function HealthReportSection({
   const { propertyTaxes } = usePropertyTax();
   const { fixedPayments } = useFixedPayments();
   const [categoryFixes, setCategoryFixes] = useState<Record<string, string>>({});
+  const [dismissedHealthIssues, setDismissedHealthIssues] = useState<string[]>(loadDismissedHealthIssues);
 
   const issues = useMemo<HealthIssue[]>(() => {
     const nextIssues: HealthIssue[] = [];
@@ -118,7 +150,7 @@ export function HealthReportSection({
           id: `src-${tx.id}`,
           severity: "high",
           title: "Broken source account/card reference",
-          detail: `${summarizeTx(tx)} · sourceId=${tx.sourceId}`,
+          detail: `${summarizeTx(tx)} - sourceId=${tx.sourceId}`,
           hint: "This transaction points to an account or card that no longer exists.",
         });
       }
@@ -128,7 +160,7 @@ export function HealthReportSection({
           id: `dest-${tx.id}`,
           severity: "high",
           title: "Broken destination account/card reference",
-          detail: `${summarizeTx(tx)} · destinationId=${tx.destinationId}`,
+          detail: `${summarizeTx(tx)} - destinationId=${tx.destinationId}`,
           hint: "Transfers and linked postings should keep a valid destination reference.",
         });
       }
@@ -138,7 +170,7 @@ export function HealthReportSection({
           id: `cat-${tx.id}`,
           severity: "high",
           title: "Broken category reference",
-          detail: `${summarizeTx(tx)} · categoryId=${tx.categoryId}`,
+          detail: `${summarizeTx(tx)} - categoryId=${tx.categoryId}`,
           hint: "Replace or restore the missing category so filters and reports stay accurate.",
         });
       }
@@ -148,7 +180,7 @@ export function HealthReportSection({
           id: `veh-${tx.id}`,
           severity: "medium",
           title: "Broken linked vehicle reference",
-          detail: `${summarizeTx(tx)} · linkedVehicleId=${tx.linkedVehicleId}`,
+          detail: `${summarizeTx(tx)} - linkedVehicleId=${tx.linkedVehicleId}`,
           hint: "Vehicle-linked transactions should point to a valid vehicle record.",
         });
       }
@@ -158,7 +190,7 @@ export function HealthReportSection({
           id: `prop-${tx.id}`,
           severity: "medium",
           title: "Broken linked property reference",
-          detail: `${summarizeTx(tx)} · linkedPropertyId=${tx.linkedPropertyId}`,
+          detail: `${summarizeTx(tx)} - linkedPropertyId=${tx.linkedPropertyId}`,
           hint: "Property-linked transactions should map to a current house/property record.",
         });
       }
@@ -174,6 +206,28 @@ export function HealthReportSection({
       }
     });
 
+    const duplicateGroups = new Map<string, Transaction[]>();
+    transactions.forEach((tx) => {
+      if (tx.status === "pending" || tx.type === "adjustment") return;
+      const key = duplicateKey(tx);
+      duplicateGroups.set(key, [...(duplicateGroups.get(key) ?? []), tx]);
+    });
+
+    duplicateGroups.forEach((group, key) => {
+      if (group.length < 2) return;
+      const issueId = `duplicate-${key}-${group.map((tx) => tx.id).sort().join("-")}`;
+      if (dismissedHealthIssues.includes(issueId)) return;
+      const [first] = group;
+      nextIssues.push({
+        id: issueId,
+        severity: "medium",
+        title: "Possible duplicate transactions",
+        detail: `${first.date} - ${TYPE_LABELS[first.type]} - ${Number(first.amount).toFixed(2)} - ${group.length} matching rows`,
+        hint: "Same date, amount, type, subtype, source, and destination. Delete the extra row, or dismiss this warning if both rows are legitimate.",
+        duplicateTransactions: group,
+      });
+    });
+
     vehicles.forEach((vehicle) => {
       const latestVehicleTx = latestDate(
         transactions
@@ -185,7 +239,7 @@ export function HealthReportSection({
           id: `vehicle-next-${vehicle.id}`,
           severity: "medium",
           title: "Vehicle next payment date looks stale",
-          detail: `${vehicle.name} · nextPaymentDate=${vehicle.nextPaymentDate} · latest linked activity=${latestVehicleTx}`,
+          detail: `${vehicle.name} - nextPaymentDate=${vehicle.nextPaymentDate} - latest linked activity=${latestVehicleTx}`,
           hint: "Next due date should usually move forward as lease or finance payments are logged.",
           vehicleId: vehicle.id,
         });
@@ -203,7 +257,7 @@ export function HealthReportSection({
           id: `loan-next-${loan.id}`,
           severity: "medium",
           title: "House loan next payment date looks stale",
-          detail: `${loan.name} · nextPaymentDate=${loan.nextPaymentDate} · latest mortgage activity=${latestMortgageTx}`,
+          detail: `${loan.name} - nextPaymentDate=${loan.nextPaymentDate} - latest mortgage activity=${latestMortgageTx}`,
           hint: "This usually means schedule metadata drifted behind the posted ledger.",
           houseLoanId: loan.id,
         });
@@ -255,18 +309,33 @@ export function HealthReportSection({
       const rank: Record<HealthSeverity, number> = { high: 0, medium: 1, low: 2 };
       return rank[a.severity] - rank[b.severity] || a.title.localeCompare(b.title);
     });
-  }, [accounts, cards, categories, fixedPayments, houseLoans, propertyTaxes, transactions, vehicles]);
+  }, [accounts, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, propertyTaxes, transactions, vehicles]);
 
   const highCount = issues.filter((issue) => issue.severity === "high").length;
   const uncategorizedCount = issues.filter((issue) => issue.title === "Uncategorized expense or income").length;
   const brokenRefCount = issues.filter((issue) => issue.title.includes("Broken")).length;
   const staleScheduleCount = issues.filter((issue) => issue.title.includes("stale")).length;
   const recurringCount = issues.filter((issue) => issue.title.includes("Recurring") || issue.title.includes("Planned transfer")).length;
+  const duplicateCount = issues.filter((issue) => issue.title === "Possible duplicate transactions").length;
   const uncategorizedMap = new Map(
     transactions
       .filter((tx) => (tx.type === "expense" || tx.type === "income") && !tx.categoryId)
       .map((tx) => [tx.id, tx] as const)
   );
+
+  function deleteTransactionFromHealth(transactionId: string) {
+    if (!confirm("Delete this transaction? This cannot be undone.")) return;
+    transactionRepository.saveAll(transactionRepository.getAll().filter((tx) => tx.id !== transactionId));
+    syncBalances();
+    notifyDataChanged("transactions");
+    reloadTransactions();
+  }
+
+  function dismissHealthIssue(issueId: string) {
+    const next = [...new Set([...dismissedHealthIssues, issueId])];
+    setDismissedHealthIssues(next);
+    saveDismissedHealthIssues(next);
+  }
 
   const statCard = (label: string, value: number, color: string) => (
     <div style={{ flex: 1, minWidth: 160, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
@@ -294,6 +363,7 @@ export function HealthReportSection({
         {statCard("Broken References", brokenRefCount, "#a31515")}
         {statCard("Stale Schedules", staleScheduleCount, "#1a5fa8")}
         {statCard("Recurring Gaps", recurringCount, "#6b21a8")}
+        {statCard("Duplicates", duplicateCount, "#a05c00")}
       </div>
 
       {issues.length === 0 ? (
@@ -322,6 +392,24 @@ export function HealthReportSection({
               </div>
               <div style={{ color: "#334155", fontSize: 13, marginBottom: issue.hint ? 4 : 0 }}>{issue.detail}</div>
               {issue.hint && <div style={{ color: "#6b7280", fontSize: 12 }}>{issue.hint}</div>}
+              {issue.duplicateTransactions && (
+                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                  {issue.duplicateTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "7px 10px", border: "1px solid #e5e7eb", borderRadius: 8, background: "#f9fafb" }}
+                    >
+                      <div style={{ fontSize: 12, color: "#334155" }}>
+                        <strong>{tx.description}</strong> - {tx.date} - {Number(tx.amount).toFixed(2)} - id={tx.id}
+                      </div>
+                      <FixButton onClick={() => deleteTransactionFromHealth(tx.id)}>Delete This Row</FixButton>
+                    </div>
+                  ))}
+                  <div>
+                    <FixButton onClick={() => dismissHealthIssue(issue.id)}>Dismiss as Legit Duplicate</FixButton>
+                  </div>
+                </div>
+              )}
               {issue.transactionId && issue.transactionType && (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
                   <select
@@ -329,7 +417,7 @@ export function HealthReportSection({
                     onChange={(e) => setCategoryFixes((current) => ({ ...current, [issue.transactionId!]: e.target.value }))}
                     style={{ minWidth: 220, padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, background: "#fff", fontSize: 12 }}
                   >
-                    <option value="">Select category…</option>
+                    <option value="">Select category...</option>
                     {categoryOptions(categories, issue.transactionType).map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}

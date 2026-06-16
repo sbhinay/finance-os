@@ -4,16 +4,28 @@ import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { toFixed2 } from "@/utils/finance";
 
 type BalanceFields = {
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string | null;
   reconciledBalance?: number;
   reconciledDate?: string | null;
   reconciledAt?: string | null;
   balanceBase?: number;
 };
 
+function getSnapshotDate(item: BalanceFields): string | null {
+  return item.balanceSnapshotAmount != null && item.balanceSnapshotDate
+    ? item.balanceSnapshotDate
+    : item.reconciledDate ?? null;
+}
+
 function getReplayBase<T extends { id: string; openingBalance: number }>(
   item: T & BalanceFields,
   transactions: Transaction[]
 ): number {
+  if (typeof item.balanceSnapshotAmount === "number" && item.balanceSnapshotDate) {
+    return item.balanceSnapshotAmount;
+  }
+
   if (typeof item.reconciledBalance === "number") {
     return item.reconciledBalance;
   }
@@ -52,14 +64,19 @@ function getReconciledAtCutoff(
 }
 
 function shouldApplyTransaction(
-  item: { reconciledDate?: string | null; reconciledAt?: string | null },
+  item: BalanceFields,
   txDate: string,
   txCreatedAt: string,
   reconciledAtCutoff: string | null
 ) {
-  if (!item.reconciledDate) return true;
-  if (txDate > item.reconciledDate) return true;
-  if (txDate < item.reconciledDate) return false;
+  if (item.balanceSnapshotAmount != null && item.balanceSnapshotDate) {
+    return txDate > item.balanceSnapshotDate;
+  }
+
+  const anchorDate = getSnapshotDate(item);
+  if (!anchorDate) return true;
+  if (txDate > anchorDate) return true;
+  if (txDate < anchorDate) return false;
   if (!reconciledAtCutoff) return false;
   return txCreatedAt > reconciledAtCutoff;
 }

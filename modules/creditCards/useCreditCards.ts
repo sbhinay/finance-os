@@ -7,6 +7,7 @@ import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { getCardReferenceReasons } from "@/utils/referenceIntegrity";
 import { removeOwnedRecurringForCard, syncCardFeeRecurring } from "@/utils/recurringOwners";
+import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 export function useCreditCards() {
   const [cards, setCards] = useState<CreditCard[]>([]);
@@ -14,6 +15,9 @@ export function useCreditCards() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCards(creditCardRepository.getAll());
+    const handler = () => setCards(creditCardRepository.getAll());
+    window.addEventListener(DATA_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handler);
   }, []);
 
   const load = useCallback(() => {

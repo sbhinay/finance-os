@@ -21,6 +21,8 @@ import { Account } from "@/types/account";
 import { businessRepository } from "@/repositories/businessRepository";
 import { accountRepository } from "@/repositories/accountRepository";
 import { transactionRepository } from "@/repositories/transactionRepository";
+import { notifyDataChanged } from "@/utils/events";
+import { syncBalances } from "@/utils/syncBalances";
 import {
   uid,
   toFixed2,
@@ -83,9 +85,9 @@ function buildCRATransaction(
   return {
     id,
     type: "expense",
-    date: new Date().toISOString().split("T")[0],
-  currency: "CAD",
-  status: "cleared" as const,
+    date,
+    currency: "CAD",
+    status: "cleared" as const,
     amount,
     description,
     sourceId: accountId,
@@ -541,11 +543,6 @@ export function useBusiness() {
       };
 
       const isNew = !fields.id;
-      const wasReceived = !isNew
-        ? biz.invoices.find((x) => x.id === fields.id)?.paymentDate
-        : undefined;
-      const paymentDateChanged =
-        !isNew && inv.paymentDate && inv.paymentDate !== (wasReceived ?? "");
 
       // Upsert invoice
       let newBiz: Business = {
@@ -565,22 +562,8 @@ export function useBusiness() {
       };
 
       commit(newBiz);
-
-      // Bank balance update: only when payment is newly received or date changed
-      if (inv.depositAccount && inv.paymentDate) {
-        if (isNew || paymentDateChanged) {
-          const accounts = getAccounts();
-          const updatedAccounts = accounts.map((a) => {
-            if (a.name !== inv.depositAccount) return a;
-            let b = a.openingBalance;
-            // If date changed, reverse the old total first
-            if (paymentDateChanged && wasReceived) b = toFixed2(b - inv.total);
-            b = toFixed2(b + inv.total);
-            return { ...a, openingBalance: b };
-          });
-          accountRepository.saveAll(updatedAccounts);
-        }
-      }
+      syncBalances();
+      notifyDataChanged("business");
     },
     [commit, calcInvoiceFields, getNextInvoiceNumber, getBusiness]
   );
@@ -603,17 +586,8 @@ export function useBusiness() {
         ),
       };
       commit(newBiz);
-
-      // Reverse bank balance if payment had been received
-      if (inv.depositAccount && inv.paymentDate) {
-        const accounts = getAccounts();
-        const updated = accounts.map((a) =>
-          a.name === inv.depositAccount
-            ? { ...a, openingBalance: toFixed2(a.openingBalance - inv.total) }
-            : a
-        );
-        accountRepository.saveAll(updated);
-      }
+      syncBalances();
+      notifyDataChanged("business");
     },
     [commit, getBusiness]
   );
@@ -680,11 +654,12 @@ export function useBusiness() {
       amount: number,
       accountId: string,
       paidDate: string,
-      label: string
+      label: string,
+      linkedTxnId?: string
     ) => {
       if (!accountId) { setError("Select an account to pay from."); return; }
       const biz = getBusiness();
-      const txnId = uid();
+      const txnId = linkedTxnId ?? uid();
 
       // Update obligation
       const newBiz = { ...biz };
@@ -705,14 +680,16 @@ export function useBusiness() {
       commit(newBiz);
 
       // Auto-create linked transaction
-      const txn = buildCRATransaction(
-        txnId,
-        amount,
-        paidDate,
-        accountId,
-        `CRA Payment — ${label}`
-      );
-      addTransactionAndDebit(txn, accountId);
+      if (!linkedTxnId) {
+        const txn = buildCRATransaction(
+          txnId,
+          amount,
+          paidDate,
+          accountId,
+          `CRA Payment — ${label}`
+        );
+        addTransactionAndDebit(txn, accountId);
+      }
     },
     [commit, addTransactionAndDebit, getBusiness]
   );

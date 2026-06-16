@@ -587,6 +587,12 @@ export function useFixedPayments() {
         const needsAccount = !["cra_payroll", "cra_corp", "cra_hst"].includes(p.sourceType);
         if (needsAccount && !p.account) return;
 
+        if (transactionRepository.getAll().some((txn) => transactionMatchesPending(txn, p))) {
+            fixedPaymentRepository.addDismissedKey(p.key);
+            load();
+            return;
+        }
+
         const pendingType = p.sourceType === "fixed" && p.transactionType
             ? { type: p.transactionType as TransactionType, subType: p.subType }
             : getTransactionType(p.sourceType);

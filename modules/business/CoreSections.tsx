@@ -11,11 +11,10 @@ import { useFixedPayments } from "./useFixedPayments";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
-import { transactionRepository } from "@/repositories/transactionRepository";
 import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
-import { SUB_TYPE_LABELS } from "@/types/transaction";
+import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction } from "@/types/transaction";
 import { theme } from "@/lib/theme";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -109,12 +108,155 @@ function useAutoReload(reload: () => void) {
   }, [reload]);
 }
 
+type LedgerKind = "account" | "card";
+type LedgerEntity = {
+  id: string;
+  name: string;
+  openingBalance: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
+  reconciledBalance?: number;
+  reconciledDate?: string;
+};
+
+function txDate(t: Transaction) {
+  return t.date ?? t.createdAt?.slice(0, 10) ?? "";
+}
+
+function ledgerEffect(t: Transaction, entityId: string, kind: LedgerKind) {
+  const isSource = t.sourceId === entityId;
+  const isDestination = t.destinationId === entityId;
+  if (!isSource && !isDestination) return 0;
+
+  switch (t.type) {
+    case "expense":
+    case "tax_payment":
+    case "loan_payment":
+    case "withdrawal":
+      if (isSource) return kind === "card" ? t.amount : -t.amount;
+      return 0;
+
+    case "income":
+    case "refund":
+    case "dividend":
+    case "loan_receipt":
+      if (isSource) return kind === "card" ? -t.amount : t.amount;
+      return 0;
+
+    case "transfer":
+      if (isSource) return -t.amount;
+      if (isDestination) return kind === "card" ? -t.amount : t.amount;
+      return 0;
+
+    case "adjustment":
+      if (isSource) return t.amount;
+      if (isDestination) return -t.amount;
+      return 0;
+
+    default:
+      return 0;
+  }
+}
+
+function LedgerModal({
+  entity,
+  kind,
+  transactions,
+  accounts,
+  cards,
+  onClose,
+}: {
+  entity: LedgerEntity;
+  kind: LedgerKind;
+  transactions: Transaction[];
+  accounts: Account[];
+  cards: CreditCard[];
+  onClose: () => void;
+}) {
+  const [view, setView] = useState<"afterSnapshot" | "latest30">("afterSnapshot");
+  const allEntities = [...accounts, ...cards];
+  const snapshotAmount = entity.balanceSnapshotAmount ?? entity.reconciledBalance;
+  const snapshotDate = entity.balanceSnapshotDate ?? entity.reconciledDate;
+  const related = transactions
+    .filter((t) => t.status !== "pending" && (t.sourceId === entity.id || t.destinationId === entity.id))
+    .sort((a, b) => {
+      const dateCompare = txDate(a).localeCompare(txDate(b));
+      if (dateCompare !== 0) return dateCompare;
+      return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+    });
+  const afterSnapshot = snapshotDate ? related.filter((t) => txDate(t) > snapshotDate) : related;
+  const latest30 = [...related]
+    .sort((a, b) => {
+      const dateCompare = txDate(b).localeCompare(txDate(a));
+      if (dateCompare !== 0) return dateCompare;
+      return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+    })
+    .slice(0, 30);
+  const displayRows = view === "afterSnapshot" ? afterSnapshot : latest30;
+  const afterSnapshotTotal = toFixed2(afterSnapshot.reduce((sum, t) => sum + ledgerEffect(t, entity.id, kind), 0));
+  const calculated = typeof snapshotAmount === "number" ? toFixed2(snapshotAmount + afterSnapshotTotal) : undefined;
+  const difference = calculated == null ? undefined : toFixed2(entity.openingBalance - calculated);
+
+  let running = snapshotAmount ?? 0;
+  const counterparty = (t: Transaction) => {
+    const otherId = t.sourceId === entity.id ? t.destinationId : t.sourceId;
+    return otherId ? allEntities.find((x) => x.id === otherId)?.name ?? otherId : "";
+  };
+
+  return (
+    <Modal title={`Ledger - ${entity.name}`} onClose={onClose} wide>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <StatBox label={kind === "card" ? "Snapshot Owing" : "Snapshot Balance"} value={snapshotAmount == null ? "Not set" : fmtCAD(snapshotAmount)} sub={snapshotDate ? `as of ${snapshotDate}` : "no snapshot date"} />
+        <StatBox label="After Snapshot" value={fmtCAD(afterSnapshotTotal)} sub={`${afterSnapshot.length} cleared rows`} color={afterSnapshotTotal >= 0 ? "#1a7f3c" : "#a31515"} />
+        <StatBox label={kind === "card" ? "Current Owing" : "Current Balance"} value={fmtCAD(entity.openingBalance)} color={kind === "card" ? "#a31515" : entity.openingBalance >= 0 ? "#1a7f3c" : "#a31515"} />
+        {calculated != null && <StatBox label="Check Difference" value={fmtCAD(difference ?? 0)} sub="current minus snapshot math" color={difference === 0 ? "#1a7f3c" : "#a05c00"} />}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Btn small variant={view === "afterSnapshot" ? "primary" : "secondary"} onClick={() => setView("afterSnapshot")}>After Snapshot</Btn>
+        <Btn small variant={view === "latest30" ? "primary" : "secondary"} onClick={() => setView("latest30")}>Latest 30</Btn>
+      </div>
+
+      <div style={{ border: "1px solid #e2e4e8", borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: view === "afterSnapshot" ? "90px 1fr 90px 90px" : "90px 1fr 90px", gap: 8, padding: "8px 10px", background: "#f9fafb", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>
+          <span>Date</span>
+          <span>Description</span>
+          <span style={{ textAlign: "right" }}>Effect</span>
+          {view === "afterSnapshot" && <span style={{ textAlign: "right" }}>Running</span>}
+        </div>
+        {displayRows.length === 0 ? (
+          <div style={{ padding: 18, textAlign: "center", color: "#6b7280", fontSize: 13 }}>
+            No cleared transactions found for this view.
+          </div>
+        ) : displayRows.map((t) => {
+          const effect = toFixed2(ledgerEffect(t, entity.id, kind));
+          if (view === "afterSnapshot") running = toFixed2(running + effect);
+          return (
+            <div key={t.id} style={{ display: "grid", gridTemplateColumns: view === "afterSnapshot" ? "90px 1fr 90px 90px" : "90px 1fr 90px", gap: 8, padding: "9px 10px", borderTop: "1px solid #f3f4f6", fontSize: 12, alignItems: "center" }}>
+              <span style={{ color: "#374151" }}>{txDate(t)}</span>
+              <span>
+                <span style={{ fontWeight: 600 }}>{t.description || TYPE_LABELS[t.type]}</span>
+                <span style={{ color: "#6b7280" }}> - {TYPE_LABELS[t.type]}{t.subType ? ` / ${SUB_TYPE_LABELS[t.subType] ?? t.subType}` : ""}</span>
+                {counterparty(t) && <span style={{ color: "#6b7280" }}> - {counterparty(t)}</span>}
+              </span>
+              <span style={{ textAlign: "right", fontWeight: 700, color: effect >= 0 ? "#1a7f3c" : "#a31515" }}>{effect >= 0 ? "+" : ""}{fmtCAD(effect)}</span>
+              {view === "afterSnapshot" && <span style={{ textAlign: "right", fontWeight: 700 }}>{fmtCAD(running)}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
 // -------------------------------------------------------------------------------
 // BANK ACCOUNTS SECTION
 // -------------------------------------------------------------------------------
 
 export function BankAccountsSection() {
   const { accounts, addAccount, updateAccount, deleteAccount, reloadAccounts } = useAccounts();
+  const { cards } = useCreditCards();
+  const { transactions } = useTransactions();
   const { fixedPayments } = useFixedPayments();
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
@@ -138,6 +280,7 @@ export function BankAccountsSection() {
   const [form, setForm] = useState(emptyForm);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reconcile, setReconcile] = useState<Account | null>(null);
+  const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null);
   const [reconAmt, setReconAmt] = useState(0);
   const [reconDate, setReconDate] = useState(todayLocal);
 
@@ -160,9 +303,11 @@ export function BankAccountsSection() {
         type: form.type as Account["type"],
         openingBalance: nextOpening,
         balanceBase: balanceChanged ? nextOpening : (existing?.balanceBase ?? nextOpening),
-        reconciledBalance: balanceChanged ? undefined : existing?.reconciledBalance,
-        reconciledDate: balanceChanged ? undefined : existing?.reconciledDate,
-        reconciledAt: balanceChanged ? undefined : existing?.reconciledAt,
+        balanceSnapshotAmount: balanceChanged ? nextOpening : existing?.balanceSnapshotAmount,
+        balanceSnapshotDate: balanceChanged ? todayLocal : existing?.balanceSnapshotDate,
+        reconciledBalance: balanceChanged ? nextOpening : existing?.reconciledBalance,
+        reconciledDate: balanceChanged ? todayLocal : existing?.reconciledDate,
+        reconciledAt: balanceChanged ? new Date().toISOString() : existing?.reconciledAt,
         monthlyFeeAmount: Number(form.monthlyFeeAmount) > 0 ? toFixed2(Number(form.monthlyFeeAmount)) : undefined,
         monthlyFeeDate: Number(form.monthlyFeeAmount) > 0 ? form.monthlyFeeDate : undefined,
         active: true,
@@ -173,6 +318,8 @@ export function BankAccountsSection() {
       addAccount(form.name, form.type as Account["type"], toFixed2(Number(form.openingBalance)), {
         bank: form.bank,
         accountNumber: form.accountNumber,
+        balanceSnapshotAmount: toFixed2(Number(form.openingBalance)),
+        balanceSnapshotDate: todayLocal,
         monthlyFeeAmount: Number(form.monthlyFeeAmount) > 0 ? toFixed2(Number(form.monthlyFeeAmount)) : undefined,
         monthlyFeeDate: Number(form.monthlyFeeAmount) > 0 ? form.monthlyFeeDate : undefined,
       });
@@ -261,7 +408,12 @@ export function BankAccountsSection() {
                   <Btn variant="secondary" small onClick={() => setExpanded(expanded === a.id ? null : a.id)}>
                     {expanded === a.id ? "Hide" : "Outflows"}
                   </Btn>
-                  <Btn variant="secondary" small onClick={() => { setReconcile(a); setReconAmt(a.openingBalance); setReconDate(a.reconciledDate ?? todayLocal); }}>Reconcile</Btn>
+                  <Btn variant="secondary" small onClick={() => {
+                    setReconcile(a);
+                    setReconAmt(a.balanceSnapshotAmount ?? a.reconciledBalance ?? a.openingBalance);
+                    setReconDate(a.balanceSnapshotDate ?? a.reconciledDate ?? todayLocal);
+                  }}>Snapshot</Btn>
+                  <Btn variant="secondary" small onClick={() => setLedgerAccount(a)}>Ledger</Btn>
                   <button onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}
                     style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: a.primary ? "#1a7f3c" : "#f3f4f6", color: a.primary ? "#fff" : "#6b7280" }}>
                     {a.primary ? "Primary" : "Set Primary"}
@@ -306,15 +458,26 @@ export function BankAccountsSection() {
 
       {accounts.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No accounts yet.</div>}
 
+      {ledgerAccount && (
+        <LedgerModal
+          entity={ledgerAccount}
+          kind="account"
+          transactions={transactions}
+          accounts={accounts}
+          cards={cards}
+          onClose={() => setLedgerAccount(null)}
+        />
+      )}
+
       {reconcile && (
-        <Modal title={`Reconcile Statement - ${reconcile.name}`} onClose={() => setReconcile(null)}>
+        <Modal title={`Balance Snapshot - ${reconcile.name}`} onClose={() => setReconcile(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
-            Set the actual statement balance as of the selected date. This aligns the ledger baseline without creating a normal spending or income entry.
+            Set the known real balance as of the selected date. Transactions after this date are replayed from this amount.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcile.openingBalance)}</strong></div>
           <Grid2>
-            <Inp label="Actual Balance from Statement ($)" type="number" value={reconAmt} onChange={(e) => setReconAmt(Number(e.target.value))} />
-            <Inp label="Statement Date" type="date" value={reconDate} onChange={(e) => setReconDate(e.target.value)} />
+            <Inp label="Known Balance ($)" type="number" value={reconAmt} onChange={(e) => setReconAmt(Number(e.target.value))} />
+            <Inp label="Balance Date" type="date" value={reconDate} onChange={(e) => setReconDate(e.target.value)} />
           </Grid2>
           {reconAmt === 0 && (
             <div style={{ background: "#fef2f2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a31515" }}>
@@ -329,35 +492,18 @@ export function BankAccountsSection() {
                 ...reconcile,
                 openingBalance: toFixed2(reconAmt),
                 balanceBase: toFixed2(reconAmt),
+                balanceSnapshotAmount: toFixed2(reconAmt),
+                balanceSnapshotDate: reconDate,
                 reconciledBalance: toFixed2(reconAmt),
                 reconciledDate: reconDate,
                 reconciledAt: new Date().toISOString(),
               };
               updateAccount(updated);
 
-              const diff = toFixed2(reconAmt - reconcile.openingBalance);
-              if (diff !== 0) {
-                transactionRepository.add({
-                  id: Date.now().toString(),
-                  type: "adjustment",
-                  subType: "reconciliation",
-                  amount: Math.abs(diff),
-                  description: `Reconciliation - ${reconcile.name}`,
-                  sourceId: reconcile.id,
-                  destinationId: reconcile.id,
-                  date: reconDate,
-                  createdAt: new Date().toISOString(),
-                  currency: "CAD",
-                  status: "cleared",
-                  tag: "Personal",
-                  mode: "Bank Transfer",
-                });
-              }
-
               syncBalances();
               notifyDataChanged("accounts");
               setReconcile(null);
-            }}>Set Statement Balance</Btn>
+            }}>Save Snapshot</Btn>
           </div>
         </Modal>
       )}
@@ -396,6 +542,7 @@ export function BankAccountsSection() {
 export function CreditCardsSection() {
   const { cards, addCard, deleteCard, updateCard, reloadCards } = useCreditCards();
   const { accounts, reloadAccounts } = useAccounts();
+  const { transactions } = useTransactions();
 
   useAutoReload(reloadCards);
   useAutoReload(reloadAccounts);
@@ -418,6 +565,7 @@ export function CreditCardsSection() {
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [pendingPayCard, setPendingPayCard] = useState<CreditCard | null>(null);
   const [reconcileCard, setReconcileCard] = useState<CreditCard | null>(null);
+  const [ledgerCard, setLedgerCard] = useState<CreditCard | null>(null);
   const [cardReconAmt, setCardReconAmt] = useState(0);
   const [cardReconDate, setCardReconDate] = useState(todayLocal);
 
@@ -440,9 +588,11 @@ export function CreditCardsSection() {
         limitAmount: toFixed2(Number(form.limitAmount)),
         openingBalance: nextOpening,
         balanceBase: balanceChanged ? nextOpening : (existing?.balanceBase ?? nextOpening),
-        reconciledBalance: balanceChanged ? undefined : existing?.reconciledBalance,
-        reconciledDate: balanceChanged ? undefined : existing?.reconciledDate,
-        reconciledAt: balanceChanged ? undefined : existing?.reconciledAt,
+        balanceSnapshotAmount: balanceChanged ? nextOpening : existing?.balanceSnapshotAmount,
+        balanceSnapshotDate: balanceChanged ? todayLocal : existing?.balanceSnapshotDate,
+        reconciledBalance: balanceChanged ? nextOpening : existing?.reconciledBalance,
+        reconciledDate: balanceChanged ? todayLocal : existing?.reconciledDate,
+        reconciledAt: balanceChanged ? new Date().toISOString() : existing?.reconciledAt,
         linkedAccountId: form.linkedAccountId,
         annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
         annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
@@ -458,6 +608,8 @@ export function CreditCardsSection() {
         toFixed2(Number(form.openingBalance)),
         form.linkedAccountId,
         {
+          balanceSnapshotAmount: toFixed2(Number(form.openingBalance)),
+          balanceSnapshotDate: todayLocal,
           annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
           annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
         }
@@ -531,7 +683,12 @@ export function CreditCardsSection() {
                 <div style={{ fontSize: 12, color: "#6b7280" }}>Limit: {fmtCAD(c.limitAmount)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <Btn variant="green" small onClick={() => openPayCard(c)}>Pay</Btn>
-                  <Btn variant="secondary" small onClick={() => { setReconcileCard(c); setCardReconAmt(c.openingBalance); setCardReconDate(c.reconciledDate ?? todayLocal); }}>Reconcile</Btn>
+                  <Btn variant="secondary" small onClick={() => {
+                    setReconcileCard(c);
+                    setCardReconAmt(c.balanceSnapshotAmount ?? c.reconciledBalance ?? c.openingBalance);
+                    setCardReconDate(c.balanceSnapshotDate ?? c.reconciledDate ?? todayLocal);
+                  }}>Snapshot</Btn>
+                  <Btn variant="secondary" small onClick={() => setLedgerCard(c)}>Ledger</Btn>
                   <button onClick={() => {
                     const all = creditCardRepository.getAll();
                     creditCardRepository.saveAll(all.map((x) => ({ ...x, primary: x.id === c.id ? !c.primary : x.primary })));
@@ -550,6 +707,17 @@ export function CreditCardsSection() {
 
       {cards.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No cards yet.</div>}
 
+      {ledgerCard && (
+        <LedgerModal
+          entity={ledgerCard}
+          kind="card"
+          transactions={transactions}
+          accounts={accounts}
+          cards={cards}
+          onClose={() => setLedgerCard(null)}
+        />
+      )}
+
       <TransactionForm
         open={txFormOpen}
         onClose={() => { setTxFormOpen(false); setPendingPayCard(null); setTxFormInitial(undefined); }}
@@ -566,14 +734,14 @@ export function CreditCardsSection() {
       />
 
       {reconcileCard && (
-        <Modal title={`Reconcile Statement - ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
+        <Modal title={`Balance Snapshot - ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
           <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
-            Set the actual statement balance owing as of the selected date. This aligns the card baseline without creating a normal spending or income entry.
+            Set the known real balance owing as of the selected date. Transactions after this date are replayed from this amount.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcileCard.openingBalance)}</strong></div>
           <Grid2>
-            <Inp label="Statement Balance Owing ($)" type="number" value={cardReconAmt} onChange={(e) => setCardReconAmt(Number(e.target.value))} />
-            <Inp label="Statement Date" type="date" value={cardReconDate} onChange={(e) => setCardReconDate(e.target.value)} />
+            <Inp label="Known Balance Owing ($)" type="number" value={cardReconAmt} onChange={(e) => setCardReconAmt(Number(e.target.value))} />
+            <Inp label="Balance Date" type="date" value={cardReconDate} onChange={(e) => setCardReconDate(e.target.value)} />
           </Grid2>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setReconcileCard(null)}>Cancel</Btn>
@@ -583,6 +751,8 @@ export function CreditCardsSection() {
                 ...reconcileCard,
                 openingBalance: toFixed2(cardReconAmt),
                 balanceBase: toFixed2(cardReconAmt),
+                balanceSnapshotAmount: toFixed2(cardReconAmt),
+                balanceSnapshotDate: cardReconDate,
                 reconciledBalance: toFixed2(cardReconAmt),
                 reconciledDate: cardReconDate,
                 reconciledAt: new Date().toISOString(),
@@ -591,30 +761,11 @@ export function CreditCardsSection() {
                 creditCardRepository.getAll().map((c) => c.id === updated.id ? updated : c)
               );
 
-              const diff = toFixed2(cardReconAmt - reconcileCard.openingBalance);
-              if (diff !== 0) {
-                transactionRepository.add({
-                  id: Date.now().toString(),
-                  type: "adjustment",
-                  subType: "reconciliation",
-                  amount: Math.abs(diff),
-                  description: `Reconciliation - ${reconcileCard.name}`,
-                  sourceId: reconcileCard.id,
-                  destinationId: reconcileCard.id,
-                  date: cardReconDate,
-                  createdAt: new Date().toISOString(),
-                  currency: "CAD",
-                  status: "cleared",
-                  tag: "Personal",
-                  mode: "Bank Transfer",
-                });
-              }
-
               syncBalances();
               reloadCards();
               notifyDataChanged("cards");
               setReconcileCard(null);
-            }}>Set Statement Balance</Btn>
+            }}>Save Snapshot</Btn>
           </div>
         </Modal>
       )}

@@ -7,6 +7,8 @@ export interface CreditCard {
   type: CardType;
   limitAmount: number;
   openingBalance: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   balanceBase?: number;
   reconciledBalance?: number;
   reconciledDate?: string;

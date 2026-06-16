@@ -10,6 +10,7 @@ import { vehicleRepository, houseLoanRepository } from "@/repositories/assetRepo
 import { validateNewAccount } from "@/rules/accountRules";
 import { getAccountReferenceReasons } from "@/utils/referenceIntegrity";
 import { removeOwnedRecurringForAccount, syncAccountFeeRecurring } from "@/utils/recurringOwners";
+import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -18,6 +19,9 @@ export function useAccounts() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAccounts(accountRepository.getAll());
+    const handler = () => setAccounts(accountRepository.getAll());
+    window.addEventListener(DATA_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handler);
   }, []);
 
   const load = useCallback(() => {

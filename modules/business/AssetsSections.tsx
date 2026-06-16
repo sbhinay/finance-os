@@ -104,6 +104,11 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual"];
 
+function todayIsoLocal() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 // Mileage projection (mirrors prototype exactly)
 
 function mileageProjection(v: Vehicle) {
@@ -169,6 +174,7 @@ export function VehiclesSection({
     excessRate: 0.15, residual: 0,
     endOfLeaseOption: "Return" as Vehicle["endOfLeaseOption"],
     principal: 0, remaining: 0, interestRate: 0,
+    balanceSnapshotDate: todayIsoLocal(),
     insuranceAmount: 0, insuranceSchedule: "Monthly" as PaymentSchedule, insuranceDate: "", insuranceSource: "",
     status: "Active",
   }), []);
@@ -302,6 +308,8 @@ export function VehiclesSection({
       payment: toFixed2(Number(form.payment)),
       principal: toFixed2(Number(form.principal)),
       remaining: toFixed2(Number(form.remaining)),
+      balanceSnapshotAmount: toFixed2(Number(form.remaining)),
+      balanceSnapshotDate: form.balanceSnapshotDate || todayIsoLocal(),
       insuranceAmount: toFixed2(Number(form.insuranceAmount || 0)),
     };
     if (form.id) { updateVehicle(v as Vehicle); }
@@ -453,11 +461,16 @@ export function VehiclesSection({
             </>
           )}
           {form.vtype === "Finance" && (
-            <Grid3>
-              <Inp label="Original Loan ($)" type="number" value={form.principal} onChange={f("principal")} />
-              <Inp label="Remaining Balance ($)" type="number" value={form.remaining} onChange={f("remaining")} />
-              <Inp label="Interest Rate (%)" type="number" value={form.interestRate} onChange={f("interestRate")} />
-            </Grid3>
+            <>
+              <Grid3>
+                <Inp label="Original Loan ($)" type="number" value={form.principal} onChange={f("principal")} />
+                <Inp label="Remaining Balance ($)" type="number" value={form.remaining} onChange={f("remaining")} />
+                <Inp label="Balance Date" type="date" value={form.balanceSnapshotDate ?? ""} onChange={f("balanceSnapshotDate")} />
+              </Grid3>
+              <Grid3>
+                <Inp label="Interest Rate (%)" type="number" value={form.interestRate} onChange={f("interestRate")} />
+              </Grid3>
+            </>
           )}
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setShowForm(false)}>Cancel</Btn>
@@ -596,6 +609,7 @@ export function HouseLoansSection({
   const emptyForm = useMemo(() => ({
     id: "" as string | undefined,
     name: "", address: "", principal: 0, remaining: 0,
+    balanceSnapshotDate: todayIsoLocal(),
     payment: 0, schedule: "Bi-weekly" as PaymentSchedule,
     source: "", startDate: "", endDate: "",
     nextPaymentDate: "", interestRate: 0,
@@ -636,6 +650,8 @@ export function HouseLoansSection({
       ...form,
       principal: toFixed2(Number(form.principal)),
       remaining: toFixed2(Number(form.remaining)),
+      balanceSnapshotAmount: toFixed2(Number(form.remaining)),
+      balanceSnapshotDate: form.balanceSnapshotDate || todayIsoLocal(),
       payment: toFixed2(Number(form.payment)),
       propertyTaxAmount: toFixed2(Number(form.propertyTaxAmount || 0)),
     };
@@ -843,6 +859,9 @@ export function HouseLoansSection({
           <Grid2>
             <Inp label="Original Principal ($)" type="number" value={form.principal} onChange={f("principal")} />
             <Inp label="Remaining Balance ($)" type="number" value={form.remaining} onChange={f("remaining")} />
+          </Grid2>
+          <Grid2>
+            <Inp label="Balance Date" type="date" value={form.balanceSnapshotDate ?? ""} onChange={f("balanceSnapshotDate")} />
           </Grid2>
           <Grid3>
             <Inp label="Payment Amount ($)" type="number" value={form.payment} onChange={f("payment")} />

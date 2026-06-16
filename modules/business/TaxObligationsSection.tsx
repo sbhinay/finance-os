@@ -1,5 +1,5 @@
 "use client";
-import { TransactionForm } from "./TransactionForm";
+import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 
 import { useState, useMemo } from "react";
 import { useBusiness, calcHSTFromInvoices } from "./useBusiness";
@@ -134,7 +134,7 @@ function ObligationsList({
 }) {
   const [markingPaid, setMarkingPaid] = useState<FlatObligation | null>(null);
   const [txFormOpen, setTxFormOpen] = useState(false);
-  const [txFormInitial, setTxFormInitial] = useState<any>(undefined);
+  const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial | undefined>(undefined);
 
   // Pre-select business account for CRA payments
   const defaultCRAAccountId = (() => {
@@ -155,7 +155,6 @@ function ObligationsList({
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
   const in30 = useMemo(() => {
     const d = new Date();
-    // eslint-disable-next-line react-hooks/purity
     d.setTime(d.getTime() + 30 * 86400000);
     return d.toISOString().split("T")[0];
   }, []);
@@ -193,11 +192,6 @@ function ObligationsList({
   const typeColors: Record<string, string> = { HST: "blue", "Corp Tax": "purple", Payroll: "teal" };
   const unpaid = obligations.filter((o) => !o.paid);
   const paid = obligations.filter((o) => o.paid);
-  const acctOpts = [
-    { value: "", label: "— Select account —" },
-    ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${fmtCAD(a.openingBalance)})` })),
-  ];
-
   return (
     <div>
       {/* Add actions */}
@@ -309,8 +303,8 @@ function ObligationsList({
           if (markingPaid) {
             hooks.markObligationPaid(
               markingPaid.id, markingPaid.type, markingPaid.amount,
-              txn.sourceId ?? "", (txn as any).date ?? new Date().toISOString().split("T")[0],
-              markingPaid.label
+              txn.sourceId ?? "", txn.date ?? new Date().toISOString().split("T")[0],
+              markingPaid.label, txn.id
             );
           }
           setTxFormOpen(false);
