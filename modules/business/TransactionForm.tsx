@@ -323,7 +323,6 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const showLoanSplit = txType === "loan_payment";
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
-  const isReconciliationAudit = !!initial?.id && initial.type === "adjustment" && initial.subType === "reconciliation";
   const showVehicleLink = txType === "expense" && isVehicleCat;
   const showPropertyLink = txType === "expense" && isPropertyCat;
   const isHistoricalEdit = !!form.id && form.date < todayLocal;
@@ -442,7 +441,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff", borderTop: `3px solid ${typeColor}` }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: typeColor }}>
-            {title ?? (form.id ? (isReconciliationAudit ? "Reconciliation Audit" : "✏ Edit Transaction") : "New Transaction")}
+            {title ?? (form.id ? "Edit Transaction" : "New Transaction")}
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
         </div>
@@ -454,16 +453,11 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
           {/* Warnings */}
           {warnings.map((w, i) => <Alert key={i} type="warning">⚠ {w}</Alert>)}
-          {isReconciliationAudit && (
-            <Alert type="info">
-              This transaction is a reconciliation audit entry and cannot be edited here. Use the reconcile flow to change account baselines.
-            </Alert>
-          )}
 
           {/* Amount + Date */}
           <Grid2>
-            <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} placeholder="0.00" required disabled={isReconciliationAudit} />
-            <Inp label="Date" type="date" value={form.date} onChange={f("date")} required disabled={isReconciliationAudit} />
+            <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} placeholder="0.00" required />
+            <Inp label="Date" type="date" value={form.date} onChange={f("date")} required />
           </Grid2>
 
           {/* Type + SubType */}
@@ -481,7 +475,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", odometer: "" }),
               }));
             }}
-              disabled={isReconciliationAudit || !!lockType}
+              disabled={!!lockType}
               options={USER_FACING_TYPES.map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
               required />
             {subTypeOptions.length > 0 && (
@@ -495,7 +489,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 }));
               }}
                 options={[{ value: "", label: "— Select sub-type —" }, ...subTypeOptions]}
-                required={requiresSubType(txType)} disabled={isReconciliationAudit} />
+                required={requiresSubType(txType)} />
             )}
           </Grid2>
 
@@ -503,10 +497,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           <Grid2>
             <Sel label="Payment Mode" value={form.mode} onChange={f("mode")}
               options={["Cash", "Debit", "Credit Card", "Bank Transfer", "E-Transfer", "Cheque", "Direct Deposit", "Pre-authorized"].map((m) => ({ value: m, label: m }))}
-              disabled={isReconciliationAudit} />
+              />
             <Sel label="Tag" value={form.tag} onChange={f("tag")}
               options={[{ value: "Personal", label: "Personal" }, { value: "Business", label: "Business" }]}
-              disabled={isReconciliationAudit} />
+              />
           </Grid2>
 
           {/* Description + Notes */}
@@ -514,8 +508,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             <Label>Description</Label>
             <input value={form.description || generatedDescription} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="Transaction label"
-              disabled={isReconciliationAudit}
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
+             
+              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: "#fff" }} />
             {!form.description && (
               <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
                 Auto-generated from the selected type, category, accounts, and linked item. Edit it only if you want a custom label.
@@ -531,7 +525,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <Label>Notes (optional)</Label>
-                {!isReconciliationAudit && (
+                {(
                   <button
                     type="button"
                     onClick={() => {
@@ -546,11 +540,11 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
               </div>
               <input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                 placeholder="Reference number, extra context, or something you want to remember later"
-                disabled={isReconciliationAudit}
-                style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: isReconciliationAudit ? "#f9fafb" : "#fff" }} />
+               
+                style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: "#fff" }} />
             </div>
           ) : (
-            !isReconciliationAudit && (
+            (
               <div>
                 <button
                   type="button"
@@ -569,20 +563,20 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
               <div>
                 <Label>Category</Label>
                 <select value={form.categoryId} onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
-                  disabled={isReconciliationAudit}
-                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: isReconciliationAudit ? "#f9fafb" : "#fff", fontSize: 13 }}>
+                 
+                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}>
                   <option value="">— Select category —</option>
                   {catList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
             ) : <div />}
-            <Sel label="Account / Card" value={form.sourceId} onChange={f("sourceId")} options={paymentSources} required disabled={isReconciliationAudit} />
+            <Sel label="Account / Card" value={form.sourceId} onChange={f("sourceId")} options={paymentSources} required />
           </Grid2>
 
           {/* Destination — for transfers, adjustments, loans */}
           {showDestination && (
             <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")}
-              options={destinationOptions} required={requiresDestination(txType)} disabled={isReconciliationAudit} />
+              options={destinationOptions} required={requiresDestination(txType)} />
           )}
 
           {/* Loan payment split */}
@@ -600,15 +594,15 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 <Btn
                   variant="secondary"
                   onClick={() => setShowLoanDetails((v) => !v)}
-                  disabled={isReconciliationAudit}
+                 
                 >
                   {showLoanDetails ? "Hide Detailed Split" : "Add Detailed Split"}
                 </Btn>
               </div>
               {loanDetailsVisible && (
                 <Grid2>
-                  <Inp label="Principal Amount ($)" type="number" value={form.principalAmount} onChange={f("principalAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
-                  <Inp label="Interest Amount ($)" type="number" value={form.interestAmount} onChange={f("interestAmount")} placeholder="0.00" disabled={isReconciliationAudit} />
+                  <Inp label="Principal Amount ($)" type="number" value={form.principalAmount} onChange={f("principalAmount")} placeholder="0.00" />
+                  <Inp label="Interest Amount ($)" type="number" value={form.interestAmount} onChange={f("interestAmount")} placeholder="0.00" />
                 </Grid2>
               )}
             </div>
@@ -618,15 +612,15 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           {showVehicleLink && (
             <Grid2>
               <Sel label="Vehicle (optional)" value={form.linkedVehicleId} onChange={f("linkedVehicleId")}
-                options={[{ value: "", label: "— Select vehicle —" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} disabled={isReconciliationAudit} />
-              <Inp label="Odometer (km)" type="number" value={form.odometer} onChange={f("odometer")} placeholder="e.g. 42500" disabled={isReconciliationAudit} />
+                options={[{ value: "", label: "— Select vehicle —" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} />
+              <Inp label="Odometer (km)" type="number" value={form.odometer} onChange={f("odometer")} placeholder="e.g. 42500" />
             </Grid2>
           )}
 
           {/* Property link */}
           {showPropertyLink && (
             <Sel label="Property (optional)" value={form.linkedPropertyId} onChange={f("linkedPropertyId")}
-              options={[{ value: "", label: "— Select property —" }, ...houseLoans.map((h) => ({ value: h.id, label: h.name }))]} disabled={isReconciliationAudit} />
+              options={[{ value: "", label: "— Select property —" }, ...houseLoans.map((h) => ({ value: h.id, label: h.name }))]} />
           )}
 
           {/* Balance preview */}
@@ -677,10 +671,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 4 }}>
-            <div>{form.id && !isReconciliationAudit && <Btn variant="danger" onClick={handleDelete}>Delete</Btn>}</div>
+            <div>{form.id && <Btn variant="danger" onClick={handleDelete}>Delete</Btn>}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-              {!isReconciliationAudit && <Btn onClick={save}>{form.id ? "Save Changes" : "Add Entry"}</Btn>}
+              <Btn onClick={save}>{form.id ? "Save Changes" : "Add Entry"}</Btn>
             </div>
           </div>
 

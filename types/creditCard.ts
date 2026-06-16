@@ -1,4 +1,4 @@
-export type CardType = "personal" | "business";
+export type CardType = "personal" | "business" | "loc";
 
 export interface CreditCard {
   id: string;
@@ -9,10 +9,6 @@ export interface CreditCard {
   openingBalance: number;
   balanceSnapshotAmount?: number;
   balanceSnapshotDate?: string;
-  balanceBase?: number;
-  reconciledBalance?: number;
-  reconciledDate?: string;
-  reconciledAt?: string;
   linkedAccountId?: string;
   annualFeeAmount?: number;
   annualFeeDate?: string;

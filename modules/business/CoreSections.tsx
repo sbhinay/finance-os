@@ -11,7 +11,8 @@ import { useFixedPayments } from "./useFixedPayments";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
-import { fmtCAD, toFixed2 } from "@/utils/finance";
+import { transactionRepository } from "@/repositories/transactionRepository";
+import { fmtCAD, toFixed2, uid } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction } from "@/types/transaction";
@@ -115,8 +116,6 @@ type LedgerEntity = {
   openingBalance: number;
   balanceSnapshotAmount?: number;
   balanceSnapshotDate?: string;
-  reconciledBalance?: number;
-  reconciledDate?: string;
 };
 
 function txDate(t: Transaction) {
@@ -144,7 +143,7 @@ function ledgerEffect(t: Transaction, entityId: string, kind: LedgerKind) {
       return 0;
 
     case "transfer":
-      if (isSource) return -t.amount;
+      if (isSource) return kind === "card" && t.subType === "loc_draw" ? t.amount : -t.amount;
       if (isDestination) return kind === "card" ? -t.amount : t.amount;
       return 0;
 
@@ -175,8 +174,8 @@ function LedgerModal({
 }) {
   const [view, setView] = useState<"afterSnapshot" | "latest30">("afterSnapshot");
   const allEntities = [...accounts, ...cards];
-  const snapshotAmount = entity.balanceSnapshotAmount ?? entity.reconciledBalance;
-  const snapshotDate = entity.balanceSnapshotDate ?? entity.reconciledDate;
+  const snapshotAmount = entity.balanceSnapshotAmount;
+  const snapshotDate = entity.balanceSnapshotDate;
   const related = transactions
     .filter((t) => t.status !== "pending" && (t.sourceId === entity.id || t.destinationId === entity.id))
     .sort((a, b) => {
@@ -302,12 +301,8 @@ export function BankAccountsSection() {
         accountNumber: form.accountNumber,
         type: form.type as Account["type"],
         openingBalance: nextOpening,
-        balanceBase: balanceChanged ? nextOpening : (existing?.balanceBase ?? nextOpening),
         balanceSnapshotAmount: balanceChanged ? nextOpening : existing?.balanceSnapshotAmount,
         balanceSnapshotDate: balanceChanged ? todayLocal : existing?.balanceSnapshotDate,
-        reconciledBalance: balanceChanged ? nextOpening : existing?.reconciledBalance,
-        reconciledDate: balanceChanged ? todayLocal : existing?.reconciledDate,
-        reconciledAt: balanceChanged ? new Date().toISOString() : existing?.reconciledAt,
         monthlyFeeAmount: Number(form.monthlyFeeAmount) > 0 ? toFixed2(Number(form.monthlyFeeAmount)) : undefined,
         monthlyFeeDate: Number(form.monthlyFeeAmount) > 0 ? form.monthlyFeeDate : undefined,
         active: true,
@@ -410,8 +405,8 @@ export function BankAccountsSection() {
                   </Btn>
                   <Btn variant="secondary" small onClick={() => {
                     setReconcile(a);
-                    setReconAmt(a.balanceSnapshotAmount ?? a.reconciledBalance ?? a.openingBalance);
-                    setReconDate(a.balanceSnapshotDate ?? a.reconciledDate ?? todayLocal);
+                    setReconAmt(a.balanceSnapshotAmount ?? a.openingBalance);
+                    setReconDate(a.balanceSnapshotDate ?? todayLocal);
                   }}>Snapshot</Btn>
                   <Btn variant="secondary" small onClick={() => setLedgerAccount(a)}>Ledger</Btn>
                   <button onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}
@@ -491,12 +486,8 @@ export function BankAccountsSection() {
               const updated = {
                 ...reconcile,
                 openingBalance: toFixed2(reconAmt),
-                balanceBase: toFixed2(reconAmt),
                 balanceSnapshotAmount: toFixed2(reconAmt),
                 balanceSnapshotDate: reconDate,
-                reconciledBalance: toFixed2(reconAmt),
-                reconciledDate: reconDate,
-                reconciledAt: new Date().toISOString(),
               };
               updateAccount(updated);
 
@@ -564,6 +555,11 @@ export function CreditCardsSection() {
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [pendingPayCard, setPendingPayCard] = useState<CreditCard | null>(null);
+  const [locPaymentCard, setLocPaymentCard] = useState<CreditCard | null>(null);
+  const [locPrincipalAmt, setLocPrincipalAmt] = useState(0);
+  const [locInterestAmt, setLocInterestAmt] = useState(0);
+  const [locPaymentDate, setLocPaymentDate] = useState(todayLocal);
+  const [locPaymentSourceId, setLocPaymentSourceId] = useState("");
   const [reconcileCard, setReconcileCard] = useState<CreditCard | null>(null);
   const [ledgerCard, setLedgerCard] = useState<CreditCard | null>(null);
   const [cardReconAmt, setCardReconAmt] = useState(0);
@@ -587,12 +583,8 @@ export function CreditCardsSection() {
         type: form.type,
         limitAmount: toFixed2(Number(form.limitAmount)),
         openingBalance: nextOpening,
-        balanceBase: balanceChanged ? nextOpening : (existing?.balanceBase ?? nextOpening),
         balanceSnapshotAmount: balanceChanged ? nextOpening : existing?.balanceSnapshotAmount,
         balanceSnapshotDate: balanceChanged ? todayLocal : existing?.balanceSnapshotDate,
-        reconciledBalance: balanceChanged ? nextOpening : existing?.reconciledBalance,
-        reconciledDate: balanceChanged ? todayLocal : existing?.reconciledDate,
-        reconciledAt: balanceChanged ? new Date().toISOString() : existing?.reconciledAt,
         linkedAccountId: form.linkedAccountId,
         annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
         annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
@@ -621,22 +613,110 @@ export function CreditCardsSection() {
 
   function openPayCard(c: CreditCard) {
     if (!c.linkedAccountId) {
-  alert(`No linked bank account set for ${c.name}. Edit the card and set a linked account first.`);
-  return;
-}
+      alert(`No linked bank account set for ${c.name}. Edit the card and set a linked account first.`);
+      return;
+    }
     const linkedAccount = accounts.find((a) => a.id === c.linkedAccountId);
     setPendingPayCard(c);
     setTxFormInitial({
       type: "transfer",
-      subType: "cc_payment",
+      subType: c.type === "loc" ? "loc_payment" : "cc_payment",
       amount: c.openingBalance > 0 ? toFixed2(c.openingBalance) : undefined,
-      description: `Credit card payment - ${c.name}`,
+      description: c.type === "loc" ? `LOC Payment - ${c.name}` : `Credit card payment - ${c.name}`,
       sourceId: c.linkedAccountId ?? "",
       destinationId: c.id,
       tag: linkedAccount?.type === "business" || c.type === "business" ? "Business" : "Personal",
       mode: "Bank Transfer",
     });
     setTxFormOpen(true);
+  }
+
+  function openLocDraw(c: CreditCard) {
+    if (!c.linkedAccountId) {
+      alert(`No linked bank account set for ${c.name}. Edit the LOC and set the receiving account first.`);
+      return;
+    }
+    const linkedAccount = accounts.find((a) => a.id === c.linkedAccountId);
+    setPendingPayCard(c);
+    setTxFormInitial({
+      type: "transfer",
+      subType: "loc_draw",
+      description: `LOC Draw - ${c.name}`,
+      sourceId: c.id,
+      destinationId: c.linkedAccountId,
+      tag: linkedAccount?.type === "business" || c.type === "business" ? "Business" : "Personal",
+      mode: "Bank Transfer",
+    });
+    setTxFormOpen(true);
+  }
+
+  function openLocPayment(c: CreditCard) {
+    if (!c.linkedAccountId) {
+      alert(`No linked bank account set for ${c.name}. Edit the LOC and set the payment account first.`);
+      return;
+    }
+    setLocPaymentCard(c);
+    setLocPrincipalAmt(c.openingBalance > 0 ? toFixed2(c.openingBalance) : 0);
+    setLocInterestAmt(0);
+    setLocPaymentDate(todayLocal);
+    setLocPaymentSourceId(c.linkedAccountId);
+  }
+
+  function saveLocPayment() {
+    if (!locPaymentCard) return;
+    const principal = toFixed2(Number(locPrincipalAmt));
+    const interest = toFixed2(Number(locInterestAmt));
+    if (!locPaymentSourceId) {
+      alert("Please select a payment account.");
+      return;
+    }
+    if (principal <= 0 && interest <= 0) {
+      alert("Enter a principal payment or interest amount.");
+      return;
+    }
+
+    const linkedAccount = accounts.find((a) => a.id === locPaymentSourceId);
+    const tag = linkedAccount?.type === "business" || locPaymentCard.type === "business" ? "Business" : "Personal";
+
+    if (principal > 0) {
+      transactionRepository.add({
+        id: uid(),
+        type: "transfer",
+        subType: "loc_payment",
+        amount: principal,
+        description: `LOC Principal Payment - ${locPaymentCard.name}`,
+        sourceId: locPaymentSourceId,
+        destinationId: locPaymentCard.id,
+        date: locPaymentDate,
+        createdAt: new Date().toISOString(),
+        currency: "CAD",
+        status: "cleared",
+        tag,
+        mode: "Bank Transfer",
+      });
+    }
+
+    if (interest > 0) {
+      transactionRepository.add({
+        id: uid(),
+        type: "expense",
+        amount: interest,
+        description: `LOC Interest - ${locPaymentCard.name}`,
+        sourceId: locPaymentSourceId,
+        date: locPaymentDate,
+        createdAt: new Date().toISOString(),
+        currency: "CAD",
+        status: "cleared",
+        tag,
+        mode: "Bank Transfer",
+      });
+    }
+
+    syncBalances();
+    reloadCards();
+    reloadAccounts();
+    notifyDataChanged("transactions");
+    setLocPaymentCard(null);
   }
 
   const totalOwing = cards.reduce((s, c) => s + c.openingBalance, 0);
@@ -660,6 +740,7 @@ export function CreditCardsSection() {
       {cards.map((c) => {
         const u = c.limitAmount ? Math.round((c.openingBalance / c.limitAmount) * 100) : 0;
         const linked = accounts.find((a) => a.id === c.linkedAccountId);
+        const isLoc = c.type === "loc";
         return (
           <div key={c.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -670,7 +751,7 @@ export function CreditCardsSection() {
                 </div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, alignItems: "center" }}>
                   {c.issuer}
-                  <Pill color={c.type === "business" ? "blue" : "purple"}>{c.type}</Pill>
+                  <Pill color={isLoc ? "teal" : c.type === "business" ? "blue" : "purple"}>{isLoc ? "LOC" : c.type}</Pill>
                   {linked && <span>- {linked.name}</span>}
                 </div>
                 <div style={{ marginTop: 8, height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
@@ -682,11 +763,18 @@ export function CreditCardsSection() {
                 <div style={{ fontWeight: 700, fontSize: 16, color: "#a31515" }}>{fmtCAD(c.openingBalance)}</div>
                 <div style={{ fontSize: 12, color: "#6b7280" }}>Limit: {fmtCAD(c.limitAmount)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                  <Btn variant="green" small onClick={() => openPayCard(c)}>Pay</Btn>
+                  {isLoc ? (
+                    <>
+                      <Btn variant="green" small onClick={() => openLocPayment(c)}>Pay</Btn>
+                      <Btn variant="secondary" small onClick={() => openLocDraw(c)}>Draw</Btn>
+                    </>
+                  ) : (
+                    <Btn variant="green" small onClick={() => openPayCard(c)}>Pay</Btn>
+                  )}
                   <Btn variant="secondary" small onClick={() => {
                     setReconcileCard(c);
-                    setCardReconAmt(c.balanceSnapshotAmount ?? c.reconciledBalance ?? c.openingBalance);
-                    setCardReconDate(c.balanceSnapshotDate ?? c.reconciledDate ?? todayLocal);
+                    setCardReconAmt(c.balanceSnapshotAmount ?? c.openingBalance);
+                    setCardReconDate(c.balanceSnapshotDate ?? todayLocal);
                   }}>Snapshot</Btn>
                   <Btn variant="secondary" small onClick={() => setLedgerCard(c)}>Ledger</Btn>
                   <button onClick={() => {
@@ -716,6 +804,31 @@ export function CreditCardsSection() {
           cards={cards}
           onClose={() => setLedgerCard(null)}
         />
+      )}
+
+      {locPaymentCard && (
+        <Modal title={`Pay LOC - ${locPaymentCard.name}`} onClose={() => setLocPaymentCard(null)}>
+          <div style={{ background: "#f0f9ff", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a5fa8" }}>
+            Principal reduces the LOC balance. Interest is logged as an expense from the payment account.
+          </div>
+          <Grid2>
+            <Inp label="Principal Payment ($)" type="number" value={locPrincipalAmt} onChange={(e) => setLocPrincipalAmt(Number(e.target.value))} />
+            <Inp label="Interest Paid ($)" type="number" value={locInterestAmt} onChange={(e) => setLocInterestAmt(Number(e.target.value))} />
+          </Grid2>
+          <Grid2>
+            <Inp label="Payment Date" type="date" value={locPaymentDate} onChange={(e) => setLocPaymentDate(e.target.value)} />
+            <Sel
+              label="Pay From"
+              value={locPaymentSourceId}
+              onChange={(e) => setLocPaymentSourceId(e.target.value)}
+              options={[{ value: "", label: "-- Select account --" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]}
+            />
+          </Grid2>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Btn variant="secondary" onClick={() => setLocPaymentCard(null)}>Cancel</Btn>
+            <Btn onClick={saveLocPayment}>Save LOC Payment</Btn>
+          </div>
+        </Modal>
       )}
 
       <TransactionForm
@@ -750,12 +863,8 @@ export function CreditCardsSection() {
               const updated = {
                 ...reconcileCard,
                 openingBalance: toFixed2(cardReconAmt),
-                balanceBase: toFixed2(cardReconAmt),
                 balanceSnapshotAmount: toFixed2(cardReconAmt),
                 balanceSnapshotDate: cardReconDate,
-                reconciledBalance: toFixed2(cardReconAmt),
-                reconciledDate: cardReconDate,
-                reconciledAt: new Date().toISOString(),
               };
               creditCardRepository.saveAll(
                 creditCardRepository.getAll().map((c) => c.id === updated.id ? updated : c)
@@ -777,12 +886,13 @@ export function CreditCardsSection() {
           <Sel label="Type" value={form.type} onChange={f("type")} options={[
             { value: "personal", label: "Personal Credit Card" },
             { value: "business", label: "Business Credit Card" },
+            { value: "loc", label: "Line of Credit" },
           ]} />
           <Sel label="Linked Bank Account" value={form.linkedAccountId ?? ""} onChange={f("linkedAccountId")}
             options={[{ value: "", label: "-- None --" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]} />
           <Grid2>
             <Inp label="Credit Limit ($)" type="number" value={form.limitAmount} onChange={f("limitAmount")} />
-            <Inp label="Balance Owing ($)" type="number" value={form.openingBalance} onChange={f("openingBalance")} />
+            <Inp label={form.type === "loc" ? "LOC Balance Owing ($)" : "Balance Owing ($)"} type="number" value={form.openingBalance} onChange={f("openingBalance")} />
           </Grid2>
           <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 8, padding: "10px 12px" }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Annual Card Fee (optional)</div>

@@ -6,17 +6,7 @@ import { toFixed2 } from "@/utils/finance";
 type BalanceFields = {
   balanceSnapshotAmount?: number;
   balanceSnapshotDate?: string | null;
-  reconciledBalance?: number;
-  reconciledDate?: string | null;
-  reconciledAt?: string | null;
-  balanceBase?: number;
 };
-
-function getSnapshotDate(item: BalanceFields): string | null {
-  return item.balanceSnapshotAmount != null && item.balanceSnapshotDate
-    ? item.balanceSnapshotDate
-    : item.reconciledDate ?? null;
-}
 
 function getReplayBase<T extends { id: string; openingBalance: number }>(
   item: T & BalanceFields,
@@ -24,14 +14,6 @@ function getReplayBase<T extends { id: string; openingBalance: number }>(
 ): number {
   if (typeof item.balanceSnapshotAmount === "number" && item.balanceSnapshotDate) {
     return item.balanceSnapshotAmount;
-  }
-
-  if (typeof item.reconciledBalance === "number") {
-    return item.reconciledBalance;
-  }
-
-  if (typeof item.balanceBase === "number") {
-    return item.balanceBase;
   }
 
   const hasRelatedTransactions = transactions.some(
@@ -45,40 +27,11 @@ function getReplayBase<T extends { id: string; openingBalance: number }>(
   return toFixed2(item.openingBalance ?? 0);
 }
 
-function getReconciledAtCutoff(
-  item: { id: string; reconciledDate?: string | null; reconciledAt?: string | null },
-  transactions: Transaction[]
-): string | null {
-  if (item.reconciledAt) return item.reconciledAt;
-  if (!item.reconciledDate) return null;
-
-  return transactions
-    .filter((t) => {
-      const txDate = t.date ?? t.createdAt?.slice(0, 10) ?? "";
-      return (t.sourceId === item.id || t.destinationId === item.id) && txDate === item.reconciledDate;
-    })
-    .map((t) => t.createdAt)
-    .filter(Boolean)
-    .sort()
-    .slice(-1)[0] ?? null;
-}
-
-function shouldApplyTransaction(
-  item: BalanceFields,
-  txDate: string,
-  txCreatedAt: string,
-  reconciledAtCutoff: string | null
-) {
+function shouldApplyTransaction(item: BalanceFields, txDate: string) {
   if (item.balanceSnapshotAmount != null && item.balanceSnapshotDate) {
     return txDate > item.balanceSnapshotDate;
   }
-
-  const anchorDate = getSnapshotDate(item);
-  if (!anchorDate) return true;
-  if (txDate > anchorDate) return true;
-  if (txDate < anchorDate) return false;
-  if (!reconciledAtCutoff) return false;
-  return txCreatedAt > reconciledAtCutoff;
+  return true;
 }
 
 export function recalculateBalances(transactions: Transaction[]) {
@@ -110,23 +63,18 @@ export function recalculateBalances(transactions: Transaction[]) {
     if (t.status === "pending") continue;
 
     const txDate = t.date ?? t.createdAt?.slice(0, 10) ?? "";
-    const txCreatedAt = t.createdAt ?? `${txDate}T00:00:00.000Z`;
     if (txDate > today) continue;
+    if (t.type === "adjustment" && (t.subType as string) === "reconciliation") continue;
 
     const srcAcc = accounts.find((a) => a.id === t.sourceId);
     const srcCard = cards.find((c) => c.id === t.sourceId);
     const toAcc = t.destinationId ? accounts.find((a) => a.id === t.destinationId) : undefined;
     const toCard = t.destinationId ? cards.find((c) => c.id === t.destinationId) : undefined;
 
-    const srcAccCutoff = srcAcc ? getReconciledAtCutoff(srcAcc, transactions) : null;
-    const srcCardCutoff = srcCard ? getReconciledAtCutoff(srcCard, transactions) : null;
-    const toAccCutoff = toAcc ? getReconciledAtCutoff(toAcc, transactions) : null;
-    const toCardCutoff = toCard ? getReconciledAtCutoff(toCard, transactions) : null;
-
-    const applySrcAcc = srcAcc && shouldApplyTransaction(srcAcc, txDate, txCreatedAt, srcAccCutoff);
-    const applySrcCard = srcCard && shouldApplyTransaction(srcCard, txDate, txCreatedAt, srcCardCutoff);
-    const applyToAcc = toAcc && shouldApplyTransaction(toAcc, txDate, txCreatedAt, toAccCutoff);
-    const applyToCard = toCard && shouldApplyTransaction(toCard, txDate, txCreatedAt, toCardCutoff);
+    const applySrcAcc = srcAcc && shouldApplyTransaction(srcAcc, txDate);
+    const applySrcCard = srcCard && shouldApplyTransaction(srcCard, txDate);
+    const applyToAcc = toAcc && shouldApplyTransaction(toAcc, txDate);
+    const applyToCard = toCard && shouldApplyTransaction(toCard, txDate);
 
     switch (t.type) {
       case "expense":
@@ -147,7 +95,9 @@ export function recalculateBalances(transactions: Transaction[]) {
 
       case "transfer":
         if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance - t.amount);
-        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance - t.amount);
+        if (applySrcCard && srcCard) {
+          srcCard.openingBalance = toFixed2(srcCard.openingBalance + (t.subType === "loc_draw" ? t.amount : -t.amount));
+        }
         if (applyToAcc && toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance + t.amount);
         if (applyToCard && toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
         break;

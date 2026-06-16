@@ -47,7 +47,6 @@ export function useAccounts() {
       type,
       currency: "CAD",
       openingBalance: balance,
-      balanceBase: balance,
       active: true,
       createdAt: new Date().toISOString(),
       ...extras,

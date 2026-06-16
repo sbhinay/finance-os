@@ -10,10 +10,6 @@ export interface Account {
   openingBalance: number;
   balanceSnapshotAmount?: number;
   balanceSnapshotDate?: string;
-  balanceBase?: number;
-  reconciledBalance?: number;
-  reconciledDate?: string;
-  reconciledAt?: string;
   monthlyFeeAmount?: number;
   monthlyFeeDate?: string;
   active: boolean;

@@ -33,5 +33,7 @@ export function normalizeTransactionShape<T extends RawTransaction>(tx: T): Tran
 }
 
 export function normalizeTransactionCollection(transactions: RawTransaction[]): Transaction[] {
-  return transactions.map(normalizeTransactionShape);
+  return transactions
+    .map(normalizeTransactionShape)
+    .filter((tx) => !(tx.type === "adjustment" && (tx.subType as string) === "reconciliation"));
 }

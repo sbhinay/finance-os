@@ -40,7 +40,6 @@ export function useCreditCards() {
       type,
       limitAmount: limit,
       openingBalance: balance,
-      balanceBase: balance,
       linkedAccountId,
       active: true,
       createdAt: new Date().toISOString(),

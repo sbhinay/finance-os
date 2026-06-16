@@ -10,14 +10,11 @@ import { recalculateBalances } from "./recalculateBalances";
 import { toFixed2 } from "@/utils/finance";
 
 function shouldApplyInvoiceDeposit(
-  account: { balanceSnapshotDate?: string | null; balanceSnapshotAmount?: number; reconciledDate?: string | null },
+  account: { balanceSnapshotDate?: string | null; balanceSnapshotAmount?: number },
   paymentDate: string
 ) {
-  const anchorDate = account.balanceSnapshotAmount != null && account.balanceSnapshotDate
-    ? account.balanceSnapshotDate
-    : account.reconciledDate;
-  if (!anchorDate) return true;
-  return paymentDate > anchorDate;
+  if (account.balanceSnapshotAmount == null || !account.balanceSnapshotDate) return true;
+  return paymentDate > account.balanceSnapshotDate;
 }
 
 function hasMatchingIncomeTransaction(

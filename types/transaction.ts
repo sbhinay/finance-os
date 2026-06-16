@@ -10,7 +10,7 @@ export type TransactionType =
   | "loan_receipt"     // borrowed money arriving — not income, creates liability
   | "loan_payment"     // debt repayment — principal + interest split
   | "withdrawal"       // personal draw from corporation — not corporate expense
-  | "adjustment";      // reconciliation correction — no real money movement
+  | "adjustment";      // manual correction, write-off, or opening balance row
 
 export type TransactionSubType =
   // tax_payment sub-types
@@ -26,12 +26,12 @@ export type TransactionSubType =
   | "mortgage"
   | "shareholder_loan"
   // adjustment sub-types
-  | "reconciliation"
   | "correction"
   | "write_off"
   | "opening_balance"
   // transfer sub-types
   | "cc_payment"
+  | "loc_payment"
   | "loc_draw"
   | "tfsa_contribution"
   | "rrsp_contribution"
@@ -51,7 +51,7 @@ export type TransactionMode =
 export type TransactionStatus =
   | "pending"      // logged but not yet cleared at bank
   | "cleared"      // confirmed on bank statement
-  | "reconciled";  // matched against bank statement during reconciliation
+  | "reconciled";  // confirmed against statement history
 
 // ─── Balance Effect Reference ─────────────────────────────────────────────────
 //
@@ -178,6 +178,7 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
   ],
   transfer: [
     { value: "cc_payment",         label: "Credit Card Payment" },
+    { value: "loc_payment",        label: "Line of Credit Payment" },
     { value: "loc_draw",           label: "Line of Credit Draw" },
     { value: "tfsa_contribution",  label: "TFSA Contribution" },
     { value: "rrsp_contribution",  label: "RRSP Contribution" },
@@ -185,7 +186,6 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
     { value: "e_transfer",         label: "E-Transfer" },
   ],
   adjustment: [
-    { value: "reconciliation",  label: "Reconciliation" },
     { value: "correction",      label: "Correction" },
     { value: "write_off",       label: "Write Off" },
     { value: "opening_balance", label: "Opening Balance" },
