@@ -11,7 +11,7 @@ import { Transaction } from "@/types/transaction";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
-import { calculateBackfillDates } from "./useFixedPayments";
+import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useFixedPayments";
 import { theme } from "@/lib/theme";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -107,6 +107,15 @@ const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-mo
 function todayIsoLocal() {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function nextOccurrenceAfter(anchorDate: string | undefined, schedule: PaymentSchedule, afterDate = todayIsoLocal()) {
+  if (!anchorDate) return undefined;
+  let next = anchorDate;
+  while (next <= afterDate) {
+    next = advanceOneInterval(next, schedule);
+  }
+  return next;
 }
 
 // Mileage projection (mirrors prototype exactly)
@@ -228,13 +237,15 @@ export function VehiclesSection({
   }
 
   function openBackfill(vehicle: Vehicle) {
-    const anchorDate = vehicle.leaseStart || vehicle.nextPaymentDate;
+    const anchorDate = vehicle.nextPaymentDate || vehicle.leaseStart;
     if (!anchorDate) {
       alert("Please set a vehicle start date or next payment date first.");
       return;
     }
 
-    const dates = calculateBackfillDates(anchorDate, vehicle.schedule, vehicle.leaseEnd);
+    const dates = vehicle.nextPaymentDate
+      ? calculateBackfillDatesFromAnchor(anchorDate, vehicle.schedule, vehicle.leaseStart, vehicle.leaseEnd)
+      : calculateBackfillDates(anchorDate, vehicle.schedule, vehicle.leaseEnd);
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const cutoff = yesterday.toISOString().split("T")[0];
@@ -287,7 +298,7 @@ export function VehiclesSection({
 
     if (inserted > 0) {
       transactionRepository.saveAll(existing);
-      const advancedDate = getNextOccurrence(vehicle.nextPaymentDate || vehicle.leaseStart, vehicle.schedule)
+      const advancedDate = nextOccurrenceAfter(vehicle.nextPaymentDate || dates[dates.length - 1], vehicle.schedule)
         ?? advanceOneInterval(dates[dates.length - 1], vehicle.schedule);
       updateVehicle({
         ...vehicle,
@@ -707,13 +718,15 @@ export function HouseLoansSection({
   }
 
   function openBackfill(loan: HouseLoan) {
-    const anchorDate = loan.startDate || loan.nextPaymentDate;
+    const anchorDate = loan.nextPaymentDate || loan.startDate;
     if (!anchorDate) {
       alert("Please set a mortgage start date or next payment date first.");
       return;
     }
 
-    const dates = calculateBackfillDates(anchorDate, loan.schedule, loan.endDate);
+    const dates = loan.nextPaymentDate
+      ? calculateBackfillDatesFromAnchor(anchorDate, loan.schedule, loan.startDate, loan.endDate)
+      : calculateBackfillDates(anchorDate, loan.schedule, loan.endDate);
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const cutoff = yesterday.toISOString().split("T")[0];
@@ -767,6 +780,13 @@ export function HouseLoansSection({
     });
 
     if (count > 0) {
+      const advancedDate = nextOccurrenceAfter(loan.nextPaymentDate || dates[dates.length - 1], loan.schedule)
+        ?? advanceOneInterval(dates[dates.length - 1], loan.schedule);
+      updateHouseLoan({
+        ...loan,
+        source: accountId,
+        nextPaymentDate: advancedDate,
+      });
       syncBalances();
       notifyDataChanged("transactions");
     }

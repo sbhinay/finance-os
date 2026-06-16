@@ -151,6 +151,51 @@ export function calculateBackfillDates(
     return dates;
 }
 
+function shiftDateBySchedule(date: Date, schedule: PaymentSchedule, direction: 1 | -1): Date {
+    const next = new Date(date);
+    switch (schedule) {
+        case "Monthly":
+            next.setMonth(next.getMonth() + direction);
+            return next;
+        case "Annual":
+            next.setFullYear(next.getFullYear() + direction);
+            return next;
+        default: {
+            const interval = SCHED_DAYS[schedule];
+            return interval ? new Date(next.getTime() + direction * interval * 86400000) : next;
+        }
+    }
+}
+
+export function calculateBackfillDatesFromAnchor(
+    anchorDate: string,
+    schedule: PaymentSchedule,
+    startDate ? : string,
+    endDate ? : string
+): string[] {
+    if (!anchorDate || schedule === "One-time") return [];
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 0);
+    const start = startDate ? new Date(startDate + "T12:00:00") : null;
+    const end = endDate ? new Date(Math.min(new Date(endDate + "T12:00:00").getTime(), today.getTime())) : today;
+    const dates = new Set<string>();
+
+    let d = new Date(anchorDate + "T12:00:00");
+    while (d <= end) {
+        if (!start || d >= start) dates.add(d.toISOString().slice(0, 10));
+        d = shiftDateBySchedule(d, schedule, 1);
+    }
+
+    d = shiftDateBySchedule(new Date(anchorDate + "T12:00:00"), schedule, -1);
+    while ((!start || d >= start) && d <= end) {
+        dates.add(d.toISOString().slice(0, 10));
+        d = shiftDateBySchedule(d, schedule, -1);
+    }
+
+    return Array.from(dates).sort();
+}
+
 // ─── Pending generation ───────────────────────────────────────────────────────
 
 export function generatePendingTransactions(

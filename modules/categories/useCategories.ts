@@ -18,7 +18,6 @@ export function useCategories() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategories(seeded);
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategories(cats);
     }
   }, []);
@@ -40,8 +39,18 @@ export function useCategories() {
     return () => window.removeEventListener(DATA_CHANGED_EVENT, handler);
   }, [load]);
 
-  const addCategory = useCallback((name: string, type: CategoryType) => {
-    const cat: Category = { id: uid(), name: name.trim(), type };
+  const addCategory = useCallback((
+    name: string,
+    type: CategoryType,
+    options?: Pick<Category, "vehicleLinked" | "propertyLinked">
+  ) => {
+    const cat: Category = {
+      id: uid(),
+      name: name.trim(),
+      type,
+      vehicleLinked: options?.vehicleLinked || undefined,
+      propertyLinked: options?.propertyLinked || undefined,
+    };
     categoryRepository.add(cat);
     load();
   }, [load]);

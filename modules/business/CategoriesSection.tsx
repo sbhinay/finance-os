@@ -28,6 +28,14 @@ function Sel({ label, value, onChange, options }: { label?: string; value: strin
     </div>
   );
 }
+function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: "#374151", cursor: "pointer" }}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span>{label}</span>
+    </label>
+  );
+}
 function Btn({ children, onClick, variant = "primary", small, disabled }: {
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "amber"; small?: boolean; disabled?: boolean;
@@ -66,6 +74,8 @@ export function CategoriesSection() {
 
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<"income" | "expense" | "both">("expense");
+  const [newVehicleLinked, setNewVehicleLinked] = useState(false);
+  const [newPropertyLinked, setNewPropertyLinked] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
@@ -84,8 +94,13 @@ export function CategoriesSection() {
 
   function handleAdd() {
     if (!newName.trim()) return;
-    addCategory(newName.trim(), newType);
+    addCategory(newName.trim(), newType, {
+      vehicleLinked: newVehicleLinked,
+      propertyLinked: newPropertyLinked,
+    });
     setNewName("");
+    setNewVehicleLinked(false);
+    setNewPropertyLinked(false);
   }
 
   function handleSaveEdit() {
@@ -151,6 +166,10 @@ export function CategoriesSection() {
           </div>
           <Btn onClick={handleAdd}>Add</Btn>
         </div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
+          <Check label="Ask for vehicle details" checked={newVehicleLinked} onChange={setNewVehicleLinked} />
+          <Check label="Ask for property details" checked={newPropertyLinked} onChange={setNewPropertyLinked} />
+        </div>
       </div>
 
       {/* Filters */}
@@ -171,7 +190,7 @@ export function CategoriesSection() {
         }}>
           {showArchived ? "Hide Archived" : "Show Archived"}
         </button>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..."
           style={{ flex: 1, minWidth: 120, padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 12, background: "#fff" }} />
       </div>
 
@@ -197,7 +216,13 @@ export function CategoriesSection() {
                 {cat.archived && (
                   <span style={{ fontSize: 10, fontWeight: 700, background: "#f3f4f6", color: "#6b7280", padding: "1px 7px", borderRadius: 99 }}>ARCHIVED</span>
                 )}
-                {/* Transaction count — show on hover */}
+                {cat.vehicleLinked && (
+                  <span style={{ fontSize: 10, fontWeight: 700, background: "#e0f2fe", color: "#075985", padding: "1px 7px", borderRadius: 99 }}>VEHICLE</span>
+                )}
+                {cat.propertyLinked && (
+                  <span style={{ fontSize: 10, fontWeight: 700, background: "#dcfce7", color: "#166534", padding: "1px 7px", borderRadius: 99 }}>PROPERTY</span>
+                )}
+                {/* Transaction count - show on hover */}
                 {isHovered && txCount > 0 && (
                   <span style={{ fontSize: 11, color: "#6b7280", background: "#f0f9ff", padding: "2px 8px", borderRadius: 99, border: "1px solid #bae6fd" }}>
                     {txCount} transaction{txCount !== 1 ? "s" : ""}
@@ -241,6 +266,10 @@ export function CategoriesSection() {
           </div>
           <Inp label="Name" value={editCat.name} onChange={(e) => setEditCat((p) => p ? { ...p, name: e.target.value } : p)} />
           <Sel label="Type" value={editCat.type} onChange={(e) => setEditCat((p) => p ? { ...p, type: e.target.value as Category["type"] } : p)} options={TYPE_OPTS} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px" }}>
+            <Check label="Ask for vehicle details" checked={!!editCat.vehicleLinked} onChange={(checked) => setEditCat((p) => p ? { ...p, vehicleLinked: checked || undefined } : p)} />
+            <Check label="Ask for property details" checked={!!editCat.propertyLinked} onChange={(checked) => setEditCat((p) => p ? { ...p, propertyLinked: checked || undefined } : p)} />
+          </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setEditCat(null)}>Cancel</Btn>
             <Btn onClick={handleSaveEdit}>Save Changes</Btn>
