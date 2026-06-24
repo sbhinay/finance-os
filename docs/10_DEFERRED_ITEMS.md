@@ -31,6 +31,11 @@ The following items are no longer purely deferred because they are complete or m
   - property tax
 - `Subscriptions` and `Planned Payments` now exist as recurring-domain workflows.
 - The mobile shell and core finance views have had a major modernization pass.
+- Balance snapshots have replaced the old reconciliation-baseline workflow for account/card balance alignment.
+- Account/card snapshot and ledger explanation views are now available for balance diagnosis.
+- Credit cards now include `loc` as a supported card/liability type, and LOC draws use `transfer + loc_draw`.
+- Category add/edit UI can now mark categories as vehicle-linked or property-linked.
+- Vehicle and mortgage backfill now anchor cadence from `nextPaymentDate` when present, so historical generated dates follow the real payment weekday.
 
 The remaining sections below focus on what is still open.
 
@@ -77,9 +82,9 @@ The remaining sections below focus on what is still open.
 - Continue deepening the new `Assets & Liabilities` page so legacy workflows can move there safely.
 
 ### Liability model
-- Add stronger liability account support for loans and lines of credit.
-- Reduce ambiguity between liabilities that behave like cards, loans, LOCs, and financed assets.
-- Improve liability-originated payment and draw workflows without forcing them into misleading income/expense modeling.
+- Continue strengthening liability support for loans, LOCs, financed vehicles, and future HELOC-style accounts.
+- LOC is now represented as a credit-card-like liability type in the current model, but the long-term model still needs clearer liability/account-kind separation.
+- Improve liability-originated payment, interest, and draw workflows without forcing them into misleading income/expense modeling.
 
 ## 3. Debt Payment Modeling And Reporting
 
@@ -111,8 +116,39 @@ The remaining sections below focus on what is still open.
 - Auto-generate transaction descriptions by default instead of making users manually write most labels.
 - Demote `Notes` to optional secondary metadata instead of giving it equal weight with the main label.
 - Improve category presentation so history views show friendly category names, not raw IDs or weak fallback labels.
+- Continue extending vehicle/property/category linking so newly created categories can reveal the right linked fields without hardcoded category names.
 
-## 5. Safe Cloud-First Persistence
+## 5. AI Statement Scanner
+
+The AI Statement Scanner is planned, not implemented.
+
+### Goal
+- Allow the user to upload or photograph bank and credit-card statement screenshots.
+- Use an AI vision model to extract candidate transactions.
+- Show an editable confirmation table before anything is written.
+- Write confirmed rows through the canonical transaction save pipeline.
+
+### Required design constraints
+- Do not expose an AI provider API key in browser code.
+- Use a server-side API route, Supabase Edge Function, or other secure backend boundary for AI calls.
+- Treat scanner output as suggestions until the user confirms.
+- Do not create a second direct transaction repository write path.
+- Reuse or extract the existing transaction-save pipeline so imports behave like manual entries.
+- Show a user-facing privacy notice before sending images to an external AI provider.
+- Do not store statement images after processing unless the user explicitly asks for archival support.
+
+### Phase direction
+- Phase 1: one image, manual account selection, editable preview, import confirmed rows.
+- Phase 2: multi-image batch import, category suggestions from current category list, basic duplicate detection.
+- Phase 3: account auto-match from statement hints, fuzzy duplicate detection, confidence indicators.
+- Phase 4: correction learning for recurring merchants/categories.
+
+### Open decisions
+- Whether Phase 1 should use a purpose-built batch confirmation table or a step-through reuse of `TransactionForm`.
+- Where to mount the scanner in navigation: likely `Daily Log` for quick entry and/or `Transaction History` for backfill.
+- Which AI provider and model to use after confirming current pricing, privacy, retention, and API capabilities.
+
+## 6. Safe Cloud-First Persistence
 
 ### Immediate direction
 - Keep current safe manual cloud save + safe restore preview as the baseline.
@@ -127,7 +163,7 @@ The remaining sections below focus on what is still open.
 - Move toward cloud-first repositories only after those protections exist.
 - Make sure manual export/import remains available as a safety and portability tool.
 
-## 6. Reporting, Tax, And Exports
+## 7. Reporting, Tax, And Exports
 
 - Add richer import signature validation for current-app exports.
 - Add income sources module for expected revenue projections.
@@ -165,14 +201,14 @@ The remaining sections below focus on what is still open.
   - unresolved classification risks
   - exportable tax working papers
 
-## 7. Integrity, QA, And Tooling
+## 8. Integrity, QA, And Tooling
 
 - Continue expanding the data health / integrity page for orphaned references and cleanup review.
 - Add stronger import review UI for unresolved stale references.
 - Complete manual QA on the newer vehicle, property-tax, and asset-launched actions.
 - Add a small developer worklog / change-log file in repo for branch and bot traceability.
 
-## 8. UI And Product Modernization
+## 9. UI And Product Modernization
 
 - Continue the visual modernization pass across remaining older surfaces and interactions.
 - Keep improving typography, spacing, form density, card layout, and mobile responsiveness.

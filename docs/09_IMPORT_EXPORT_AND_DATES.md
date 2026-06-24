@@ -24,9 +24,10 @@ The import process supports:
 #### Current-app import path
 - Reads the same top-level keys the exporter writes.
 - Restores vehicles, house loans, property taxes, and fixed payments.
-- Preserves reconciliation metadata on accounts and cards.
+- Preserves balance snapshot metadata on accounts and cards.
 - Resolves asset source references by ID or name.
 - Normalizes legacy `credit_card_payment` rows into canonical `transfer + cc_payment`.
+- Legacy reconciliation metadata may be present in old files, but current-account/card balance alignment should use `balanceSnapshotAmount` and `balanceSnapshotDate`.
 
 #### Legacy import path
 - Uses `migrateFromPrototype()` to convert older prototype data shapes.
@@ -53,11 +54,11 @@ This resolution is applied to vehicles, house loans, and fixed payments.
 | `createdAt` | ISO UTC | system entry timestamp |
 | `date` | YYYY-MM-DD | accounting date |
 | `nextPaymentDate` | YYYY-MM-DD | scheduled next occurrence |
-| `reconciledDate` | YYYY-MM-DD | reconciliation baseline date |
+| `balanceSnapshotDate` | YYYY-MM-DD | known real-world balance anchor date |
 
 #### Rules
 - `date` drives filters, reports, and replay.
 - `createdAt` records actual row creation time.
 - UI normalizes dates by appending `T12:00:00` before parsing to avoid timezone shifts.
-- `reconciledDate` is used as a cutoff in replay logic.
+- `balanceSnapshotDate` is used as a cutoff in replay logic for the item carrying the snapshot.
 - Future cloud sync must preserve these meanings exactly; cloud persistence should not reinterpret accounting dates as live timestamps.

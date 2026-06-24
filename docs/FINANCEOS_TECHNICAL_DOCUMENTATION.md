@@ -1,6 +1,6 @@
 # FinanceOS - Technical Documentation
 **Version:** 3.0
-**Last Updated:** May 2026
+**Last Updated:** June 2026
 **Status:** Active Development
 
 ---
@@ -20,6 +20,7 @@
 12. [Cloud Migration](11_CLOUD_MIGRATION.md)
 13. [Commercial Vision](12_COMMERCIAL_VISION.md)
 14. [Appendices](13_APPENDICES.md)
+15. [Vision Plan v5](14_VISION_PLAN_V5.md)
 
 ---
 
@@ -30,7 +31,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Master transaction ledger with replay-based balance computation.
 - Full support for bank accounts, credit cards, assets, and recurring payments.
 - Current-app JSON export/import with asset restoration.
-- Reconciliation metadata on accounts and credit cards.
+- Balance snapshots on accounts and credit cards.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
 - New `CRA Review` business subview that combines current ledger and business data with saved tax questionnaire inputs to produce warning-first CRA working-paper guidance.
 - Initial unified `Assets & Liabilities` page with upcoming-obligation actions.
@@ -46,10 +47,9 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 ## 3. Current Implementation Notes
 - Internal money movement is standardized on `transfer`; credit card payoff is stored as `transfer` with `subType: "cc_payment"`.
 - LOC drawdowns are moving toward `transfer` with `subType: "loc_draw"` instead of being treated like income.
-- Accounts and credit cards support `balanceBase`, `reconciledBalance`, and `reconciledDate`.
-- `recalculateBalances.ts` bases replay on reconciliation metadata and avoids compound drift.
-- Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
-- Reconciliation adjustments are excluded from normal reporting.
+- Accounts and credit cards support `balanceSnapshotAmount` and `balanceSnapshotDate`.
+- `recalculateBalances.ts` bases replay on the latest balance snapshot when present and avoids compound drift.
+- Legacy reconciliation adjustment rows are ignored by balance replay and should be treated as old cleanup/audit data, not the current balance workflow.
 - The new `Assets & Liabilities` area is now in active transition, not just planned. It already surfaces upcoming obligations and launches selected actions through the canonical `TransactionForm`.
 - Legacy `House Loans / Mortgages` now supports direct mortgage logging and backfill for missed historical scheduled payments.
 - Recurring payments now use a shared engine underneath, but user-facing ownership is moving toward stronger parent records and focused recurring views instead of one generic catch-all list.
@@ -64,6 +64,9 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Transaction History is no longer category-only for findability; it now supports richer debt-oriented lookup and subtype-aware display.
 - Transaction History is now explicitly paginated with user-visible page controls instead of silently clipping to a hidden row limit.
 - Health Report is now live as a warning-first repair surface rather than a deferred concept.
+- Account and credit-card balance snapshots can be set directly from the account/card record and inspected through ledger views.
+- Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
+- Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:
   - `Daily Log`
   - `Dashboard`
@@ -98,11 +101,13 @@ The docs are organized into the following cross-linked files:
 - `11_CLOUD_MIGRATION.md`
 - `12_COMMERCIAL_VISION.md`
 - `13_APPENDICES.md`
+- `14_VISION_PLAN_V5.md`
 
 ## 5. Notes for Review
 - The documentation prefers current code behavior over legacy wording.
 - Where implementation is not fully complete, deferred items are explicitly listed.
 - This set is a v3 refresh of the repo docs.
+- Some documents have been refreshed after the June 2026 balance snapshot and category-linking work; older references to reconciliation baselines should be considered obsolete.
 - Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.
 - FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.
 - The current navigation now deliberately emphasizes a reduced hub set while still preserving older detail pages behind sub-navigation during transition.

@@ -30,8 +30,8 @@ export const [domain]Repository = {
 ### Module Map
 | Hook | File | Responsibility |
 |---|---|---|
-| `useAccounts` | `modules/accounts/useAccounts.ts` | Account CRUD and reconciliation metadata |
-| `useCreditCards` | `modules/creditCards/useCreditCards.ts` | Card CRUD and payment/reconcile workflows |
+| `useAccounts` | `modules/accounts/useAccounts.ts` | Account CRUD, primary status, fees, and balance snapshots |
+| `useCreditCards` | `modules/creditCards/useCreditCards.ts` | Card CRUD, LOC/card behavior, payments, fees, and balance snapshots |
 | `useTransactions` | `modules/transactions/useTransactions.ts` | Transaction CRUD and balance sync |
 | `useCategories` | `modules/categories/useCategories.ts` | Category CRUD and defaults |
 | `useFixedPayments` | `modules/business/useFixedPayments.ts` | Fixed payment definition and pending generation |
@@ -43,9 +43,9 @@ export const [domain]Repository = {
 ### UI Sections
 | Section | File | Notes |
 |---|---|---|
-| Daily Log | `modules/business/DailyLogSection.tsx` | Excludes reconciliation adjustments from normal view |
-| Bank Accounts | `modules/business/CoreSections.tsx` | Includes account reconcile flow |
-| Credit Cards | `modules/business/CoreSections.tsx` | Includes card payment and reconcile flows |
+| Daily Log | `modules/business/DailyLogSection.tsx` | Pending confirmations, quick entry, and recent transaction activity |
+| Bank Accounts | `modules/business/CoreSections.tsx` | Includes account snapshot and ledger explanation flows |
+| Credit Cards | `modules/business/CoreSections.tsx` | Includes card/LOC payment, snapshot, and ledger explanation flows |
 | Dashboard / Projection | `modules/business/DashboardProjectionSections.tsx` | Monthly actuals, projections, top categories |
 | Health Report | `modules/business/HealthReportSection.tsx` | Warning-first integrity scan with inline repair/open actions |
 | Recurring Payments | `modules/business/FixedPaymentsSection.tsx` | Shared recurring engine, filtered recurring views, pending alerts |
@@ -72,6 +72,8 @@ export const [domain]Repository = {
 - Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
 - New actions should prefer launching the canonical `TransactionForm` from the unified page rather than inventing separate transaction-entry behavior.
 - `FixedPaymentsSection.tsx` is now serving as the shared recurring engine and also exports focused recurring views rather than acting only as a generic fixed-payments page.
+- Vehicle and mortgage backfill now use `nextPaymentDate` as the preferred cadence anchor.
+- Category add/edit UI now exposes vehicle/property linking flags used by `TransactionForm`.
 - Parent records now own part of recurring setup directly:
   - accounts and cards own fee records
   - vehicles own insurance recurring items

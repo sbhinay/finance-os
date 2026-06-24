@@ -3,11 +3,13 @@
 ## 12. Cloud Migration Plan
 
 ### Current State
-- Browser localStorage only
+- Browser localStorage remains the primary working store
 - Single-user mode
 - No authentication
 - App state lives entirely client-side
-- Manual JSON export/import is the only backup path today, which means data loss is possible if the browser session is reset and the user has not exported recently.
+- Manual JSON export/import remains available as the safest portable backup path.
+- Manual Supabase cloud save and manual restore preview exist as guarded backup/restore groundwork.
+- Automatic cloud write-back is intentionally not active because overwrite guards, conflict detection, and sync-state visibility are not strong enough yet.
 
 ### Future Target
 - Supabase backend with PostgreSQL storage
@@ -21,15 +23,18 @@
 - Start with personal single-user cloud save before solving broader commercial multi-tenant concerns.
 - Keep JSON export/import as backup and portability tools, not as the primary persistence model.
 - App access on phone should come first through the deployed web app, not a native mobile rewrite.
+- Keep cloud behavior manual until snapshot history and overwrite protection are reliable enough for cloud-first use.
 
 ### Migration Roadmap
 1. Map localStorage keys to Supabase tables.
-2. Implement repository layer swap only.
-3. Add authentication and user-scoped repositories.
-4. Migrate local data to Supabase in a one-time import script.
-5. Remove localStorage fallback after validation.
-6. Add first-load logic that offers to upload existing local browser data into the cloud if cloud storage is empty.
-7. Add visible save/sync status in the UI once cloud persistence becomes primary.
+2. Keep manual cloud save/restore preview stable and guarded.
+3. Add snapshot history, overwrite guards, and conflict protection.
+4. Add authentication and user-scoped repositories.
+5. Implement repository layer swap only after guarded persistence is proven.
+6. Migrate local data to Supabase in a one-time import script.
+7. Add first-load logic that offers to upload existing local browser data into the cloud if cloud storage is empty.
+8. Add visible save/sync status in the UI once cloud persistence becomes primary.
+9. Remove localStorage fallback only after validation.
 
 ### Phase 1 Setup Artifacts
 - `.env.example` now documents the required public Supabase variables.

@@ -26,7 +26,7 @@ The transaction ledger is the canonical source for all financial movement.
 - `transfer + cc_payment` reduces bank source and reduces credit card debt without affecting spending or income reports.
 - `transfer + loc_draw` moves borrowed cash from a tracked line of credit into a receiving account without treating it as income.
 - `loan_payment` reduces the paying source by the full cash amount, even when only part of that amount is true expense.
-- `adjustment` can be used for reconcile audits and corrections.
+- `adjustment` can be used for corrections. Older imports may contain reconciliation adjustment rows, but the current balance workflow uses balance snapshots instead.
 
 #### Reporting Inclusion Rules
 - Expense reportable types: `expense`, `refund`
@@ -35,9 +35,10 @@ The transaction ledger is the canonical source for all financial movement.
 - `loan_payment` is a cash outflow for planning, but should not be treated as a normal generic expense by default.
 - For mortgages and financed loans, only the interest portion is expense-like; principal is liability reduction.
 
-#### Reconciliation Audit Rows
-- Stored as `type: "adjustment"` with `subType: "reconciliation"`.
-- Preserves auditability but should be excluded from normal expense/income summaries and most reporting views.
+#### Legacy Reconciliation Audit Rows
+- Older data may contain rows stored as `type: "adjustment"` with `subType: "reconciliation"`.
+- New balance alignment should be done with account/card balance snapshots, not by creating new reconciliation adjustment rows.
+- Legacy reconciliation rows are skipped by replay and should be excluded from normal expense/income summaries and most reporting views.
 
 #### Validation and Form Rules
 - `amount > 0`

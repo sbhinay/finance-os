@@ -17,6 +17,8 @@
 - Existing transactions remain linked to archived categories.
 - `vehicleLinked` enables vehicle/odometer fields in `TransactionForm`.
 - `propertyLinked` enables property selector fields.
+- The Categories UI can set `vehicleLinked` and `propertyLinked` for new or existing categories.
+- Category names alone do not trigger vehicle/property fields; the explicit flags do.
 
 ### Primary Item Rules
 - Accounts and cards can be marked primary.
@@ -51,6 +53,7 @@
 - New asset-originated actions should open the shared `TransactionForm` when they create real ledger rows.
 - Legacy mortgage editing must tolerate stale saved source IDs and allow users to re-select a current account.
 - Mortgage backfill should generate missing historical scheduled payments but skip dates that already have matching ledger rows.
+- Vehicle and mortgage backfill should use `nextPaymentDate` as the cadence anchor when present. Start dates act as historical lower bounds, not necessarily as the recurring weekday anchor.
 - Vehicle parent records may also own recurring insurance setup.
 - House-loan/property parent records may also own recurring property-tax setup during the transition away from a standalone property-tax-only model.
 
@@ -66,11 +69,12 @@
 - `loan_payment` rows should support optional `principalAmount` and `interestAmount`, but regular mode must still work if the split is unknown.
 - `transfer + loc_draw` is the canonical way to represent borrowed cash moving from a line of credit into a receiving account.
 
-### Reconciliation Rules
-- Reconcile metadata is stored on accounts/cards using `balanceBase`, `reconciledBalance`, and `reconciledDate`.
-- Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
-- Audit entries are excluded from normal reporting views.
-- Reconcile is a statement-alignment action, not a generic income/expense logging flow.
+### Balance Snapshot Rules
+- Known real-world balances are stored on accounts/cards using `balanceSnapshotAmount` and `balanceSnapshotDate`.
+- Snapshot entry is the current statement-alignment action.
+- Transactions on or before the snapshot date are treated as already included in the snapshot for that account/card.
+- Transactions after the snapshot date are replayed from the snapshot amount.
+- Legacy reconciliation adjustment rows should not be used for new balance alignment and are skipped by replay.
 
 ### Reporting Rules
 - Only `expense` and `refund` are included in expense reporting.

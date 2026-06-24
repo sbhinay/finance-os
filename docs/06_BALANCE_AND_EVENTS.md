@@ -7,10 +7,9 @@ Balances are recomputed through replay every time transactions change.
 
 #### Replay Base Rules
 For each account/card, the replay starting point is determined as:
-1. `reconciledBalance` if present
-2. otherwise `balanceBase` if present
-3. otherwise `0` if there are related transactions
-4. otherwise the current `openingBalance` for rows with no history
+1. `balanceSnapshotAmount` when both `balanceSnapshotAmount` and `balanceSnapshotDate` are present
+2. otherwise `0` if there are related transactions
+3. otherwise the current `openingBalance` for rows with no history
 
 This avoids compound replay drift from previously computed balances.
 
@@ -21,7 +20,8 @@ This avoids compound replay drift from previously computed balances.
 - sort transactions by `date`, then `createdAt`
 - skip `pending` status rows
 - skip future-dated rows
-- skip row application when `txDate <= reconciledDate`
+- skip legacy reconciliation adjustment rows
+- skip row application for an item when `txDate <= balanceSnapshotDate`
 - apply transaction effects per type
 - persist computed balances back to repositories
 
@@ -34,13 +34,14 @@ This avoids compound replay drift from previously computed balances.
 - `adjustment`: source increases, destination decreases
 - `loan_payment`: source cash decreases by the full payment amount
 
-### Reconcile Metadata
+### Balance Snapshot Metadata
 Accounts and cards now carry:
-- `balanceBase`
-- `reconciledBalance`
-- `reconciledDate`
+- `balanceSnapshotAmount`
+- `balanceSnapshotDate`
 
-These fields are the stable baseline for replay after reconciliation.
+These fields are the stable baseline for replay after the user enters a known real-world balance as of a specific statement/app date.
+
+The current UI exposes snapshot entry and ledger explanation views from account/card records. Historical transactions on or before the snapshot date are not replayed for that item; transactions after the snapshot date are replayed from the snapshot amount.
 
 ### Event System
 The app uses a custom event bus in `utils/events.ts`.

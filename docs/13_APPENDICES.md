@@ -5,6 +5,8 @@
 ### Expense (Personal)
 Gas, Groceries, Dining & Food, Shopping, Utilities, Insurance, Subscriptions, Entertainment, Transportation, Medical, Home Maintenance, Education, Clothing, Personal Care, Car Maintenance
 
+Vehicle-linked defaults include Gas and Car Maintenance. Additional categories such as Vehicle Lease, Parking, Tire Swap, or Tickets/Fines can be marked vehicle-linked from the Categories UI.
+
 ### Expense (Business)
 Business Expense, CRA Remittance, Professional Dev., Office Supplies, Software & Tools, Phone & Internet
 

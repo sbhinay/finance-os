@@ -24,6 +24,9 @@ UI reloads from hooks
 - Transactions are the master ledger.
 - Balances are recomputed from transactions after every write.
 - `openingBalance` is treated as the current computed balance and is not authoritative by itself.
+- `balanceSnapshotAmount` and `balanceSnapshotDate` are the user-entered real-world anchor when available.
+- Replay starts from the snapshot amount for that item and applies only transactions after the snapshot date.
+- Legacy reconciliation adjustment rows are skipped by replay and are not the current balance-alignment workflow.
 
 ### Repository Layer
 - All storage access is centralized in repository files.

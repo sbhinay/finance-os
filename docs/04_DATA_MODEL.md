@@ -61,9 +61,10 @@ Supported transaction types:
 - `tfsa_contribution`
 - `rrsp_contribution`
 
-#### Reconciliation and Audit
-- Reconciliation audit rows are stored as `type: "adjustment"` with `subType: "reconciliation"`.
-- These rows are kept for auditability but should be excluded from normal expense/income reporting.
+#### Legacy Reconciliation and Audit
+- Older data may still contain `type: "adjustment"` rows with `subType: "reconciliation"`.
+- The current balance workflow does not create new reconciliation adjustment rows.
+- Legacy reconciliation rows are skipped by balance replay and should be treated as cleanup/audit history only.
 
 ### Account
 ```typescript
@@ -71,11 +72,12 @@ interface Account {
   id: string;
   name: string;
   type: "bank" | "cash" | "business";
+  bank?: string;
+  accountNumber?: string;
   currency: string;
   openingBalance: number;
-  balanceBase?: number;
-  reconciledBalance?: number;
-  reconciledDate?: string;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   active: boolean;
   createdAt: string;
   primary?: boolean;
@@ -90,12 +92,11 @@ interface CreditCard {
   id: string;
   name: string;
   issuer: string;
-  type: "personal" | "business";
+  type: "personal" | "business" | "loc";
   limitAmount: number;
   openingBalance: number;
-  balanceBase?: number;
-  reconciledBalance?: number;
-  reconciledDate?: string;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   linkedAccountId?: string;
   active: boolean;
   createdAt: string;
@@ -174,6 +175,8 @@ interface Vehicle {
   mileageAllowance: number;
   excessRate: number;
   residual: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   endOfLeaseOption: "Return" | "Buy Out" | "Extend" | "Undecided";
   principal: number;
   remaining: number;
@@ -194,6 +197,8 @@ interface HouseLoan {
   address?: string;
   principal: number;
   remaining: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
   payment: number;
   schedule: PaymentSchedule;
   source: string;
@@ -214,6 +219,7 @@ interface HouseLoan {
 - Detailed mode can add balance-sheet and financing fields like original principal, remaining balance, interest rate, term dates, and principal/interest split support.
 - Missing detailed fields must not block normal cash projection or upcoming-obligation views.
 - Property tax can now either remain in the legacy standalone `PropertyTax` domain or be owned directly by the house-loan/property parent during migration.
+- Vehicle, account, card, and house-loan records can carry balance snapshot fields. These snapshots are the user-entered real-world anchor for replay and ledger explanation views.
 
 ### PropertyTax
 ```typescript

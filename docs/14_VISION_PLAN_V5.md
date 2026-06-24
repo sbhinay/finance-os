@@ -151,6 +151,27 @@ Users must still be able to find:
 
 The answer is better filtering and metadata, not fake categories.
 
+### Balance snapshots are the current alignment model
+The old reconciliation-baseline approach caused drift when backdated transactions and mass cleanup work changed history.
+
+The current model is:
+- store a known real-world balance directly on the account/card as `balanceSnapshotAmount`
+- store the statement/app date as `balanceSnapshotDate`
+- replay only later transactions from that anchor
+- inspect the ledger explanation when a balance does not match expectation
+
+This keeps balance correction on the account/card record itself instead of spreading it across separate reconciliation rows.
+
+### AI-assisted import is a future input path
+Statement scanning is strategically valuable, but it is not a current feature.
+
+The scanner should be treated as a new input path:
+- images become candidate rows
+- the user reviews and confirms
+- confirmed rows use the same transaction-save pipeline as manual entries
+
+It must not become a second ledger-writing system. It also needs a secure backend boundary so API keys and statement images are not handled unsafely in browser-only code.
+
 ## Delivery Discipline
 
 ### Phase guidance stays, but file rules become flexible
@@ -175,6 +196,7 @@ we follow:
 - recurring architecture cleanup
 - description/notes simplification
 - regular vs detailed pattern refinement
+- balance snapshot and ledger explanation clarity
 
 ### Phase 2: Stronger parents and derived schedules
 - real property parent model
@@ -187,6 +209,7 @@ we follow:
 - stronger reporting
 - mobile-first shell modernization
 - visual design refresh
+- AI scanner MVP after secure API and privacy flow are agreed
 
 ## Current Implementation Status Summary
 As of this version:
@@ -199,7 +222,10 @@ As of this version:
   - vehicle insurance
   - house-loan property tax
 - cloud backup is manual and safe
+- balance snapshots are the current account/card balance-alignment model
 - debt payments support regular-first UX
+- vehicle/property category linking can be configured from the Categories UI
+- vehicle and mortgage backfill use the real next-payment cadence anchor when available
 - transaction descriptions are system-first
 - transaction history is more subtype/findability aware
 - transaction history is now explicitly paginated instead of silently truncating to a hidden cap
