@@ -327,7 +327,7 @@ export function generatePendingTransactions(
             addIfNew(`pr_${r.id}`, {
                 sourceType: "cra_payroll",
                 sourceId: r.id,
-                name: `CRA Payroll Remittance — ${r.month}`,
+                name: `CRA Payroll Remittance - ${r.month}`,
                 amount: r.amount,
                 dueDate: alertDate,
                 account: "",
@@ -385,7 +385,7 @@ export function generatePendingTransactions(
                 addIfNew(`pt_${p.id}`, {
                     sourceType: "propertytax",
                     sourceId: p.id,
-                    name: `Property Tax — ${prop.name}`,
+                    name: `Property Tax - ${prop.name}`,
                     amount: p.amount,
                     dueDate: p.date,
                     account: "",

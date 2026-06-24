@@ -932,6 +932,7 @@ export function TransactionHistorySection() {
   const [dateTo, setDateTo] = useState(now.toISOString().split("T")[0]);
   const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer" | "loan_payment">("all");
   const [search, setSearch] = useState("");
+  const [accountFilter, setAccountFilter] = useState("");
   const [catFilter, setCatFilter] = useState("");
   const [subTypeFilter, setSubTypeFilter] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
@@ -962,11 +963,17 @@ export function TransactionHistorySection() {
     return [...vehicleItems, ...propertyItems];
   }, [vehicles, houseLoans]);
 
+  const accountOptions = useMemo(() => [
+    ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
+    ...cards.map((c) => ({ value: c.id, label: `${c.name} (${c.type === "loc" ? "LOC" : "Credit"})` })),
+  ].sort((a, b) => a.label.localeCompare(b.label)), [accounts, cards]);
+
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
       const d = (t.date ?? t.createdAt ?? "").slice(0, 10);
       if (d < dateFrom || d > dateTo) return false;
       if (filter !== "all" && t.type !== filter) return false;
+      if (accountFilter && t.sourceId !== accountFilter && t.destinationId !== accountFilter) return false;
       if (catFilter && t.categoryId !== catFilter) return false;
       if (subTypeFilter && t.subType !== subTypeFilter) return false;
       if (linkedFilter) {
@@ -994,7 +1001,7 @@ export function TransactionHistorySection() {
       const db = (b.date ?? b.createdAt ?? "");
       return db > da ? 1 : -1;
     });
-  }, [transactions, dateFrom, dateTo, filter, catFilter, subTypeFilter, linkedFilter, search, acctName, catName, linkedLabel]);
+  }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, search, acctName, catName, linkedLabel]);
 
   const totalIn = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalOut = filtered.filter((t) => ["expense", "loan_payment", "tax_payment", "withdrawal"].includes(t.type)).reduce((s, t) => s + t.amount, 0);
@@ -1021,6 +1028,7 @@ export function TransactionHistorySection() {
 
   function clearFilters() {
     setFilter("all");
+    setAccountFilter("");
     setCatFilter("");
     setSubTypeFilter("");
     setLinkedFilter("");
@@ -1061,6 +1069,11 @@ export function TransactionHistorySection() {
               {v === "all" ? "All" : v === "loan_payment" ? "Debt" : v.charAt(0).toUpperCase() + v.slice(1)}
             </Btn>
           ))}
+          <select value={accountFilter} onChange={(e) => { setAccountFilter(e.target.value); setPage(1); }}
+            style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
+            <option value="">All Accounts / Cards</option>
+            {accountOptions.map((account) => <option key={account.value} value={account.value}>{account.label}</option>)}
+          </select>
           <select value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setPage(1); }}
             style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
             <option value="">All Categories</option>
@@ -1079,7 +1092,7 @@ export function TransactionHistorySection() {
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search..."
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
           <Btn variant="secondary" small onClick={exportCSV}>Export CSV</Btn>
-          {(filter !== "all" || !!catFilter || !!subTypeFilter || !!linkedFilter || !!search) && (
+          {(filter !== "all" || !!accountFilter || !!catFilter || !!subTypeFilter || !!linkedFilter || !!search) && (
             <Btn variant="secondary" small onClick={clearFilters}>Clear Filters</Btn>
           )}
         </div>

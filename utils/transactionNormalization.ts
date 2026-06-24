@@ -10,6 +10,21 @@ function asTransactionSubType(value: string | undefined): TransactionSubType | u
   return value as TransactionSubType;
 }
 
+function normalizeText(value: string | undefined): string | undefined {
+  if (!value) return value;
+
+  return value
+    .replace(/Ã¢â‚¬â€|Ã¢â‚¬â€�|Ã¢â‚¬â€œ|â€”|â€“|—|–/g, " - ")
+    .replace(/Ã¢â‚¬Ëœ|Ã¢â‚¬â„¢|â€˜|â€™|‘|’/g, "'")
+    .replace(/Ã¢â‚¬Å“|Ã¢â‚¬Â|â€œ|â€|“|”/g, '"')
+    .replace(/Ã¢â‚¬Â¦|â€¦|…/g, "...")
+    .replace(/Ã‚Â /g, " ")
+    .replace(/Â /g, " ")
+    .replace(/\s+-\s+/g, " - ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function normalizeTransactionShape<T extends RawTransaction>(tx: T): Transaction {
   const normalizedType = tx.type === "credit_card_payment" ? "transfer" : (tx.type as TransactionType);
   const normalizedSubType =
@@ -24,6 +39,8 @@ export function normalizeTransactionShape<T extends RawTransaction>(tx: T): Tran
     ...tx,
     type: normalizedType,
     subType: normalizedSubType,
+    description: normalizeText(tx.description) ?? "",
+    notes: normalizeText(tx.notes),
     categoryId: isTransferLike ? undefined : tx.categoryId,
     linkedVehicleId: isLegacyCardPayment ? undefined : tx.linkedVehicleId,
     linkedPropertyId: isLegacyCardPayment ? undefined : tx.linkedPropertyId,

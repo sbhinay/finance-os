@@ -686,7 +686,7 @@ export function useBusiness() {
           amount,
           paidDate,
           accountId,
-          `CRA Payment — ${label}`
+          `CRA Payment - ${label}`
         );
         addTransactionAndDebit(txn, accountId);
       }
@@ -916,7 +916,7 @@ export function useBusiness() {
           payment.amount,
           payment.date,
           accountId,
-          `CRA Arrears Payment — ${payment.type}${payment.note ? ` (${payment.note})` : ""}`
+          `CRA Arrears Payment - ${payment.type}${payment.note ? ` (${payment.note})` : ""}`
         );
         addTransactionAndDebit(txn, accountId);
       }
@@ -968,7 +968,7 @@ export function useBusiness() {
           updated.amount,
           updated.date,
           accountId,
-          `CRA Arrears Payment — ${updated.type}${updated.note ? ` (${updated.note})` : ""}`
+          `CRA Arrears Payment - ${updated.type}${updated.note ? ` (${updated.note})` : ""}`
         );
         addTransactionAndDebit(txn, accountId);
       }
