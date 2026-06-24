@@ -157,6 +157,12 @@ function ledgerEffect(t: Transaction, entityId: string, kind: LedgerKind) {
   }
 }
 
+function ledgerEffectColor(effect: number, kind: LedgerKind) {
+  if (effect === 0) return "#6b7280";
+  if (kind === "card") return effect > 0 ? "#a31515" : "#1a7f3c";
+  return effect > 0 ? "#1a7f3c" : "#a31515";
+}
+
 function LedgerModal({
   entity,
   kind,
@@ -238,7 +244,7 @@ function LedgerModal({
                 <span style={{ color: "#6b7280" }}> - {TYPE_LABELS[t.type]}{t.subType ? ` / ${SUB_TYPE_LABELS[t.subType] ?? t.subType}` : ""}</span>
                 {counterparty(t) && <span style={{ color: "#6b7280" }}> - {counterparty(t)}</span>}
               </span>
-              <span style={{ textAlign: "right", fontWeight: 700, color: effect >= 0 ? "#1a7f3c" : "#a31515" }}>{effect >= 0 ? "+" : ""}{fmtCAD(effect)}</span>
+              <span style={{ textAlign: "right", fontWeight: 700, color: ledgerEffectColor(effect, kind) }}>{effect >= 0 ? "+" : ""}{fmtCAD(effect)}</span>
               {view === "afterSnapshot" && <span style={{ textAlign: "right", fontWeight: 700 }}>{fmtCAD(running)}</span>}
             </div>
           );
