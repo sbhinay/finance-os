@@ -190,26 +190,20 @@ we follow:
 
 ## Recommended Phase Direction
 
-### Phase 1: Stabilize and clarify
-- Health Report
-- category/findability improvements
-- recurring architecture cleanup
-- description/notes simplification
-- regular vs detailed pattern refinement
-- balance snapshot and ledger explanation clarity
+The stabilization phase has materially landed: balance snapshots, ledger explanations, Health Report, canonical transaction purposes/effects, semantic duplicates, linked lender liabilities, refund treatment, and stronger Transaction History filters are operational.
 
-### Phase 2: Stronger parents and derived schedules
-- real property parent model
-- liability/loan model upgrades
-- better schedule derivation
-- broader parent-owned recurring coverage
+The ordered path to production completion is now:
 
-### Phase 3: Safer cloud-first and product polish
-- guarded cloud-first persistence
-- stronger reporting
-- mobile-first shell modernization
-- visual design refresh
-- AI scanner MVP after secure API and privacy flow are agreed
+1. Complete lender and debt-detail UX.
+2. Consolidate recurring architecture.
+3. Build the first-class Property parent model.
+4. Improve optional detailed mortgage/vehicle debt reporting.
+5. Expand findability, Data Health, and import review.
+6. Build the secure AI Statement Scanner MVP.
+7. Add guarded cloud history and conflict protection.
+8. Add tax working papers and Excel/PDF reporting exports.
+
+Every phase must preserve ledger-first behavior, remain backward-compatible with current JSON exports, use accounting `date` rather than `createdAt`, and finish with automated plus browser-level verification.
 
 ## Current Implementation Status Summary
 As of this version:
@@ -230,5 +224,11 @@ As of this version:
 - transaction history is more subtype/findability aware
 - transaction history is now explicitly paginated instead of silently truncating to a hidden cap
 - health reporting is live and actionable, not just planned
+- canonical transaction persistence and shared financial effects are live
+- refunds reverse expense reporting and reduce card owing correctly
+- semantic duplicate detection is shared by backfills and Data Health
+- linked lender liabilities support borrowing, repayment, and principal-based balances
+- lender, account/card, subtype, vehicle, and property history filtering is live
+- the June 29 fixture replays all stored account/card balances without drift
 
-The next major challenge is not adding raw capability. It is consolidating capability into fewer, clearer destinations while maintaining the integrity of the ledger.
+The next major challenge is completing lender/debt UX and then consolidating recurring behavior before introducing the Property parent model.

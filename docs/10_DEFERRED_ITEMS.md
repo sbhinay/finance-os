@@ -36,8 +36,57 @@ The following items are no longer purely deferred because they are complete or m
 - Credit cards now include `loc` as a supported card/liability type, and LOC draws use `transfer + loc_draw`.
 - Category add/edit UI can now mark categories as vehicle-linked or property-linked.
 - Vehicle and mortgage backfill now anchor cadence from `nextPaymentDate` when present, so historical generated dates follow the real payment weekday.
+- A canonical transaction pipeline now owns normalized persistence, balance sync, and data-change notification.
+- Stable transaction purposes now separate financial meaning from editable descriptions and categories.
+- Balance replay, ledgers, list signs, refund handling, and report effects now share transaction semantics.
+- Backfills and Data Health now use semantic duplicate identity instead of description-only matching.
+- Refunds reduce expense reporting and credit-card owing without being misclassified as income.
+- Transaction History now supports account/card, subtype, vehicle, property, and lender filters.
+- Lender liabilities now support linked borrowing and repayment transactions with principal-based balances.
+- Numbered legacy personal-loan receipt series can migrate into one lender liability when the lender identity is unambiguous.
+- Vehicle Lease is now a required vehicle-linked category, with consistent manual and backfill naming.
 
 The remaining sections below focus on what is still open.
+
+## Ordered Production Completion Plan
+
+The following order is authoritative for the next implementation cycle. Each phase must remain usable, preserve ledger balances, update import/export and cloud payloads when needed, pass automated and browser checks, and end with synchronized `main` and `codex/phase-next` branches.
+
+### Phase 1: Lender and debt UX
+- Add lender edit, notes, archive, safe deletion, snapshot balance/date, and transaction relinking.
+- Add a lender detail ledger with borrowed, principal repaid, interest paid, running balance, and current owing.
+- Complete guided Borrow and Repay actions.
+
+### Phase 2: Recurring architecture
+- Consolidate schedule generation, confirmation, Log Payment, backfill, ownership, origin links, and semantic duplicate handling.
+- Cover subscriptions, planned transfers, fees, insurance, and property tax without introducing another ledger writer.
+
+### Phase 3: Property parent model
+- Add first-class primary, rental, and commercial Property records.
+- Let properties own mortgages, property tax, insurance, expenses, carrying-cost views, and transaction history.
+- Migrate only unambiguous house-loan/property relationships.
+
+### Phase 4: Detailed debt reporting
+- Improve optional principal/interest workflows for mortgages and financed vehicles.
+- Keep full payments in cash planning while reducing liabilities only by principal.
+- Report interest and carrying costs separately without blocking regular mode.
+
+### Phase 5: Findability, Data Health, and import review
+- Add tag and recurring-origin filters.
+- Expand orphan, stale-reference, duplicate, classification, relinking, correction, and dismissal workflows.
+- Improve import review before replacement is confirmed.
+
+### Phase 6: AI Statement Scanner MVP
+- Add a secure provider boundary, image input, editable candidate preview, confirmation, privacy messaging, canonical writes, and semantic duplicate detection.
+- Keep provider/model configuration replaceable and never expose provider credentials in browser code.
+
+### Phase 7: Guarded cloud persistence
+- Add snapshot history, restore points, overwrite guards, version/conflict checks, and explicit local-vs-cloud state.
+- Preserve manual JSON export/import and prohibit silent replacement of newer data.
+
+### Phase 8: Tax working papers and report exports
+- Add cautious CRA mapping, confidence and missing-input states, and separation between bookkeeping totals and confirmed tax treatment.
+- Add Excel/PDF exports for business, lender, debt, property, and vehicle reporting.
 
 ## 1. Recurring Architecture
 
@@ -82,7 +131,9 @@ The remaining sections below focus on what is still open.
 - Continue deepening the new `Assets & Liabilities` page so legacy workflows can move there safely.
 
 ### Liability model
-- Continue strengthening liability support for loans, LOCs, financed vehicles, and future HELOC-style accounts.
+- Lender liabilities and linked personal/bank/shareholder loan transactions are now materially implemented.
+- Complete lender management, snapshots, relinking, history, and debt-detail UX in Phase 1.
+- Continue strengthening liability support for LOCs, financed vehicles, and future HELOC-style accounts.
 - LOC is now represented as a credit-card-like liability type in the current model, but the long-term model still needs clearer liability/account-kind separation.
 - Improve liability-originated payment, interest, and draw workflows without forcing them into misleading income/expense modeling.
 
@@ -112,15 +163,27 @@ The remaining sections below focus on what is still open.
   - tag
   - recurring parent or origin
 
+Already landed:
+- source account/card
+- subtype
+- linked vehicle
+- linked property
+- linked lender liability
+- text search
+
+Still open for Phase 5:
+- tag
+- recurring parent/origin
+
 ### Labels and notes
-- Auto-generate transaction descriptions by default instead of making users manually write most labels.
+- Canonical descriptions are now auto-generated by default while custom descriptions remain supported.
 - Demote `Notes` to optional secondary metadata instead of giving it equal weight with the main label.
 - Improve category presentation so history views show friendly category names, not raw IDs or weak fallback labels.
 - Continue extending vehicle/property/category linking so newly created categories can reveal the right linked fields without hardcoded category names.
 
 ## 5. AI Statement Scanner
 
-The AI Statement Scanner is planned, not implemented.
+The AI Statement Scanner remains planned and is assigned to Phase 6, after transaction, recurring, property, debt, and integrity workflows are stable.
 
 ### Goal
 - Allow the user to upload or photograph bank and credit-card statement screenshots.

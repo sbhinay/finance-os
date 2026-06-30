@@ -69,6 +69,8 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Assets & Liabilities now supports lender-level personal/bank/shareholder liabilities, linked borrowing, linked repayments, and principal-based balances.
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
+- Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
+- The production-completion roadmap is now ordered across lender UX, recurring consolidation, Property, debt reporting, Data Health/import review, AI scanning, guarded cloud persistence, and tax/report exports.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:
