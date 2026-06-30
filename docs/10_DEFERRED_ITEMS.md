@@ -52,12 +52,13 @@ The remaining sections below focus on what is still open.
 
 The following order is authoritative for the next implementation cycle. Each phase must remain usable, preserve ledger balances, update import/export and cloud payloads when needed, pass automated and browser checks, and end with synchronized `main` and `codex/phase-next` branches.
 
-### Phase 1: Lender and debt UX
-- Add lender edit, notes, archive, safe deletion, snapshot balance/date, and transaction relinking.
-- Add a lender detail ledger with borrowed, principal repaid, interest paid, running balance, and current owing.
-- Complete guided Borrow and Repay actions.
+### Phase 1: Lender and debt UX - landed
+- Lender edit, notes, archive/restore, safe deletion, snapshot balance/date, and canonical transaction relinking are implemented.
+- The lender detail view reports borrowed, principal repaid, interest paid, current owing, and a running principal ledger.
+- Guided Borrow and Repay actions remain available from both lender rows and lender details.
+- Existing unlinked loan transactions can be attached safely; linked lenders are archived instead of hard-deleted.
 
-### Phase 2: Recurring architecture
+### Phase 2: Recurring architecture - next
 - Consolidate schedule generation, confirmation, Log Payment, backfill, ownership, origin links, and semantic duplicate handling.
 - Cover subscriptions, planned transfers, fees, insurance, and property tax without introducing another ledger writer.
 

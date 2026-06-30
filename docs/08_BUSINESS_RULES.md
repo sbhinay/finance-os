@@ -77,9 +77,13 @@
 - Repayments decrease liability by `principalAmount`, or by the full amount when no split is supplied.
 - Interest reduces the paying account but does not reduce liability principal.
 - Loan receipt `sourceId` identifies the receiving cash account; loan payment `sourceId` identifies the paying cash account. `linkedLiabilityId` identifies the lender.
+- A lender snapshot is valid only when both `balanceSnapshotAmount` and `balanceSnapshotDate` exist.
+- Lender activity on or before the snapshot date is already represented by the snapshot; only later principal activity is replayed.
+- Lenders with linked transactions are archived instead of deleted. Lenders without linked transactions may be deleted.
+- Relinking a loan row must pass through the canonical transaction pipeline so validation, persistence, balances, and events remain synchronized.
 
 ### Balance Snapshot Rules
-- Known real-world balances are stored on accounts/cards using `balanceSnapshotAmount` and `balanceSnapshotDate`.
+- Known real-world balances are stored on accounts, cards, and lender liabilities using `balanceSnapshotAmount` and `balanceSnapshotDate`.
 - Snapshot entry is the current statement-alignment action.
 - Transactions on or before the snapshot date are treated as already included in the snapshot for that account/card.
 - Transactions after the snapshot date are replayed from the snapshot amount.

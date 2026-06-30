@@ -39,7 +39,7 @@ export const [domain]Repository = {
 | `useBusiness` | `modules/business/useBusiness.ts` | Business domain normalization and CRA data |
 | `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD, history, and owned insurance recurring sync |
 | `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD and owned property-tax recurring sync |
-| `useLiabilities` | `modules/business/useLiabilities.ts` | Lender records and principal-based liability balances |
+| `useLiabilities` | `modules/business/useLiabilities.ts` | Lender CRUD/archive, snapshots, canonical relinking, summaries, running ledger, and principal-based balances |
 | `usePropertyTax` | `modules/business/useAssets.ts` | Property tax CRUD |
 
 ### UI Sections
@@ -48,6 +48,7 @@ export const [domain]Repository = {
 | Daily Log | `modules/business/DailyLogSection.tsx` | Pending confirmations, quick entry, and recent transaction activity |
 | Bank Accounts | `modules/business/CoreSections.tsx` | Includes account snapshot and ledger explanation flows |
 | Credit Cards | `modules/business/CoreSections.tsx` | Includes card/LOC payment, snapshot, and ledger explanation flows |
+| Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Lender detail/edit, Borrow/Repay, snapshots, archive/restore, safe deletion, transaction attachment/relinking, and running debt ledger |
 | Dashboard / Projection | `modules/business/DashboardProjectionSections.tsx` | Monthly actuals, projections, top categories |
 | Health Report | `modules/business/HealthReportSection.tsx` | Warning-first integrity scan with inline repair/open actions |
 | Recurring Payments | `modules/business/FixedPaymentsSection.tsx` | Shared recurring engine, filtered recurring views, pending alerts |

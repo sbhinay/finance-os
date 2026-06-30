@@ -94,6 +94,31 @@ function replay(item, kind) {
   return money(balance);
 }
 
+function replayLiability(liability, activity) {
+  const hasSnapshot = liability.balanceSnapshotAmount != null && liability.balanceSnapshotDate;
+  let balance = hasSnapshot ? liability.balanceSnapshotAmount : liability.openingBalance;
+
+  activity
+    .filter((transaction) =>
+      transaction.status !== "pending"
+      && transaction.linkedLiabilityId === liability.id
+      && (!hasSnapshot || transaction.date > liability.balanceSnapshotDate)
+    )
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
+    .forEach((transaction) => {
+      if (transaction.type === "loan_receipt") {
+        balance += transaction.amount;
+      } else if (transaction.type === "loan_payment") {
+        const principal = transaction.principalAmount
+          ?? transaction.amount - (transaction.interestAmount ?? 0);
+        balance -= principal;
+      }
+      balance = money(balance);
+    });
+
+  return balance;
+}
+
 const balanceRows = [
   ...accounts.map((item) => ({ kind: "account", item })),
   ...cards.map((item) => ({ kind: "card", item })),
@@ -116,12 +141,53 @@ const dpReceipts = transactions.filter(
     && /^Loan DP \d+$/i.test(transaction.description)
 );
 const dpTotal = money(dpReceipts.reduce((sum, transaction) => sum + transaction.amount, 0));
+const syntheticLiability = {
+  id: "fixture-lender",
+  openingBalance: 999,
+  balanceSnapshotAmount: 5000,
+  balanceSnapshotDate: "2026-05-31",
+};
+const syntheticLiabilityBalance = replayLiability(syntheticLiability, [
+  {
+    id: "before-snapshot",
+    linkedLiabilityId: syntheticLiability.id,
+    type: "loan_receipt",
+    status: "cleared",
+    date: "2026-05-01",
+    createdAt: "2026-05-01T12:00:00.000Z",
+    amount: 700,
+  },
+  {
+    id: "after-snapshot-borrow",
+    linkedLiabilityId: syntheticLiability.id,
+    type: "loan_receipt",
+    status: "cleared",
+    date: "2026-06-01",
+    createdAt: "2026-06-01T12:00:00.000Z",
+    amount: 1000,
+  },
+  {
+    id: "after-snapshot-repay",
+    linkedLiabilityId: syntheticLiability.id,
+    type: "loan_payment",
+    status: "cleared",
+    date: "2026-06-15",
+    createdAt: "2026-06-15T12:00:00.000Z",
+    amount: 450,
+    principalAmount: 400,
+    interestAmount: 50,
+  },
+]);
 
 console.table(balanceRows);
 console.log(`DP receipts: ${dpReceipts.length}; liability principal received: $${dpTotal.toFixed(2)}`);
+console.log(`Synthetic lender balance: $${syntheticLiabilityBalance.toFixed(2)}`);
 
 if (dpReceipts.length !== 7 || dpTotal !== 21000) {
   throw new Error("DP personal-loan fixture invariant failed.");
+}
+if (syntheticLiabilityBalance !== 5600) {
+  throw new Error("Lender snapshot/principal replay invariant failed.");
 }
 if (mismatches.length) {
   console.error("Balance mismatches detected:", mismatches);

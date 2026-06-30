@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
@@ -10,6 +10,8 @@ import { PaymentSchedule, type PropertyTaxPayment, type Vehicle, type HouseLoan,
 import { theme } from "@/lib/theme";
 import { useLiabilities } from "./useLiabilities";
 import type { Liability } from "@/types/domain";
+import { getLiabilityLedger, getLiabilitySummary } from "./useLiabilities";
+import { useTransactions } from "@/modules/transactions/useTransactions";
 
 type NavTarget = "accounts" | "cards" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
@@ -61,12 +63,13 @@ function ActionBtn({
 }: {
   children: ReactNode;
   onClick?: () => void;
-  variant?: "primary" | "secondary" | "green";
+  variant?: "primary" | "secondary" | "green" | "danger";
 }) {
   const styles = {
     primary: { background: "#1a5fa8", color: "#fff", border: "1px solid #1a5fa8" },
     secondary: { background: "#fff", color: "#1f2937", border: "1px solid #d1d5db" },
     green: { background: "#1a7f3c", color: "#fff", border: "1px solid #1a7f3c" },
+    danger: { background: "#fff", color: "#a31515", border: "1px solid #fecaca" },
   }[variant];
 
   return (
@@ -83,6 +86,20 @@ function ActionBtn({
     >
       {children}
     </button>
+  );
+}
+
+function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.38)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "4vh 16px", overflowY: "auto" }}>
+      <div style={{ width: "min(920px, 100%)", background: "#fff", borderRadius: 8, border: "1px solid #d1d5db", boxShadow: "0 20px 50px rgba(15,23,42,.24)", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 18px", borderBottom: "1px solid #e5e7eb" }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{title}</div>
+          <button onClick={onClose} aria-label="Close lender details" style={{ border: "none", background: "transparent", color: "#475569", fontSize: 18, cursor: "pointer" }}>x</button>
+        </div>
+        <div style={{ padding: 18 }}>{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -112,7 +129,14 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
   const { propertyTaxes, markPaid } = usePropertyTax();
-  const { liabilities, balances: liabilityBalances, saveLiability } = useLiabilities();
+  const { transactions } = useTransactions();
+  const {
+    liabilities,
+    balances: liabilityBalances,
+    saveLiability,
+    deleteLiability,
+    relinkTransaction,
+  } = useLiabilities();
 
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial | undefined>(undefined);
@@ -123,6 +147,12 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   const [lenderName, setLenderName] = useState("");
   const [lenderType, setLenderType] = useState<Liability["type"]>("Personal Loan");
   const [lenderTag, setLenderTag] = useState<Liability["tag"]>("Personal");
+  const [selectedLiabilityId, setSelectedLiabilityId] = useState<string | null>(null);
+  const [liabilityDraft, setLiabilityDraft] = useState<Liability | null>(null);
+  const [showArchivedLiabilities, setShowArchivedLiabilities] = useState(false);
+  const [attachTransactionId, setAttachTransactionId] = useState("");
+  const snapshotAmountRef = useRef<HTMLInputElement>(null);
+  const snapshotDateRef = useRef<HTMLInputElement>(null);
 
   const activeAccounts = accounts.filter((a) => a.active !== false);
   const activeCards = cards.filter((c) => c.active !== false);
@@ -148,6 +178,77 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
     const name = a.name.toLowerCase();
     return name.includes("tfsa") || name.includes("rrsp") || name.includes("investment") || name.includes("savings");
   });
+  const selectedLiability = selectedLiabilityId
+    ? liabilities.find((liability) => liability.id === selectedLiabilityId) ?? null
+    : null;
+  const selectedLiabilitySummary = useMemo(
+    () => selectedLiability ? getLiabilitySummary(selectedLiability, transactions) : null,
+    [selectedLiability, transactions]
+  );
+  const selectedLiabilityLedger = useMemo(
+    () => selectedLiability ? getLiabilityLedger(selectedLiability, transactions) : [],
+    [selectedLiability, transactions]
+  );
+  const unlinkedLoanTransactions = useMemo(
+    () => transactions
+      .filter((transaction) =>
+        !transaction.linkedLiabilityId
+        && (transaction.type === "loan_receipt" || transaction.type === "loan_payment")
+      )
+      .sort((a, b) => b.date.localeCompare(a.date)),
+    [transactions]
+  );
+  const visibleLiabilities = liabilities.filter(
+    (liability) => showArchivedLiabilities || !liability.archived
+  );
+
+  function openLiabilityDetails(liability: Liability) {
+    setSelectedLiabilityId(liability.id);
+    setLiabilityDraft({ ...liability });
+    setAttachTransactionId("");
+  }
+
+  function closeLiabilityDetails() {
+    setSelectedLiabilityId(null);
+    setLiabilityDraft(null);
+    setAttachTransactionId("");
+  }
+
+  function saveLiabilityDraft() {
+    if (!liabilityDraft?.name.trim()) return;
+    const snapshotAmountText = snapshotAmountRef.current?.value ?? "";
+    const snapshotDate = snapshotDateRef.current?.value || undefined;
+    const snapshotAmount = snapshotAmountText === "" ? undefined : Number(snapshotAmountText);
+    const hasSnapshot = Number.isFinite(snapshotAmount) && !!snapshotDate;
+    const saved = saveLiability({
+      ...liabilityDraft,
+      name: liabilityDraft.name.trim(),
+      notes: liabilityDraft.notes?.trim() || undefined,
+      balanceSnapshotAmount: hasSnapshot ? snapshotAmount : undefined,
+      balanceSnapshotDate: hasSnapshot ? snapshotDate : undefined,
+    });
+    setLiabilityDraft(saved);
+  }
+
+  function archiveOrDeleteLiability(liability: Liability) {
+    const linkedCount = transactions.filter(
+      (transaction) => transaction.linkedLiabilityId === liability.id
+    ).length;
+    const prompt = linkedCount > 0
+      ? `Archive ${liability.name}? Its ${linkedCount} linked transaction(s) will remain intact.`
+      : `Delete ${liability.name}? This lender has no linked transactions.`;
+    if (!confirm(prompt)) return;
+    deleteLiability(liability.id);
+    closeLiabilityDetails();
+  }
+
+  function attachSelectedTransaction() {
+    if (!selectedLiability || !attachTransactionId) return;
+    const transaction = transactions.find((item) => item.id === attachTransactionId);
+    if (!transaction) return;
+    relinkTransaction(transaction, selectedLiability.id);
+    setAttachTransactionId("");
+  }
 
   function loanPurpose(liability: Liability, direction: "receipt" | "payment") {
     if (liability.type === "Bank Loan") {
@@ -160,6 +261,8 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   }
 
   function openLiabilityTransaction(liability: Liability, direction: "receipt" | "payment") {
+    setSelectedLiabilityId(null);
+    setLiabilityDraft(null);
     const isReceipt = direction === "receipt";
     const subType = liability.type === "Bank Loan"
       ? "bank_loan"
@@ -460,6 +563,9 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           actions={
             <div style={{ display: "flex", gap: 8 }}>
               <ActionBtn onClick={() => setShowLenderForm((value) => !value)}>Add Lender</ActionBtn>
+              <ActionBtn onClick={() => setShowArchivedLiabilities((value) => !value)}>
+                {showArchivedLiabilities ? "Hide Archived" : "Show Archived"}
+              </ActionBtn>
               <ActionBtn onClick={() => onNavigate("cards")}>Credit Cards</ActionBtn>
             </div>
           }
@@ -489,22 +595,23 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
               }}>Save</ActionBtn>
             </div>
           )}
-          {activeCards.length === 0 && houseLoans.length === 0 && liabilities.length === 0 ? (
+          {activeCards.length === 0 && houseLoans.length === 0 && visibleLiabilities.length === 0 ? (
             <EmptyNote>No liabilities tracked yet. Credit cards and house loans still live in their detail views during the transition.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ fontSize: 13, color: "#6b7280" }}>Credit cards owing: {fmtCAD(cardLiabilities)}</div>
               <div style={{ fontSize: 13, color: "#6b7280" }}>House loans remaining: {fmtCAD(houseLoanLiabilities)}</div>
-              {liabilities.filter((liability) => !liability.archived).map((liability) => (
-                <div key={liability.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
+              {visibleLiabilities.map((liability) => (
+                <div key={liability.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", paddingTop: 8, borderTop: "1px solid #f3f4f6", opacity: liability.archived ? 0.68 : 1 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{liability.name}</div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{liability.type} | {liability.tag}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{liability.type} | {liability.tag}{liability.archived ? " | Archived" : ""}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <strong>{fmtCAD(liabilityBalances[liability.id] ?? 0)} owed</strong>
-                    <ActionBtn onClick={() => openLiabilityTransaction(liability, "receipt")}>Borrow</ActionBtn>
-                    <ActionBtn variant="green" onClick={() => openLiabilityTransaction(liability, "payment")}>Repay</ActionBtn>
+                    <ActionBtn onClick={() => openLiabilityDetails(liability)}>Details</ActionBtn>
+                    {!liability.archived && <ActionBtn onClick={() => openLiabilityTransaction(liability, "receipt")}>Borrow</ActionBtn>}
+                    {!liability.archived && <ActionBtn variant="green" onClick={() => openLiabilityTransaction(liability, "payment")}>Repay</ActionBtn>}
                   </div>
                 </div>
               ))}
@@ -512,6 +619,152 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           )}
         </SectionCard>
       </div>
+
+      {selectedLiability && liabilityDraft && selectedLiabilitySummary && (
+        <Modal title={`Lender - ${selectedLiability.name}`} onClose={closeLiabilityDetails}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            <StatBox label="Current Owing" value={fmtCAD(selectedLiabilitySummary.currentBalance)} color="#a31515" />
+            <StatBox label="Borrowed" value={fmtCAD(selectedLiabilitySummary.borrowed)} color="#1a5fa8" />
+            <StatBox label="Principal Repaid" value={fmtCAD(selectedLiabilitySummary.principalRepaid)} color="#1a7f3c" />
+            <StatBox label="Interest Paid" value={fmtCAD(selectedLiabilitySummary.interestPaid)} color="#a05c00" />
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            {!selectedLiability.archived && <ActionBtn onClick={() => openLiabilityTransaction(selectedLiability, "receipt")}>Borrow</ActionBtn>}
+            {!selectedLiability.archived && <ActionBtn variant="green" onClick={() => openLiabilityTransaction(selectedLiability, "payment")}>Repay</ActionBtn>}
+            {selectedLiability.archived && (
+              <ActionBtn onClick={() => {
+                const restored = saveLiability({ ...selectedLiability, archived: false });
+                setLiabilityDraft(restored);
+              }}>Restore Lender</ActionBtn>
+            )}
+            <ActionBtn variant="danger" onClick={() => archiveOrDeleteLiability(selectedLiability)}>
+              {selectedLiabilitySummary.transactionCount > 0 ? "Archive" : "Delete"}
+            </ActionBtn>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginBottom: 18 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 10 }}>Lender Details</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+              <label style={{ fontSize: 12, color: "#475569" }}>
+                Name
+                <input value={liabilityDraft.name} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, name: event.target.value })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
+              </label>
+              <label style={{ fontSize: 12, color: "#475569" }}>
+                Type
+                <select value={liabilityDraft.type} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, type: event.target.value as Liability["type"] })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
+                  <option>Personal Loan</option>
+                  <option>Bank Loan</option>
+                  <option>Shareholder Loan</option>
+                </select>
+              </label>
+              <label style={{ fontSize: 12, color: "#475569" }}>
+                Tag
+                <select value={liabilityDraft.tag} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, tag: event.target.value as Liability["tag"] })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
+                  <option>Personal</option>
+                  <option>Business</option>
+                </select>
+              </label>
+              <label style={{ fontSize: 12, color: "#475569" }}>
+                Starting Balance ($)
+                <input type="number" value={liabilityDraft.openingBalance} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, openingBalance: Number(event.target.value) })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
+              </label>
+            </div>
+            <label style={{ display: "block", fontSize: 12, color: "#475569", marginTop: 10 }}>
+              Notes
+              <textarea value={liabilityDraft.notes ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, notes: event.target.value })} rows={2} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box", resize: "vertical" }} />
+            </label>
+
+            <div style={{ fontWeight: 800, fontSize: 14, marginTop: 16, marginBottom: 8 }}>Balance Snapshot</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Use a known lender statement balance and date. Only later principal activity is replayed.</div>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(160px, 1fr) minmax(160px, 1fr) auto", gap: 10, alignItems: "end" }}>
+              <label style={{ fontSize: 12, color: "#475569" }}>
+                Known Owing ($)
+                <input ref={snapshotAmountRef} type="number" value={liabilityDraft.balanceSnapshotAmount ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotAmount: event.target.value === "" ? undefined : Number(event.target.value) })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
+              </label>
+              <label style={{ fontSize: 12, color: "#475569" }}>
+                Snapshot Date
+                <input ref={snapshotDateRef} type="date" value={liabilityDraft.balanceSnapshotDate ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotDate: event.target.value || undefined })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
+              </label>
+              <ActionBtn onClick={() => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotAmount: undefined, balanceSnapshotDate: undefined })}>Clear Snapshot</ActionBtn>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+              <ActionBtn variant="primary" onClick={saveLiabilityDraft}>Save Details</ActionBtn>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginBottom: 18 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>Attach Existing Loan Transaction</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <select value={attachTransactionId} onChange={(event) => setAttachTransactionId(event.target.value)} style={{ flex: 1, minWidth: 240, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
+                <option value="">-- Select unlinked loan transaction --</option>
+                {unlinkedLoanTransactions.map((transaction) => (
+                  <option key={transaction.id} value={transaction.id}>
+                    {transaction.date} | {transaction.description} | {fmtCAD(transaction.amount)}
+                  </option>
+                ))}
+              </select>
+              <ActionBtn onClick={attachSelectedTransaction}>Attach</ActionBtn>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 8 }}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>Running Ledger</div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>
+                {selectedLiability.balanceSnapshotDate ? `After snapshot ${selectedLiability.balanceSnapshotDate}` : "From starting balance"}
+              </div>
+            </div>
+            {selectedLiabilityLedger.length === 0 ? (
+              <EmptyNote>No linked principal activity after the current starting point.</EmptyNote>
+            ) : (
+              <div style={{ overflowX: "auto", border: "1px solid #e5e7eb", borderRadius: 6 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc", textAlign: "left" }}>
+                      <th style={{ padding: 8 }}>Date</th>
+                      <th style={{ padding: 8 }}>Description</th>
+                      <th style={{ padding: 8, textAlign: "right" }}>Principal Effect</th>
+                      <th style={{ padding: 8, textAlign: "right" }}>Interest</th>
+                      <th style={{ padding: 8, textAlign: "right" }}>Running Owing</th>
+                      <th style={{ padding: 8 }}>Relink</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedLiabilityLedger.map((row) => (
+                      <tr key={row.transaction.id} style={{ borderTop: "1px solid #e5e7eb" }}>
+                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>{row.transaction.date}</td>
+                        <td style={{ padding: 8 }}>{row.transaction.description}</td>
+                        <td style={{ padding: 8, textAlign: "right", color: row.effect >= 0 ? "#a31515" : "#1a7f3c", fontWeight: 700 }}>{row.effect >= 0 ? "+" : "-"}{fmtCAD(Math.abs(row.effect))}</td>
+                        <td style={{ padding: 8, textAlign: "right" }}>{row.interest > 0 ? fmtCAD(row.interest) : "-"}</td>
+                        <td style={{ padding: 8, textAlign: "right", fontWeight: 700 }}>{fmtCAD(row.runningBalance)}</td>
+                        <td style={{ padding: 8 }}>
+                          <select
+                            aria-label={`Relink ${row.transaction.description}`}
+                            value={row.transaction.linkedLiabilityId ?? ""}
+                            onChange={(event) => {
+                              const nextId = event.target.value;
+                              const nextName = liabilities.find((liability) => liability.id === nextId)?.name ?? "no lender";
+                              if (!confirm(`Relink ${row.transaction.description} to ${nextName}?`)) return;
+                              relinkTransaction(row.transaction, nextId || undefined);
+                            }}
+                            style={{ padding: "5px 7px", border: "1px solid #d1d5db", borderRadius: 6 }}
+                          >
+                            <option value="">No lender</option>
+                            {liabilities.filter((liability) => !liability.archived || liability.id === row.transaction.linkedLiabilityId).map((liability) => (
+                              <option key={liability.id} value={liability.id}>{liability.name}</option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
 
       <TransactionForm
         open={txFormOpen}
