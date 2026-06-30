@@ -74,6 +74,7 @@ export interface Invoice {
   paymentDate?: string;
   clientName: string;
   depositAccount: string;
+  depositTxnId?: string | null;
   note?: string;
   fiscalYear: number;
   // Calculated fields (stored for performance)

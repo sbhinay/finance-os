@@ -53,6 +53,38 @@ export type TransactionStatus =
   | "cleared"      // confirmed on bank statement
   | "reconciled";  // confirmed against statement history
 
+export type TransactionPurpose =
+  | "general_expense"
+  | "general_income"
+  | "purchase_refund"
+  | "dividend"
+  | "bank_transfer"
+  | "e_transfer"
+  | "credit_card_payment"
+  | "loc_payment"
+  | "loc_draw"
+  | "tfsa_contribution"
+  | "rrsp_contribution"
+  | "vehicle_lease_payment"
+  | "vehicle_finance_payment"
+  | "mortgage_payment"
+  | "personal_loan_receipt"
+  | "personal_loan_payment"
+  | "bank_loan_receipt"
+  | "bank_loan_payment"
+  | "loan_interest"
+  | "shareholder_loan_receipt"
+  | "shareholder_loan_payment"
+  | "hst_remittance"
+  | "corporate_tax_payment"
+  | "payroll_remittance"
+  | "personal_income_tax"
+  | "other_tax_payment"
+  | "invoice_deposit"
+  | "recurring_expense"
+  | "withdrawal"
+  | "adjustment";
+
 // ─── Balance Effect Reference ─────────────────────────────────────────────────
 //
 // expense            → source balance decreases
@@ -73,6 +105,7 @@ export interface Transaction {
   // ── Classification ────────────────────────────────────────────────────────
   type: TransactionType;
   subType?: TransactionSubType;    // required for tax_payment, loan, adjustment, transfer
+  purpose?: TransactionPurpose;    // stable business meaning, independent of editable labels
 
   // ── Amount ────────────────────────────────────────────────────────────────
   amount: number;                  // always positive — type determines direction
@@ -107,6 +140,7 @@ export interface Transaction {
   linkedVehicleId?: string;        // vehicle expense tracking
   linkedPropertyId?: string;       // property expense tracking
   linkedLiabilityId?: string;      // loan_receipt, loan_payment — links to liability account (future)
+  linkedInvoiceId?: string;        // invoice deposit source
 
   // ── Vehicle specific ──────────────────────────────────────────────────────
   odometer?: string;               // km reading at time of transaction
@@ -192,11 +226,26 @@ export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: Tr
   ],
 };
 
-export const SUB_TYPE_LABELS: Partial<Record<TransactionSubType, string>> =
-  Object.values(SUB_TYPE_OPTIONS).flat().reduce((acc, option) => {
+export const SUB_TYPE_LABELS: Partial<Record<TransactionSubType, string>> = {
+  ...Object.values(SUB_TYPE_OPTIONS).flat().reduce((acc, option) => {
     acc[option.value] = option.label;
     return acc;
-  }, {} as Partial<Record<TransactionSubType, string>>);
+  }, {} as Partial<Record<TransactionSubType, string>>),
+  personal_loan: "Personal Loan",
+  bank_loan: "Bank Loan",
+  line_of_credit: "Line of Credit",
+  mortgage: "Mortgage",
+  shareholder_loan: "Shareholder Loan",
+};
+
+export function getSubTypeLabel(
+  type: TransactionType,
+  subType: TransactionSubType
+): string {
+  return SUB_TYPE_OPTIONS[type]?.find((option) => option.value === subType)?.label
+    ?? SUB_TYPE_LABELS[subType]
+    ?? subType;
+}
 
 // ─── Type display labels ──────────────────────────────────────────────────────
 export const TYPE_LABELS: Record<TransactionType, string> = {

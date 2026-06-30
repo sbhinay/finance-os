@@ -33,7 +33,8 @@ import {
 import {
     Transaction,
     TransactionType,
-    TransactionSubType
+    TransactionSubType,
+    TransactionPurpose
 } from "@/types/transaction";
 import {
     notifyDataChanged
@@ -41,6 +42,12 @@ import {
 import {
     syncBalances
 } from "@/utils/syncBalances";
+import {
+    buildCanonicalTransaction,
+    findSemanticDuplicate,
+    persistCanonicalTransaction,
+} from "@/services/transactionPipeline";
+import { inferTransactionPurpose, isSemanticDuplicate } from "@/utils/transactionSemantics";
 
 // ─── Schedule interval helper ─────────────────────────────────────────────────
 type PaymentSourceWithSchedule = {
@@ -76,8 +83,25 @@ function getOccurrencesBetween(
     return results;
 }
 
-function normalizeText(value: string | undefined): string {
-    return (value ?? "").trim().toLowerCase();
+function getPendingPurpose(
+    sourceType: PendingTransaction["sourceType"],
+    transactionType?: PlannedPaymentTransactionType,
+    subType?: TransactionSubType,
+    explicitPurpose?: TransactionPurpose
+): TransactionPurpose {
+    if (explicitPurpose) return explicitPurpose;
+    if (sourceType === "vehicle") return "vehicle_lease_payment";
+    if (sourceType === "loan") return "mortgage_payment";
+    if (sourceType === "cra_payroll") return "payroll_remittance";
+    if (sourceType === "cra_corp") return "corporate_tax_payment";
+    if (sourceType === "cra_hst") return "hst_remittance";
+    if (transactionType) {
+        return inferTransactionPurpose({
+            type: transactionType,
+            subType,
+        }) ?? "recurring_expense";
+    }
+    return "recurring_expense";
 }
 
 function transactionMatchesPending(
@@ -91,24 +115,26 @@ function transactionMatchesPending(
     if (toFixed2(txn.amount) !== toFixed2(pending.amount)) return false;
     if (pending.account && txn.sourceId !== pending.account) return false;
 
-    const txnDesc = normalizeText(txn.description);
-    const pendingName = normalizeText(pending.name);
-
-    switch (pending.sourceType) {
-        case "fixed":
-            if (pending.category && txn.categoryId && txn.categoryId !== pending.category) return false;
-            return txnDesc === pendingName || txnDesc.includes(pendingName);
-        case "vehicle":
-            return txn.linkedVehicleId === pending.linkedVehicleId || txnDesc === pendingName;
-        case "loan":
-        case "propertytax":
-        case "cra_payroll":
-        case "cra_corp":
-        case "cra_hst":
-            return txnDesc === pendingName;
-        default:
-            return false;
-    }
+    const candidate = buildCanonicalTransaction({
+        purpose: getPendingPurpose(
+            pending.sourceType,
+            pending.transactionType,
+            pending.subType,
+            pending.purpose
+        ),
+        amount: pending.amount,
+        date: pending.dueDate,
+        sourceId: pending.account,
+        destinationId: pending.destinationId,
+        categoryId: pending.category || undefined,
+        description: pending.name,
+        tag: pending.tag,
+        mode: pending.mode as Transaction["mode"],
+        linkedVehicleId: pending.linkedVehicleId,
+        linkedPropertyId: pending.linkedPropertyId,
+    });
+    if (pending.category && txn.categoryId && txn.categoryId !== pending.category) return false;
+    return isSemanticDuplicate(candidate, txn);
 }
 
 // ─── Backfill: calculate all past payment dates from startDate to today ───────
@@ -206,7 +232,7 @@ export function generatePendingTransactions(
     existingTransactions: Transaction[],
     extraSources ? : {
         vehicles ? : Array < {
-            id: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string
+            id: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string;vtype: "Lease" | "Finance"
         } > ;
         houseLoans ? : Array < {
             id: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string
@@ -271,6 +297,7 @@ export function generatePendingTransactions(
                 type: "Expense",
                 transactionType: p.transactionType,
                 subType: p.subType,
+                purpose: getPendingPurpose("fixed", p.transactionType, p.subType, p.purpose),
                 destinationId: p.destinationId,
                 mode: p.mode ?? "Debit",
                 tag: (p.tag ?? "Personal") as "Personal" | "Business",
@@ -295,6 +322,7 @@ export function generatePendingTransactions(
                 mode: "Debit",
                 tag: "Personal",
                 linkedVehicleId: v.id,
+                purpose: v.vtype === "Finance" ? "vehicle_finance_payment" : "vehicle_lease_payment",
             });
         });
     });
@@ -315,6 +343,8 @@ export function generatePendingTransactions(
                 type: "Expense",
                 mode: "Debit",
                 tag: "Personal",
+                linkedPropertyId: l.id,
+                purpose: "mortgage_payment",
             });
         });
     });
@@ -335,6 +365,7 @@ export function generatePendingTransactions(
                 type: "Expense",
                 mode: "Bank Transfer",
                 tag: "Business",
+                purpose: "payroll_remittance",
             });
         }
     });
@@ -355,6 +386,7 @@ export function generatePendingTransactions(
                 type: "Expense",
                 mode: "Bank Transfer",
                 tag: "Business",
+                purpose: "corporate_tax_payment",
             });
         }
     });
@@ -374,6 +406,7 @@ export function generatePendingTransactions(
                 type: "Expense",
                 mode: "Bank Transfer",
                 tag: "Business",
+                purpose: "hst_remittance",
             });
         }
     });
@@ -479,6 +512,7 @@ export function useFixedPayments() {
                 nextPaymentDate: v.nextPaymentDate,
                 schedule: v.schedule,
                 source: v.source,
+                vtype: v.vtype,
             })),
             houseLoans: houseLoans.map((l) => ({
                 id: l.id,
@@ -541,38 +575,30 @@ export function useFixedPayments() {
         if (!dates.length || !accountId) return 0;
         const existing = transactionRepository.getAll();
 
-        // Find dates that already have a matching transaction
-        const existingDates = new Set(
-            existing
-            .filter((t) => t.description === fp.name || t.description?.includes(fp.name))
-            .map((t) => t.date ?? t.createdAt?.slice(0, 10))
-        );
-
         let count = 0;
         const posting = getFixedPaymentPosting(fp);
+        const purpose = getPendingPurpose("fixed", fp.transactionType, fp.subType, fp.purpose);
         dates.forEach((date) => {
-            if (existingDates.has(date)) return; // skip duplicates
-            const txn: Transaction = {
-                id: uid(),
-                type: posting.type,
-                subType: posting.subType,
+            const txn = buildCanonicalTransaction({
+                purpose,
                 amount: toFixed2(fp.amount),
                 description: fp.name,
                 sourceId: accountId,
                 destinationId: posting.destinationId,
                 date,
                 createdAt: new Date().toISOString(),
-                currency: "CAD",
                 status: "cleared",
                 categoryId: posting.categoryId || undefined,
                 tag: (fp.tag ?? "Personal") as "Personal" | "Business",
                 mode: (fp.mode ?? "Debit") as Transaction["mode"],
-            };
-            transactionRepository.add(txn);
+            });
+            if (findSemanticDuplicate(txn, existing)) return;
+            existing.push(txn);
             count++;
         });
 
         if (count > 0) {
+            transactionRepository.saveAll(existing);
             syncBalances();
             notifyDataChanged("transactions");
         }
@@ -593,25 +619,20 @@ export function useFixedPayments() {
     ) => {
         if (!amount || !date) return;
         const posting = getFixedPaymentPosting(fp);
-        const txn: Transaction = {
-            id: uid(),
-            type: posting.type,
-            subType: posting.subType,
+        const txn = buildCanonicalTransaction({
+            purpose: getPendingPurpose("fixed", fp.transactionType, fp.subType, fp.purpose),
             amount: toFixed2(amount),
             description: description || fp.name,
             sourceId: accountId,
             destinationId: posting.destinationId,
             date,
             createdAt: new Date().toISOString(),
-            currency: "CAD",
             status: "cleared",
             categoryId: (posting.type === "expense" ? (categoryId || posting.categoryId) : undefined) || undefined,
             tag: tag ?? "Personal",
             mode: mode ?? "Debit",
-        };
-        transactionRepository.add(txn);
-        syncBalances();
-        notifyDataChanged("transactions");
+        });
+        persistCanonicalTransaction(txn);
 
         if (fp.schedule !== "One-time") {
             const all = fixedPaymentRepository.getAll();
@@ -642,26 +663,23 @@ export function useFixedPayments() {
             ? { type: p.transactionType as TransactionType, subType: p.subType }
             : getTransactionType(p.sourceType);
 
-        const txn: Transaction = {
-            id: uid(),
-            type: pendingType.type,
-            subType: pendingType.subType,
+        const txn = buildCanonicalTransaction({
+            purpose: getPendingPurpose(p.sourceType, p.transactionType, p.subType, p.purpose),
             amount: toFixed2(p.amount),
             description: p.name,
             sourceId: p.account,
             destinationId: p.destinationId,
             date: p.dueDate,
             createdAt: new Date().toISOString(),
-            currency: "CAD",
             status: "cleared",
             categoryId: pendingType.type === "expense" ? (p.category || undefined) : undefined,
             tag: p.tag,
             mode: p.mode as Transaction["mode"],
-        };
+            linkedVehicleId: p.linkedVehicleId,
+            linkedPropertyId: p.linkedPropertyId,
+        });
 
-        transactionRepository.add(txn);
-        syncBalances();
-        notifyDataChanged("transactions");
+        persistCanonicalTransaction(txn);
         fixedPaymentRepository.addDismissedKey(p.key);
 
         // Auto-advance fixed payment date

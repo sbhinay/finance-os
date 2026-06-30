@@ -2,7 +2,7 @@ import type { Account } from "@/types/account";
 import type { CreditCard } from "@/types/creditCard";
 import type { Category } from "@/types/category";
 import type { Transaction, TransactionType } from "@/types/transaction";
-import type { FixedPayment, HouseLoan, PropertyTax, Vehicle } from "@/types/domain";
+import type { FixedPayment, HouseLoan, Liability, PropertyTax, Vehicle } from "@/types/domain";
 import type { Business } from "@/types/business";
 import { normalizeTransactionShape } from "@/utils/transactionNormalization";
 
@@ -20,6 +20,7 @@ export interface ImportPayload {
   vehicles: Vehicle[];
   houseLoans: HouseLoan[];
   propertyTaxes: PropertyTax[];
+  liabilities: Liability[];
   futurePayments: FixedPayment[];
 }
 
@@ -208,6 +209,10 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
     if (tx.linkedPropertyId && !payload.houseLoans.some((h) => h.id === tx.linkedPropertyId)) {
       warnings.push(`Transaction ${tx.id}: linked property "${tx.linkedPropertyId}" was not found and was detached.`);
       normalizedTx.linkedPropertyId = undefined;
+    }
+    if (tx.linkedLiabilityId && !payload.liabilities.some((liability) => liability.id === tx.linkedLiabilityId)) {
+      warnings.push(`Transaction ${tx.id}: linked liability "${tx.linkedLiabilityId}" was not found and was detached.`);
+      normalizedTx.linkedLiabilityId = undefined;
     }
 
     if (normalizedTx.type === "transfer" && normalizedTx.subType === "cc_payment" && normalizedTx.destinationId) {

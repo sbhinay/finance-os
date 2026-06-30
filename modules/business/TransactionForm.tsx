@@ -5,16 +5,16 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
 import { useVehicles, useHouseLoans } from "./useAssets";
-import { transactionRepository } from "@/repositories/transactionRepository";
+import { useLiabilities } from "./useLiabilities";
 import { detectCategory, learnedRulesRepository, uncategorizedRepository } from "@/rules/categoryRules";
 import { buildSourceOptions, fmtCAD, toFixed2, uid } from "@/utils/finance";
-import { notifyDataChanged } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
+import { deleteCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
+import { inferTransactionPurpose } from "@/utils/transactionSemantics";
 import {
   Transaction, TransactionType, TransactionSubType, TransactionMode,
-  TYPE_LABELS, SUB_TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES,
+  TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES, getSubTypeLabel,
   requiresDestination, requiresSubType, isExpenseReportable, isIncomeReportable,
-  deriveTaxYear,
+  deriveTaxYear, TransactionPurpose,
 } from "@/types/transaction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,6 +23,7 @@ export interface TransactionFormInitial {
   id?: string;
   type?: TransactionType;
   subType?: TransactionSubType;
+  purpose?: TransactionPurpose;
   amount?: number;
   date?: string;
   createdAt?: string;
@@ -35,6 +36,7 @@ export interface TransactionFormInitial {
   mode?: string;
   linkedVehicleId?: string;
   linkedPropertyId?: string;
+  linkedLiabilityId?: string;
   odometer?: string;
   interestAmount?: number;
   principalAmount?: number;
@@ -127,6 +129,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
+  const { liabilities } = useLiabilities();
 
   const now = new Date();
   const todayLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -148,6 +151,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     mode:            "Debit" as string,
     linkedVehicleId: "",
     linkedPropertyId: "",
+    linkedLiabilityId: "",
     odometer:        "",
   }), [todayLocal]);
 
@@ -178,12 +182,12 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const destinationName = [...accounts, ...cards].find((x) => x.id === form.destinationId)?.name ?? "";
   const selectedVehicle = vehicles.find((v) => v.id === form.linkedVehicleId);
   const selectedProperty = houseLoans.find((h) => h.id === form.linkedPropertyId);
-  const selectedSubTypeLabel = form.subType ? SUB_TYPE_LABELS[form.subType as TransactionSubType] ?? form.subType : "";
+  const selectedLiability = liabilities.find((liability) => liability.id === form.linkedLiabilityId);
+  const selectedSubTypeLabel = form.subType
+    ? getSubTypeLabel(txType, form.subType as TransactionSubType)
+    : "";
 
   const generatedDescription = useMemo(() => {
-    const customTitle = title?.replace(/^Log\s+/i, "").trim();
-    if (customTitle) return customTitle;
-
     if (txType === "transfer") {
       if (form.subType === "cc_payment") return `Credit Card Payment${destinationName ? ` - ${destinationName}` : ""}`;
       if (form.subType === "loc_draw") return `LOC Draw${destinationName ? ` - ${destinationName}` : ""}`;
@@ -193,16 +197,24 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     }
 
     if (txType === "loan_payment") {
+      if (selectedLiability?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedLiability.name}`;
       if (selectedProperty?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedProperty.name}`;
       if (selectedVehicle?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedVehicle.name}`;
       return selectedSubTypeLabel || "Loan Payment";
     }
 
     if (txType === "loan_receipt") {
-      if (destinationName) return `${selectedSubTypeLabel || "Loan Receipt"} - ${destinationName}`;
-      return selectedSubTypeLabel || "Loan Receipt";
+      const receiptLabel = selectedSubTypeLabel ? `${selectedSubTypeLabel} Receipt` : "Loan Receipt";
+      if (selectedLiability?.name) return `${receiptLabel} - ${selectedLiability.name}`;
+      return receiptLabel;
     }
 
+    if (
+      selectedVehicle?.name
+      && selectedCatById?.name.trim().toLowerCase() === "vehicle lease"
+    ) {
+      return `Vehicle Lease Payment - ${selectedVehicle.name}`;
+    }
     if (selectedVehicle?.name && selectedCatById?.name) return `${selectedCatById.name} - ${selectedVehicle.name}`;
     if (selectedProperty?.name && selectedCatById?.name) return `${selectedCatById.name} - ${selectedProperty.name}`;
     if (selectedCatById?.name && sourceName) return `${selectedCatById.name} - ${sourceName}`;
@@ -210,7 +222,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (selectedSubTypeLabel) return selectedSubTypeLabel;
     if (sourceName && TYPE_LABELS[txType]) return `${TYPE_LABELS[txType]} - ${sourceName}`;
     return TYPE_LABELS[txType] ?? "Transaction";
-  }, [title, txType, form.subType, sourceName, destinationName, selectedVehicle, selectedProperty, selectedCatById, selectedSubTypeLabel]);
+  }, [txType, form.subType, sourceName, destinationName, selectedVehicle, selectedProperty, selectedLiability, selectedCatById, selectedSubTypeLabel]);
 
   const effectiveDescription = useMemo(() => (form.description || generatedDescription).trim(), [form.description, generatedDescription]);
 
@@ -292,6 +304,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         mode:            normalizedInitial.mode ?? "Debit",
         linkedVehicleId: normalizedInitial.linkedVehicleId ?? "",
         linkedPropertyId: normalizedInitial.linkedPropertyId ?? "",
+        linkedLiabilityId: normalizedInitial.linkedLiabilityId ?? "",
         odometer:        normalizedInitial.odometer ?? "",
       });
       setShowLoanDetails(Number(normalizedInitial.interestAmount) > 0 || Number(normalizedInitial.principalAmount) > 0);
@@ -319,8 +332,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const isVehicleCat = selectedCat?.vehicleLinked;
   const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
-  const showDestination = txType === "transfer" || txType === "adjustment" || txType === "loan_receipt";
+  const showDestination = txType === "transfer" || txType === "adjustment";
   const showLoanSplit = txType === "loan_payment";
+  const showLiability = txType === "loan_receipt" || txType === "loan_payment";
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
   const showVehicleLink = txType === "expense" && isVehicleCat;
@@ -354,6 +368,13 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (!form.sourceId) errs.push("Please select an account or card.");
     if (requiresDestination(txType) && !form.destinationId) errs.push("Please select a destination account or card.");
     if (requiresSubType(txType) && !form.subType) errs.push("Please select a sub-type.");
+    if (
+      txType === "loan_payment"
+      && hasLoanSplit
+      && toFixed2(Number(form.principalAmount) + Number(form.interestAmount)) !== toFixed2(Number(form.amount))
+    ) {
+      errs.push("Principal and interest must equal the payment amount.");
+    }
     if (isCreditCardPayTransfer) {
       if (cards.some((c) => c.id === form.sourceId)) {
         errs.push("Source must be a bank account (not a credit card) for a credit card payment.");
@@ -376,9 +397,12 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     const amount = toFixed2(Number(form.amount));
     const finalDescription = effectiveDescription;
     const desc = finalDescription.toLowerCase().trim();
-    const isEditing = !!form.id;
-
     const categoryId = showCategory ? (form.categoryId || autoDetectedCat) : undefined;
+    const unchangedClassification = initial?.type === txType
+      && (initial?.subType ?? "") === (form.subType ?? "");
+    const purpose = unchangedClassification
+      ? initial?.purpose
+      : undefined;
 
     if (categoryId && finalDescription) {
       learnedRulesRepository.add({ id: uid(), description: desc, categoryId });
@@ -391,6 +415,17 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       id:              form.id ?? uid(),
       type:            txType,
       subType:         form.subType ? (form.subType as TransactionSubType) : undefined,
+      purpose:         purpose
+        ?? (
+          txType === "expense"
+          && selectedCatById?.name.trim().toLowerCase() === "vehicle lease"
+          && form.linkedVehicleId
+            ? "vehicle_lease_payment"
+            : inferTransactionPurpose({
+                type: txType,
+                subType: form.subType ? (form.subType as TransactionSubType) : undefined,
+              })
+        ),
       amount,
       interestAmount:  showLoanSplit && Number(form.interestAmount) > 0 ? toFixed2(Number(form.interestAmount)) : undefined,
       principalAmount: showLoanSplit && Number(form.principalAmount) > 0 ? toFixed2(Number(form.principalAmount)) : undefined,
@@ -408,27 +443,19 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       taxYear:         deriveTaxYear(form.date.slice(0, 10)),
       linkedVehicleId:  form.linkedVehicleId || undefined,
       linkedPropertyId: form.linkedPropertyId || undefined,
+      linkedLiabilityId: form.linkedLiabilityId || undefined,
       odometer:         form.odometer || undefined,
     };
 
-    if (isEditing) {
-      transactionRepository.saveAll(transactionRepository.getAll().map((t) => t.id === txn.id ? txn : t));
-    } else {
-      transactionRepository.add(txn);
-    }
-
-    syncBalances();
-    notifyDataChanged("transactions");
-    onSaved?.(txn);
+    const saved = persistCanonicalTransaction(txn);
+    onSaved?.(saved);
     onClose();
   }
 
   function handleDelete() {
     if (!form.id) return;
     if (!confirm("Delete this transaction? This cannot be undone.")) return;
-    transactionRepository.saveAll(transactionRepository.getAll().filter((t) => t.id !== form.id));
-    syncBalances();
-    notifyDataChanged("transactions");
+    deleteCanonicalTransaction(form.id);
     onClose();
   }
 
@@ -570,13 +597,34 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 </select>
               </div>
             ) : <div />}
-            <Sel label="Account / Card" value={form.sourceId} onChange={f("sourceId")} options={paymentSources} required />
+            <Sel
+              label={txType === "loan_receipt" ? "Receiving Account" : txType === "loan_payment" ? "Pay From Account" : "Account / Card"}
+              value={form.sourceId}
+              onChange={f("sourceId")}
+              options={paymentSources}
+              required
+            />
           </Grid2>
 
           {/* Destination — for transfers, adjustments, loans */}
           {showDestination && (
             <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")}
               options={destinationOptions} required={requiresDestination(txType)} />
+          )}
+
+          {showLiability && liabilities.length > 0 && (
+            <Sel
+              label="Loan / Lender"
+              value={form.linkedLiabilityId}
+              onChange={f("linkedLiabilityId")}
+              options={[
+                { value: "", label: "-- Select loan or lender --" },
+                ...liabilities.filter((liability) => !liability.archived).map((liability) => ({
+                  value: liability.id,
+                  label: liability.name,
+                })),
+              ]}
+            />
           )}
 
           {/* Loan payment split */}

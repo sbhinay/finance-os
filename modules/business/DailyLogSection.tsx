@@ -14,9 +14,8 @@ import { fmtCAD, fmtDate } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
-import { transactionRepository } from "@/repositories/transactionRepository";
-import { notifyDataChanged } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
+import { deleteCanonicalTransaction } from "@/services/transactionPipeline";
+import { getTransactionListEffect } from "@/utils/transactionSemantics";
 import { theme } from "@/lib/theme";
 
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
@@ -136,6 +135,7 @@ export function DailyLogSection() {
       date: t.date ?? t.createdAt?.slice(0, 10),
       createdAt: t.createdAt,
       type: t.type,
+      purpose: t.purpose,
       mode: t.mode ?? "Debit",
       sourceId: t.sourceId ?? "",
       description: t.description ?? "",
@@ -146,6 +146,7 @@ export function DailyLogSection() {
       tag: t.tag ?? "Personal",
       linkedVehicleId: t.linkedVehicleId ?? "",
       linkedPropertyId: t.linkedPropertyId ?? "",
+      linkedLiabilityId: t.linkedLiabilityId ?? "",
       odometer: t.odometer ?? "",
       interestAmount: t.interestAmount,
       principalAmount: t.principalAmount,
@@ -155,18 +156,16 @@ export function DailyLogSection() {
 
   function del(t: Transaction) {
     if (!confirm("Delete this entry?")) return;
-    transactionRepository.saveAll(transactionRepository.getAll().filter((x) => x.id !== t.id));
-    syncBalances();
-    notifyDataChanged("transactions");
+    deleteCanonicalTransaction(t.id);
   }
 
   const monthStr = now.toISOString().slice(0, 7);
   const todayTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(todayStr));
   const monthTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(monthStr));
-  const tIn = todayTx.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-  const tOut = todayTx.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
-  const mIn = monthTx.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-  const mOut = monthTx.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+  const tIn = todayTx.reduce((sum, t) => sum + Math.max(0, getTransactionListEffect(t) ?? 0), 0);
+  const tOut = todayTx.reduce((sum, t) => sum + Math.max(0, -(getTransactionListEffect(t) ?? 0)), 0);
+  const mIn = monthTx.reduce((sum, t) => sum + Math.max(0, getTransactionListEffect(t) ?? 0), 0);
+  const mOut = monthTx.reduce((sum, t) => sum + Math.max(0, -(getTransactionListEffect(t) ?? 0)), 0);
 
   const filtered = useMemo(() => {
     return transactions
@@ -259,6 +258,7 @@ export function DailyLogSection() {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
           const dateStr = (t.date ?? t.createdAt ?? "").slice(0, 10);
+          const listEffect = getTransactionListEffect(t);
 
           return (
             <div
@@ -281,8 +281,8 @@ export function DailyLogSection() {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexWrap: "wrap" }}>
-                <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
-                  {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{fmtCAD(t.amount)}
+                <Pill color={listEffect == null ? "gray" : listEffect >= 0 ? "green" : "red"}>
+                  {listEffect == null ? "" : listEffect >= 0 ? "+" : "-"}{fmtCAD(t.amount)}
                 </Pill>
                 <Btn variant="ghost" small onClick={() => setAddToFixed(t)} style={{ fontSize: 11 }}>Recurring</Btn>
                 <Btn variant="secondary" small onClick={() => startEdit(t)}>Edit</Btn>

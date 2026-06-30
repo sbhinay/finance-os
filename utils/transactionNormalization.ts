@@ -1,4 +1,5 @@
 import type { Transaction, TransactionSubType, TransactionType } from "@/types/transaction";
+import { inferTransactionPurpose } from "@/utils/transactionSemantics";
 
 type RawTransaction = Omit<Partial<Transaction>, "type" | "subType"> & {
   type?: string;
@@ -10,7 +11,7 @@ function asTransactionSubType(value: string | undefined): TransactionSubType | u
   return value as TransactionSubType;
 }
 
-function normalizeText(value: string | undefined): string | undefined {
+export function normalizeText(value: string | undefined): string | undefined {
   if (!value) return value;
 
   return value
@@ -35,7 +36,7 @@ export function normalizeTransactionShape<T extends RawTransaction>(tx: T): Tran
   const isTransferLike = normalizedType === "transfer";
   const isLegacyCardPayment = tx.type === "credit_card_payment" || normalizedSubType === "cc_payment";
 
-  return {
+  const normalized = {
     ...tx,
     type: normalizedType,
     subType: normalizedSubType,
@@ -47,6 +48,11 @@ export function normalizeTransactionShape<T extends RawTransaction>(tx: T): Tran
     odometer: isLegacyCardPayment ? undefined : tx.odometer,
     mode: isLegacyCardPayment ? (tx.mode ?? "Bank Transfer") : tx.mode,
   } as Transaction;
+
+  return {
+    ...normalized,
+    purpose: inferTransactionPurpose(normalized),
+  };
 }
 
 export function normalizeTransactionCollection(transactions: RawTransaction[]): Transaction[] {

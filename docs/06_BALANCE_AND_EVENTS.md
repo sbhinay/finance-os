@@ -26,8 +26,11 @@ This avoids compound replay drift from previously computed balances.
 - persist computed balances back to repositories
 
 ### Transaction Effects
+`utils/transactionSemantics.ts#getTransactionEffect()` is the canonical implementation used by replay and ledger views.
+
 - `expense`: source account decreases, source card increases
 - `income`: source account increases, source card decreases
+- `refund`: source account increases, source card decreases
 - `transfer`: source decreases, destination increases
 - `transfer + cc_payment`: source account decreases, destination card decreases
 - `transfer + loc_draw`: source LOC decreases available credit / increases borrowed balance, destination cash account increases
@@ -57,9 +60,19 @@ Hooks listen for this event and reload from repositories.
 
 ### Write Pattern
 Any write path should follow:
-1. persist domain changes in repository
-2. call `syncBalances()` when transactions or account/card balances change
-3. call `notifyDataChanged(...)`
+1. build or normalize a transaction through `services/transactionPipeline.ts`
+2. persist through `persistCanonicalTransaction()`
+3. let the pipeline call `syncBalances()` and `notifyDataChanged(...)`
+
+Direct transaction insertion from feature pages is prohibited. Backfills may batch canonical rows, but must use semantic duplicate identity and perform one balance/event sync after the batch.
+
+### Canonical Purpose
+Transactions may carry a stable `purpose` such as `vehicle_lease_payment`, `mortgage_payment`, `credit_card_payment`, `purchase_refund`, or `personal_loan_receipt`. Purpose is independent of editable descriptions and category names. Existing rows receive only high-confidence inferred purposes during repository normalization.
+
+`transactionFingerprint()` combines purpose, transaction date, amount, accounts, and linked entities. It is used by backfills and Data Health instead of description matching.
+
+### Invoice Deposits
+Newly saved paid invoices create an `invoice_deposit` transaction linked with `linkedInvoiceId` and `depositTxnId`. The legacy virtual-deposit fallback in `syncBalances()` remains for older exports that do not yet contain a linked deposit transaction.
 
 ### Unified Asset Workflow Notes
 - The new `Assets & Liabilities` page can now launch selected vehicle and property-tax actions directly into the canonical `TransactionForm`.

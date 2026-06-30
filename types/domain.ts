@@ -54,6 +54,18 @@ export interface HouseLoan {
   propertyTaxRollNumber?: string;
 }
 
+export interface Liability {
+  id: string;
+  name: string;
+  type: "Personal Loan" | "Bank Loan" | "Shareholder Loan";
+  openingBalance: number;
+  balanceSnapshotAmount?: number;
+  balanceSnapshotDate?: string;
+  tag: "Personal" | "Business";
+  notes?: string;
+  archived?: boolean;
+}
+
 // ─── Property Tax ────────────────────────────────────────────────────────────
 export interface PropertyTaxPayment {
   id: string;
@@ -110,6 +122,7 @@ export interface FixedPayment {
   categoryId?: string;
   mode?: string;
   tag?: string;
+  purpose?: TransactionPurpose;
 }
 
 export function getFixedPaymentKind(fp?: Pick<FixedPayment, "kind"> | null): RecurringKind {
@@ -170,6 +183,8 @@ export interface PendingTransaction {
   mode: string;
   tag: "Personal" | "Business";
   linkedVehicleId?: string;
+  linkedPropertyId?: string;
+  purpose?: TransactionPurpose;
   createdAt: string;
 }
-import type { TransactionSubType, TransactionType } from "@/types/transaction";
+import type { TransactionPurpose, TransactionSubType, TransactionType } from "@/types/transaction";

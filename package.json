@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "validate:fixture": "node scripts/validate-finance-export.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",

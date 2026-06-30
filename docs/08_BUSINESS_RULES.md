@@ -10,6 +10,8 @@
 - `categoryId` is required for `expense` and `income`, optional elsewhere.
 - `pending` transactions do not affect balances or reports.
 - `cleared` and `reconciled` transactions do affect balances.
+- `date` is the accounting/posting date used by replay; `createdAt` is audit metadata and never drives normal balance ordering when `date` exists.
+- Custom descriptions remain editable. Stable behavior must use `purpose`, subtype, links, and account identities rather than description text.
 
 ### Category Rules
 - 24 default categories seeded on first run.
@@ -56,6 +58,8 @@
 - Vehicle and mortgage backfill should use `nextPaymentDate` as the cadence anchor when present. Start dates act as historical lower bounds, not necessarily as the recurring weekday anchor.
 - Vehicle parent records may also own recurring insurance setup.
 - House-loan/property parent records may also own recurring property-tax setup during the transition away from a standalone property-tax-only model.
+- A lease payment is `expense` + `vehicle_lease_payment` + `Vehicle Lease` category + `linkedVehicleId`.
+- Manual logging, Log Payment, pending confirmation, and backfill use the same canonical naming and classification rules.
 
 ### Regular vs Detailed Rules
 - Regular mode must ask only for the minimum needed to answer cash-flow questions like what came in, what went out, what is due next, and whether the account will be ready.
@@ -68,6 +72,11 @@
 - Lease payments are closer to ordinary recurring outflows and may remain expense-like unless a more specialized model is added.
 - `loan_payment` rows should support optional `principalAmount` and `interestAmount`, but regular mode must still work if the split is unknown.
 - `transfer + loc_draw` is the canonical way to represent borrowed cash moving from a line of credit into a receiving account.
+- Personal, bank, and shareholder lenders are represented by `Liability` records.
+- Multiple receipts may link to one lender liability and increase its amount owed.
+- Repayments decrease liability by `principalAmount`, or by the full amount when no split is supplied.
+- Interest reduces the paying account but does not reduce liability principal.
+- Loan receipt `sourceId` identifies the receiving cash account; loan payment `sourceId` identifies the paying cash account. `linkedLiabilityId` identifies the lender.
 
 ### Balance Snapshot Rules
 - Known real-world balances are stored on accounts/cards using `balanceSnapshotAmount` and `balanceSnapshotDate`.
@@ -77,7 +86,7 @@
 - Legacy reconciliation adjustment rows should not be used for new balance alignment and are skipped by replay.
 
 ### Reporting Rules
-- Only `expense` and `refund` are included in expense reporting.
+- Only `expense` and `refund` are included in expense reporting; refunds subtract from their original category.
 - Only `income` and `dividend` are included in income reporting.
 - `transfer` rows, including `cc_payment`, are excluded from standard income/expense summaries unless explicitly included.
 - `tax_payment`, `adjustment`, `loan_payment`, and `withdrawal` are also excluded from standard income/expense summaries unless explicitly included.
@@ -85,6 +94,7 @@
 - Detailed financing reports may later use `principalAmount`, `interestAmount`, rate, amortization, and term data when available, but regular projections must not depend on them.
 - Subscription rows should default to `Subscriptions` category when that category exists in the dedicated subscription workflow.
 - Transaction History is explicitly paginated for usability; exports still operate on the full filtered result set rather than only the visible page.
+- List signs and colors use shared transaction semantics: refunds and loan receipts are positive, ordinary outflows are negative, and transfers remain neutral in generic history.
 
 ### Navigation Rules
 - Top-level navigation should prefer a small number of strong hubs over many sibling utility tabs.

@@ -7,6 +7,7 @@ import { Transaction } from "@/types/transaction";
 import { Account } from "@/types/account";
 import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { theme } from "@/lib/theme";
+import { getExpenseReportEffect } from "@/utils/transactionSemantics";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -221,7 +222,7 @@ export function CRAReviewSection({
     [businessTagged]
   );
   const likelyBusinessExpenseTx = useMemo(
-    () => businessTagged.filter((t) => t.type === "expense"),
+    () => businessTagged.filter((t) => t.type === "expense" || t.type === "refund"),
     [businessTagged]
   );
   const likelyTaxPayments = useMemo(
@@ -285,7 +286,7 @@ export function CRAReviewSection({
     [likelyBusinessIncomeTx]
   );
   const businessExpenseTotal = useMemo(
-    () => toFixed2(likelyBusinessExpenseTx.reduce((sum, t) => sum + t.amount, 0)),
+    () => toFixed2(likelyBusinessExpenseTx.reduce((sum, t) => sum + getExpenseReportEffect(t), 0)),
     [likelyBusinessExpenseTx]
   );
   const taxPaidTotal = useMemo(
@@ -365,7 +366,7 @@ export function CRAReviewSection({
     const map = new Map<string, number>();
     likelyBusinessExpenseTx.forEach((t) => {
       const name = categoryName.get(t.categoryId ?? "") ?? "Uncategorized";
-      map.set(name, toFixed2((map.get(name) ?? 0) + t.amount));
+      map.set(name, toFixed2((map.get(name) ?? 0) + getExpenseReportEffect(t)));
     });
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   }, [likelyBusinessExpenseTx, categoryName]);

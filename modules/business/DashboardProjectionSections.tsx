@@ -12,6 +12,7 @@ import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { useEffect } from "react";
 import { theme } from "@/lib/theme";
+import { getExpenseReportEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -341,12 +342,16 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
 
   // Monthly actuals
   const monthTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(monthStr));
-  const mIn = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const mOut = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0); // transfers excluded
+  const mIn = monthTx.reduce((sum, transaction) => sum + Math.max(0, getTransactionListEffect(transaction) ?? 0), 0);
+  const mOut = monthTx.reduce((sum, transaction) => sum + Math.max(0, -(getTransactionListEffect(transaction) ?? 0)), 0);
 
   // Top categories
   const catMap: Record<string, number> = {};
-  transactions.forEach((t) => { if (t.type === "expense") catMap[t.categoryId ?? "other"] = (catMap[t.categoryId ?? "other"] ?? 0) + t.amount; });
+  transactions.forEach((t) => {
+    if (t.type === "expense" || t.type === "refund") {
+      catMap[t.categoryId ?? "other"] = (catMap[t.categoryId ?? "other"] ?? 0) + getExpenseReportEffect(t);
+    }
+  });
   const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
 
@@ -593,19 +598,22 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
     });
 
     // Summary
-    const totalIn = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const totalOut = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const totalIn = monthTx.reduce((sum, transaction) => sum + Math.max(0, getTransactionListEffect(transaction) ?? 0), 0);
+    const totalOut = monthTx.reduce((sum, transaction) => sum + Math.max(0, -(getTransactionListEffect(transaction) ?? 0)), 0);
     const projIn = projEvents.filter((e) => e.amount > 0).reduce((s, e) => s + e.amount, 0);
     const projOut = projEvents.filter((e) => e.amount < 0).reduce((s, e) => s + Math.abs(e.amount), 0);
 
     // CRA payments made this month (past)
-    const craTx = monthTx.filter((t) => t.tag === "Business" && t.type === "expense" && t.description?.toLowerCase().includes("cra"));
+    const craTx = monthTx.filter((t) =>
+      t.tag === "Business"
+      && (t.type === "tax_payment" || (t.type === "expense" && t.description?.toLowerCase().includes("cra")))
+    );
 
     // Category breakdown (past)
     const catMap: Record<string, number> = {};
-    monthTx.filter((t) => t.type === "expense").forEach((t) => {
+    monthTx.filter((t) => t.type === "expense" || t.type === "refund").forEach((t) => {
       const key = t.categoryId ?? "uncategorized";
-      catMap[key] = (catMap[key] ?? 0) + t.amount;
+      catMap[key] = (catMap[key] ?? 0) + getExpenseReportEffect(t);
     });
     const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
 

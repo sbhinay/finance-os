@@ -29,6 +29,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 
 ## 2. Key Current Features
 - Master transaction ledger with replay-based balance computation.
+- Canonical transaction purposes and one shared financial-effect implementation across balances, ledgers, history, and reports.
 - Full support for bank accounts, credit cards, assets, and recurring payments.
 - Current-app JSON export/import with asset restoration.
 - Balance snapshots on accounts and credit cards.
@@ -65,6 +66,9 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Transaction History is now explicitly paginated with user-visible page controls instead of silently clipping to a hidden row limit.
 - Health Report is now live as a warning-first repair surface rather than a deferred concept.
 - Account and credit-card balance snapshots can be set directly from the account/card record and inspected through ledger views.
+- Assets & Liabilities now supports lender-level personal/bank/shareholder liabilities, linked borrowing, linked repayments, and principal-based balances.
+- Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
+- Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:

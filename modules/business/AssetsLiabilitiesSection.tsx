@@ -8,6 +8,8 @@ import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
 import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 import { PaymentSchedule, type PropertyTaxPayment, type Vehicle, type HouseLoan, type PropertyTax } from "@/types/domain";
 import { theme } from "@/lib/theme";
+import { useLiabilities } from "./useLiabilities";
+import type { Liability } from "@/types/domain";
 
 type NavTarget = "accounts" | "cards" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
@@ -110,12 +112,17 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
   const { propertyTaxes, markPaid } = usePropertyTax();
+  const { liabilities, balances: liabilityBalances, saveLiability } = useLiabilities();
 
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial | undefined>(undefined);
   const [txFormTitle, setTxFormTitle] = useState("New Transaction");
   const [scheduledAmount, setScheduledAmount] = useState<number | undefined>(undefined);
   const [pendingPropertyMark, setPendingPropertyMark] = useState<PendingPropertyMark>(null);
+  const [showLenderForm, setShowLenderForm] = useState(false);
+  const [lenderName, setLenderName] = useState("");
+  const [lenderType, setLenderType] = useState<Liability["type"]>("Personal Loan");
+  const [lenderTag, setLenderTag] = useState<Liability["tag"]>("Personal");
 
   const activeAccounts = accounts.filter((a) => a.active !== false);
   const activeCards = cards.filter((c) => c.active !== false);
@@ -123,7 +130,10 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   const liquidAssets = toFixed2(activeAccounts.reduce((sum, a) => sum + a.openingBalance, 0));
   const cardLiabilities = toFixed2(activeCards.reduce((sum, c) => sum + c.openingBalance, 0));
   const houseLoanLiabilities = toFixed2(houseLoans.reduce((sum, l) => sum + l.remaining, 0));
-  const totalLiabilities = toFixed2(cardLiabilities + houseLoanLiabilities);
+  const lenderLiabilities = toFixed2(
+    liabilities.reduce((sum, liability) => sum + (liabilityBalances[liability.id] ?? 0), 0)
+  );
+  const totalLiabilities = toFixed2(cardLiabilities + houseLoanLiabilities + lenderLiabilities);
   const netWorth = toFixed2(liquidAssets - totalLiabilities);
 
   const vehicleMonthly = toFixed2(vehicles.reduce((sum, v) => sum + amountBySchedule(v.payment, v.schedule), 0));
@@ -138,6 +148,37 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
     const name = a.name.toLowerCase();
     return name.includes("tfsa") || name.includes("rrsp") || name.includes("investment") || name.includes("savings");
   });
+
+  function loanPurpose(liability: Liability, direction: "receipt" | "payment") {
+    if (liability.type === "Bank Loan") {
+      return direction === "receipt" ? "bank_loan_receipt" : "bank_loan_payment";
+    }
+    if (liability.type === "Shareholder Loan") {
+      return direction === "receipt" ? "shareholder_loan_receipt" : "shareholder_loan_payment";
+    }
+    return direction === "receipt" ? "personal_loan_receipt" : "personal_loan_payment";
+  }
+
+  function openLiabilityTransaction(liability: Liability, direction: "receipt" | "payment") {
+    const isReceipt = direction === "receipt";
+    const subType = liability.type === "Bank Loan"
+      ? "bank_loan"
+      : liability.type === "Shareholder Loan"
+        ? "shareholder_loan"
+        : "personal_loan";
+    setTxFormInitial({
+      purpose: loanPurpose(liability, direction),
+      type: isReceipt ? "loan_receipt" : "loan_payment",
+      subType,
+      linkedLiabilityId: liability.id,
+      tag: liability.tag,
+      mode: "Bank Transfer",
+      date: todayDateOnly(),
+    });
+    setTxFormTitle(isReceipt ? `Record Borrowing - ${liability.name}` : `Record Repayment - ${liability.name}`);
+    setScheduledAmount(undefined);
+    setTxFormOpen(true);
+  }
 
   const upcomingObligations = useMemo<UpcomingItem[]>(() => {
     const vehicleItems: UpcomingItem[] = vehicles
@@ -267,7 +308,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
         <StatBox label="Liquid Assets" value={fmtCAD(liquidAssets)} color="#1a7f3c" sub="active bank and cash accounts" />
-        <StatBox label="Tracked Liabilities" value={fmtCAD(totalLiabilities)} color="#a31515" sub="credit cards + house loans" />
+        <StatBox label="Tracked Liabilities" value={fmtCAD(totalLiabilities)} color="#a31515" sub="cards + mortgages + lender loans" />
         <StatBox label="Net Worth Snapshot" value={fmtCAD(netWorth)} color={netWorth >= 0 ? "#1a7f3c" : "#a31515"} sub="market values not modeled yet" />
         <StatBox label="Next 30 Days" value={fmtCAD(upcomingTotal30)} color="#a05c00" sub="upcoming obligations from this page" />
       </div>
@@ -416,15 +457,57 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Liabilities"
           accent="#991b1b"
-          actions={<ActionBtn onClick={() => onNavigate("cards")}>Credit Cards</ActionBtn>}
+          actions={
+            <div style={{ display: "flex", gap: 8 }}>
+              <ActionBtn onClick={() => setShowLenderForm((value) => !value)}>Add Lender</ActionBtn>
+              <ActionBtn onClick={() => onNavigate("cards")}>Credit Cards</ActionBtn>
+            </div>
+          }
         >
-          {activeCards.length === 0 && houseLoans.length === 0 ? (
+          {showLenderForm && (
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, 1fr) minmax(140px, 180px) minmax(120px, 150px) auto", gap: 8, marginBottom: 14 }}>
+              <input value={lenderName} onChange={(event) => setLenderName(event.target.value)} placeholder="Lender name" style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }} />
+              <select value={lenderType} onChange={(event) => setLenderType(event.target.value as Liability["type"])} style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
+                <option>Personal Loan</option>
+                <option>Bank Loan</option>
+                <option>Shareholder Loan</option>
+              </select>
+              <select value={lenderTag} onChange={(event) => setLenderTag(event.target.value as Liability["tag"])} style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
+                <option>Personal</option>
+                <option>Business</option>
+              </select>
+              <ActionBtn variant="green" onClick={() => {
+                if (!lenderName.trim()) return;
+                saveLiability({
+                  name: lenderName.trim(),
+                  type: lenderType,
+                  openingBalance: 0,
+                  tag: lenderTag,
+                });
+                setLenderName("");
+                setShowLenderForm(false);
+              }}>Save</ActionBtn>
+            </div>
+          )}
+          {activeCards.length === 0 && houseLoans.length === 0 && liabilities.length === 0 ? (
             <EmptyNote>No liabilities tracked yet. Credit cards and house loans still live in their detail views during the transition.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ fontSize: 13, color: "#6b7280" }}>Credit cards owing: {fmtCAD(cardLiabilities)}</div>
               <div style={{ fontSize: 13, color: "#6b7280" }}>House loans remaining: {fmtCAD(houseLoanLiabilities)}</div>
-              <div style={{ fontSize: 13, color: "#6b7280" }}>Future liability accounts and LOCs will be added here next.</div>
+              {liabilities.filter((liability) => !liability.archived).map((liability) => (
+                <div key={liability.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{liability.name}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{liability.type} | {liability.tag}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <strong>{fmtCAD(liabilityBalances[liability.id] ?? 0)} owed</strong>
+                    <ActionBtn onClick={() => openLiabilityTransaction(liability, "receipt")}>Borrow</ActionBtn>
+                    <ActionBtn variant="green" onClick={() => openLiabilityTransaction(liability, "payment")}>Repay</ActionBtn>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </SectionCard>

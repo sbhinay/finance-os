@@ -6,13 +6,15 @@ import { Vehicle, HouseLoan, PaymentSchedule } from "@/types/domain";
 import { Account } from "@/types/account";
 import { useCategories } from "@/modules/categories/useCategories";
 import { useVehicles, useHouseLoans } from "./useAssets";
-import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly, uid } from "@/utils/finance";
+import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
 import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useFixedPayments";
 import { theme } from "@/lib/theme";
+import { buildCanonicalTransaction, findSemanticDuplicate } from "@/services/transactionPipeline";
+import { getExpenseReportEffect } from "@/utils/transactionSemantics";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // Primitives
@@ -221,6 +223,7 @@ export function VehiclesSection({
     const isFinanced = vehicle.vtype === "Finance";
     const leaseCategoryId = !isFinanced ? pickLeaseVehicleCategoryId(categories) : undefined;
     setTxFormInitial({
+      purpose: isFinanced ? "vehicle_finance_payment" : "vehicle_lease_payment",
       type: isFinanced ? "loan_payment" : "expense",
       subType: isFinanced ? "bank_loan" : undefined,
       amount: vehicle.payment,
@@ -265,33 +268,23 @@ export function VehiclesSection({
     if (!dates.length || !accountId) return 0;
 
     const existing = transactionRepository.getAll();
-    const existingDates = new Set(
-      existing
-        .filter((tx) => tx.linkedVehicleId === vehicle.id)
-        .map((tx) => tx.date)
-    );
-
     let inserted = 0;
     dates.forEach((date) => {
-      if (existingDates.has(date)) return;
       const isFinanced = vehicle.vtype === "Finance";
       const leaseCategoryId = !isFinanced ? pickLeaseVehicleCategoryId(categories) : undefined;
-      const tx: Transaction = {
-        id: uid(),
-        type: isFinanced ? "loan_payment" : "expense",
-        subType: isFinanced ? "bank_loan" : undefined,
+      const tx = buildCanonicalTransaction({
+        purpose: isFinanced ? "vehicle_finance_payment" : "vehicle_lease_payment",
         amount: toFixed2(vehicle.payment),
         date,
-        createdAt: new Date(`${date}T12:00:00`).toISOString(),
-        description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Lease Payment - ${vehicle.name}`,
         sourceId: accountId,
         categoryId: leaseCategoryId,
         tag: "Personal",
-        mode: "Debit",
-        currency: "CAD",
+        createdAt: new Date(`${date}T12:00:00`).toISOString(),
         status: "cleared",
         linkedVehicleId: vehicle.id,
-      };
+        linkedName: vehicle.name,
+      });
+      if (findSemanticDuplicate(tx, existing)) return;
       existing.push(tx);
       inserted += 1;
     });
@@ -340,10 +333,10 @@ export function VehiclesSection({
   function getVehicleSpendByCategory(vehicleId: string) {
     const totals = new Map<string, number>();
     transactions
-      .filter((t) => t.linkedVehicleId === vehicleId && t.type === "expense")
+      .filter((t) => t.linkedVehicleId === vehicleId && (t.type === "expense" || t.type === "refund"))
       .forEach((t) => {
         const key = categories.find((c) => c.id === t.categoryId)?.name ?? "Uncategorized";
-        totals.set(key, (totals.get(key) ?? 0) + t.amount);
+        totals.set(key, (totals.get(key) ?? 0) + getExpenseReportEffect(t));
       });
     return Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
   }
@@ -409,7 +402,7 @@ export function VehiclesSection({
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: categorySpend.length ? 8 : 0 }}>
                     <StatBox label="Spent To Date" value={fmtCAD(totalSpent)} sub="logged expenses only" color="#a31515" />
-                    <StatBox label="Expense Entries" value={String(transactions.filter((t) => t.linkedVehicleId === v.id && t.type === "expense").length)} />
+                    <StatBox label="Expense Entries" value={String(transactions.filter((t) => t.linkedVehicleId === v.id && (t.type === "expense" || t.type === "refund")).length)} />
                   </div>
                   {categorySpend.length > 0 && (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -549,18 +542,18 @@ export function VehiclesSection({
                 if (bTime !== aTime) return bTime - aTime;
                 return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
               });
-            const expenseTxns = txns.filter((t) => t.type === "expense");
-            const total = expenseTxns.reduce((s, t) => s + t.amount, 0);
+            const expenseTxns = txns.filter((t) => t.type === "expense" || t.type === "refund");
+            const total = expenseTxns.reduce((s, t) => s + getExpenseReportEffect(t), 0);
             const spendByCategory = expenseTxns.reduce<Record<string, number>>((acc, t) => {
               const key = categories.find((c) => c.id === t.categoryId)?.name ?? "Uncategorized";
-              acc[key] = (acc[key] ?? 0) + t.amount;
+              acc[key] = (acc[key] ?? 0) + getExpenseReportEffect(t);
               return acc;
             }, {});
             const categoryRows = Object.entries(spendByCategory).sort((a, b) => b[1] - a[1]);
             return (
               <>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <StatBox label="Total Spent" value={fmtCAD(total + detail.payment)} sub="incl. monthly payments" />
+                  <StatBox label="Total Spent" value={fmtCAD(total)} sub="linked expense transactions" />
                   <StatBox label="Expense Entries" value={String(txns.length)} />
                 </div>
                 {categoryRows.length > 0 && (
@@ -704,6 +697,7 @@ export function HouseLoansSection({
       : new Date().toISOString().split("T")[0];
 
     setTxFormInitial({
+      purpose: "mortgage_payment",
       type: "loan_payment",
       subType: "mortgage",
       amount: loan.payment,
@@ -746,40 +740,27 @@ export function HouseLoansSection({
     if (!dates.length || !accountId) return 0;
 
     const existing = transactionRepository.getAll();
-    const existingDates = new Set(
-      existing
-        .filter((t) =>
-          t.sourceId === accountId &&
-          toFixed2(t.amount) === toFixed2(loan.payment) &&
-          (t.description === `${loan.name} Mortgage Payment` || t.description?.includes(loan.name))
-        )
-        .map((t) => t.date ?? t.createdAt?.slice(0, 10))
-    );
-
     let count = 0;
     dates.forEach((date) => {
-      if (existingDates.has(date)) return;
-
-      const txn: Transaction = {
-        id: uid(),
-        type: "loan_payment",
-        subType: "mortgage",
+      const txn = buildCanonicalTransaction({
+        purpose: "mortgage_payment",
         amount: toFixed2(loan.payment),
-        description: `${loan.name} Mortgage Payment`,
         sourceId: accountId,
         date,
         createdAt: new Date().toISOString(),
-        currency: "CAD",
         status: "cleared",
         tag: "Personal",
-        mode: "Debit",
-      };
+        linkedPropertyId: loan.id,
+        linkedName: loan.name,
+      });
+      if (findSemanticDuplicate(txn, existing)) return;
 
-      transactionRepository.add(txn);
+      existing.push(txn);
       count++;
     });
 
     if (count > 0) {
+      transactionRepository.saveAll(existing);
       const advancedDate = nextOccurrenceAfter(loan.nextPaymentDate || dates[dates.length - 1], loan.schedule)
         ?? advanceOneInterval(dates[dates.length - 1], loan.schedule);
       updateHouseLoan({

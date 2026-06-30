@@ -7,7 +7,8 @@ import { validateTransaction } from "@/rules/validationRules";
 import { detectCategory, learnedRulesRepository, uncategorizedRepository } from "@/rules/categoryRules";
 import { uid, toFixed2 } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
+import { deleteCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
+import { inferTransactionPurpose } from "@/utils/transactionSemantics";
 
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -64,26 +65,22 @@ export function useTransactions() {
       categoryId: shouldClassify ? detectedCategoryId : undefined,
       ...overrides,
     };
+    t.purpose = t.purpose ?? inferTransactionPurpose(t);
 
-    transactionRepository.add(t);
-    syncBalances();
+    persistCanonicalTransaction(t);
     const updated = transactionRepository.getAll();
     setTransactions(updated);
     setError(null);
   }, []);
 
   const deleteTransaction = useCallback((id: string) => {
-    const updated = transactionRepository.getAll().filter((t) => t.id !== id);
-    transactionRepository.saveAll(updated);
-    syncBalances();
-    setTransactions(updated);
+    deleteCanonicalTransaction(id);
+    setTransactions(transactionRepository.getAll());
   }, []);
 
   const updateTransaction = useCallback((updatedTx: Transaction) => {
-    const updated = transactionRepository.getAll().map((t) => (t.id === updatedTx.id ? updatedTx : t));
-    transactionRepository.saveAll(updated);
-    syncBalances();
-    setTransactions(updated);
+    persistCanonicalTransaction(updatedTx);
+    setTransactions(transactionRepository.getAll());
   }, []);
 
   return {

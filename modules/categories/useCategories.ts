@@ -4,8 +4,38 @@ import { useEffect, useState, useCallback } from "react";
 import { Category, CategoryType } from "@/types/category";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { uid } from "@/utils/finance";
-import { seedDefaultCategories } from "@/utils/defaultCategories";
+import { ensureRequiredCategories, seedDefaultCategories } from "@/utils/defaultCategories";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
+import { transactionRepository } from "@/repositories/transactionRepository";
+
+function migrateVehicleLeaseCategories(categories: Category[]) {
+  const leaseCategory = categories.find(
+    (category) => category.name.trim().toLowerCase() === "vehicle lease"
+  );
+  if (!leaseCategory) return;
+  const transactions = transactionRepository.getAll();
+  let changed = false;
+  const migrated = transactions.map((transaction) => {
+    if (
+      transaction.type === "expense"
+      && transaction.linkedVehicleId
+      && /^vehicle lease payment\b/i.test(transaction.description)
+      && (
+        transaction.categoryId !== leaseCategory.id
+        || transaction.purpose !== "vehicle_lease_payment"
+      )
+    ) {
+      changed = true;
+      return {
+        ...transaction,
+        categoryId: leaseCategory.id,
+        purpose: "vehicle_lease_payment" as const,
+      };
+    }
+    return transaction;
+  });
+  if (changed) transactionRepository.saveAll(migrated);
+}
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -18,7 +48,10 @@ export function useCategories() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategories(seeded);
     } else {
-      setCategories(cats);
+      const upgraded = ensureRequiredCategories(cats);
+      if (upgraded !== cats) categoryRepository.saveAll(upgraded);
+      migrateVehicleLeaseCategories(upgraded);
+      setCategories(upgraded);
     }
   }, []);
 
@@ -30,7 +63,10 @@ export function useCategories() {
       setCategories(seeded);
       return;
     }
-    setCategories(cats);
+    const upgraded = ensureRequiredCategories(cats);
+    if (upgraded !== cats) categoryRepository.saveAll(upgraded);
+    migrateVehicleLeaseCategories(upgraded);
+    setCategories(upgraded);
   }, []);
 
   useEffect(() => {

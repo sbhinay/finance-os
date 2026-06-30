@@ -1,6 +1,6 @@
 "use client";
 
-import type { HouseLoan, PropertyTax, FixedPayment, Vehicle } from "@/types/domain";
+import type { HouseLoan, Liability, PropertyTax, FixedPayment, Vehicle } from "@/types/domain";
 import type { Account } from "@/types/account";
 import type { CreditCard } from "@/types/creditCard";
 import type { Transaction } from "@/types/transaction";
@@ -16,7 +16,7 @@ import { categoryRepository } from "@/repositories/categoryRepository";
 import { businessRepository } from "@/repositories/businessRepository";
 import { ImportPayload, validateImportPayload } from "@/utils/referenceIntegrity";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
-import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
+import { vehicleRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { notifyDataChanged } from "@/utils/events";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { buildCloudExportPayload, loadCloudSnapshot, saveCloudSnapshot } from "@/lib/supabase/cloudSnapshots";
@@ -89,6 +89,7 @@ function loadExportResult(raw: RawObject): ImportPayload {
     vehicles: asArray(raw.vehicles) as Vehicle[],
     houseLoans: asArray(raw.houseLoans) as HouseLoan[],
     propertyTaxes: asArray(raw.propertyTaxes) as PropertyTax[],
+    liabilities: asArray(raw.liabilities) as Liability[],
     futurePayments: asArray(raw.futurePayments) as FixedPayment[],
   };
 }
@@ -107,6 +108,7 @@ function normalizeImportResult(result: ImportResult): ImportPayload {
     vehicles: [],
     houseLoans: [],
     propertyTaxes: [],
+    liabilities: [],
     futurePayments: [],
   };
 }
@@ -175,6 +177,7 @@ export function ImportExportSection() {
       Vehicles: result.vehicles.length,
       "House Loans": result.houseLoans.length,
       "Property Taxes": result.propertyTaxes.length,
+      Liabilities: result.liabilities.length,
       "Fixed Payments": result.futurePayments.length,
     });
     setPendingData(validation.normalized);
@@ -217,6 +220,7 @@ export function ImportExportSection() {
       vehicleRepository.saveAll(result.vehicles);
       houseLoanRepository.saveAll(result.houseLoans);
       propertyTaxRepository.saveAll(result.propertyTaxes);
+      liabilityRepository.saveAll(result.liabilities);
       fixedPaymentRepository.saveAll(result.futurePayments);
 
       notifyDataChanged("import");

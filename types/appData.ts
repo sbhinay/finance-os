@@ -7,6 +7,7 @@ import {
   Vehicle,
   HouseLoan,
   PropertyTax,
+  Liability,
   FixedPayment,
   IncomeSource,
   InvestmentAccount,
@@ -38,6 +39,7 @@ export interface AppData {
   vehicles: Vehicle[];
   houseLoans: HouseLoan[];
   propertyTaxes: PropertyTax[];
+  liabilities: Liability[];
   futurePayments: FixedPayment[];
   incomes: IncomeSource[];
   rrsp: InvestmentAccount;

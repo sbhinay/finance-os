@@ -7,12 +7,11 @@ import { useCategories } from "@/modules/categories/useCategories";
 import { useFixedPayments } from "@/modules/business/useFixedPayments";
 import { useHouseLoans, usePropertyTax, useVehicles } from "@/modules/business/useAssets";
 import { useTransactions } from "@/modules/transactions/useTransactions";
-import { transactionRepository } from "@/repositories/transactionRepository";
 import { FixedPayment, getFixedPaymentKind } from "@/types/domain";
-import { SUB_TYPE_LABELS, TYPE_LABELS, type Transaction } from "@/types/transaction";
+import { TYPE_LABELS, getSubTypeLabel, type Transaction } from "@/types/transaction";
 import type { Category } from "@/types/category";
-import { notifyDataChanged } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
+import { deleteCanonicalTransaction } from "@/services/transactionPipeline";
+import { transactionFingerprint } from "@/utils/transactionSemantics";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -51,20 +50,8 @@ function latestDate(dates: string[]): string | null {
 
 function summarizeTx(tx: Transaction): string {
   const type = TYPE_LABELS[tx.type];
-  const subType = tx.subType ? SUB_TYPE_LABELS[tx.subType] : undefined;
+  const subType = tx.subType ? getSubTypeLabel(tx.type, tx.subType) : undefined;
   return `${tx.date} - ${type}${subType ? ` / ${subType}` : ""} - ${tx.description}`;
-}
-
-function duplicateKey(tx: Transaction) {
-  const date = tx.date ?? tx.createdAt?.slice(0, 10) ?? "";
-  return [
-    date,
-    tx.type,
-    tx.subType ?? "",
-    Number(tx.amount).toFixed(2),
-    tx.sourceId ?? "",
-    tx.destinationId ?? "",
-  ].join("|");
 }
 
 function recurringLabel(fp: FixedPayment): string {
@@ -209,7 +196,7 @@ export function HealthReportSection({
     const duplicateGroups = new Map<string, Transaction[]>();
     transactions.forEach((tx) => {
       if (tx.status === "pending" || tx.type === "adjustment") return;
-      const key = duplicateKey(tx);
+      const key = transactionFingerprint(tx);
       duplicateGroups.set(key, [...(duplicateGroups.get(key) ?? []), tx]);
     });
 
@@ -223,7 +210,7 @@ export function HealthReportSection({
         severity: "medium",
         title: "Possible duplicate transactions",
         detail: `${first.date} - ${TYPE_LABELS[first.type]} - ${Number(first.amount).toFixed(2)} - ${group.length} matching rows`,
-        hint: "Same date, amount, type, subtype, source, and destination. Delete the extra row, or dismiss this warning if both rows are legitimate.",
+        hint: "Same purpose, date, amount, accounts, and linked item. Delete the extra row, or dismiss this warning if both rows are legitimate.",
         duplicateTransactions: group,
       });
     });
@@ -325,9 +312,7 @@ export function HealthReportSection({
 
   function deleteTransactionFromHealth(transactionId: string) {
     if (!confirm("Delete this transaction? This cannot be undone.")) return;
-    transactionRepository.saveAll(transactionRepository.getAll().filter((tx) => tx.id !== transactionId));
-    syncBalances();
-    notifyDataChanged("transactions");
+    deleteCanonicalTransaction(transactionId);
     reloadTransactions();
   }
 

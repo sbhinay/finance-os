@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Contract, Invoice, RateSettings } from "@/types/business";
+import { Contract, Invoice } from "@/types/business";
 import { Account } from "@/types/account";
 import { useBusiness } from "./useBusiness";
 import {

@@ -24,6 +24,7 @@ The import process supports:
 #### Current-app import path
 - Reads the same top-level keys the exporter writes.
 - Restores vehicles, house loans, property taxes, and fixed payments.
+- Restores lender liabilities and validates `linkedLiabilityId` references.
 - Preserves balance snapshot metadata on accounts and cards.
 - Resolves asset source references by ID or name.
 - Normalizes legacy `credit_card_payment` rows into canonical `transfer + cc_payment`.
@@ -47,6 +48,8 @@ This resolution is applied to vehicles, house loans, and fixed payments.
 - Broken transaction source/destination references block import.
 - Clearly ambiguous legacy category values fall back to `Other` if that category exists; otherwise they remain unresolved with a warning.
 - Import should prefer canonical modern shapes rather than preserving stale legacy transaction structures unchanged.
+- Transaction normalization adds stable purposes only when type/subtype or a narrow legacy pattern makes the meaning unambiguous.
+- Numbered personal-loan receipt series such as `Loan DP 1` through `Loan DP 7` can be grouped into one lender liability without changing amounts, dates, accounts, or tags.
 
 ### Date & Time Standards
 | Field | Format | Meaning |

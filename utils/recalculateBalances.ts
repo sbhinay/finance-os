@@ -2,6 +2,7 @@ import { Transaction } from "@/types/transaction";
 import { accountRepository } from "@/repositories/accountRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { toFixed2 } from "@/utils/finance";
+import { getTransactionEffect } from "@/utils/transactionSemantics";
 
 type BalanceFields = {
   balanceSnapshotAmount?: number;
@@ -76,38 +77,25 @@ export function recalculateBalances(transactions: Transaction[]) {
     const applyToAcc = toAcc && shouldApplyTransaction(toAcc, txDate);
     const applyToCard = toCard && shouldApplyTransaction(toCard, txDate);
 
-    switch (t.type) {
-      case "expense":
-      case "tax_payment":
-      case "loan_payment":
-      case "withdrawal":
-        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance - t.amount);
-        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance + t.amount);
-        break;
-
-      case "income":
-      case "refund":
-      case "dividend":
-      case "loan_receipt":
-        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance + t.amount);
-        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance - t.amount);
-        break;
-
-      case "transfer":
-        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance - t.amount);
-        if (applySrcCard && srcCard) {
-          srcCard.openingBalance = toFixed2(srcCard.openingBalance + (t.subType === "loc_draw" ? t.amount : -t.amount));
-        }
-        if (applyToAcc && toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance + t.amount);
-        if (applyToCard && toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
-        break;
-
-      case "adjustment":
-        if (applySrcAcc && srcAcc) srcAcc.openingBalance = toFixed2(srcAcc.openingBalance + t.amount);
-        if (applySrcCard && srcCard) srcCard.openingBalance = toFixed2(srcCard.openingBalance + t.amount);
-        if (applyToAcc && toAcc) toAcc.openingBalance = toFixed2(toAcc.openingBalance - t.amount);
-        if (applyToCard && toCard) toCard.openingBalance = toFixed2(toCard.openingBalance - t.amount);
-        break;
+    if (applySrcAcc && srcAcc) {
+      srcAcc.openingBalance = toFixed2(
+        srcAcc.openingBalance + getTransactionEffect(t, srcAcc.id, "account")
+      );
+    }
+    if (applySrcCard && srcCard) {
+      srcCard.openingBalance = toFixed2(
+        srcCard.openingBalance + getTransactionEffect(t, srcCard.id, "card")
+      );
+    }
+    if (applyToAcc && toAcc && toAcc.id !== srcAcc?.id) {
+      toAcc.openingBalance = toFixed2(
+        toAcc.openingBalance + getTransactionEffect(t, toAcc.id, "account")
+      );
+    }
+    if (applyToCard && toCard && toCard.id !== srcCard?.id) {
+      toCard.openingBalance = toFixed2(
+        toCard.openingBalance + getTransactionEffect(t, toCard.id, "card")
+      );
     }
   }
 

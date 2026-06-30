@@ -17,6 +17,7 @@ export const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
   { name: "Education",            type: "expense" },
   { name: "Clothing",             type: "expense" },
   { name: "Personal Care",        type: "expense" },
+  { name: "Vehicle Lease",        type: "expense", vehicleLinked: true },
   { name: "Car Maintenance",      type: "expense", vehicleLinked: true },
   // ── Business Expense ─────────────────────────────────────────────────────
   { name: "Business Expense",     type: "expense" },
@@ -34,4 +35,38 @@ export const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
 
 export function seedDefaultCategories(): Category[] {
   return DEFAULT_CATEGORIES.map((c) => ({ ...c, id: uid() }));
+}
+
+export function ensureRequiredCategories(categories: Category[]): Category[] {
+  const leaseIndex = categories.findIndex(
+    (category) => category.name.trim().toLowerCase() === "vehicle lease"
+  );
+
+  if (leaseIndex === -1) {
+    return [
+      ...categories,
+      {
+        id: uid(),
+        name: "Vehicle Lease",
+        type: "expense",
+        vehicleLinked: true,
+      },
+    ];
+  }
+
+  const lease = categories[leaseIndex];
+  if (lease.type === "expense" && lease.vehicleLinked && !lease.archived) {
+    return categories;
+  }
+
+  return categories.map((category, index) =>
+    index === leaseIndex
+      ? {
+          ...category,
+          type: "expense",
+          vehicleLinked: true,
+          archived: false,
+        }
+      : category
+  );
 }

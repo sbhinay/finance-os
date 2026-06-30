@@ -17,12 +17,18 @@ import {
   CRAReviewProfile,
 } from "@/types/business";
 import { Transaction } from "@/types/transaction";
-import { Account } from "@/types/account";
 import { businessRepository } from "@/repositories/businessRepository";
 import { accountRepository } from "@/repositories/accountRepository";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { notifyDataChanged } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
+import {
+  buildCanonicalTransaction,
+  deleteCanonicalTransaction,
+  persistCanonicalTransaction,
+} from "@/services/transactionPipeline";
+import type { TransactionPurpose } from "@/types/transaction";
+import { normalizeText } from "@/utils/transactionNormalization";
 import {
   uid,
   toFixed2,
@@ -80,13 +86,13 @@ function buildCRATransaction(
   amount: number,
   date: string,
   accountId: string,
-  description: string
+  description: string,
+  purpose: TransactionPurpose
 ): Transaction {
-  return {
+  return buildCanonicalTransaction({
     id,
-    type: "expense",
+    purpose,
     date,
-    currency: "CAD",
     status: "cleared" as const,
     amount,
     description,
@@ -94,7 +100,7 @@ function buildCRATransaction(
     createdAt: new Date().toISOString(),
     tag: "Business",
     mode: "Bank Transfer",
-  };
+  });
 }
 
 /**
@@ -169,10 +175,16 @@ function normalizeBusiness(biz?: Partial<Business> | null): Business {
     ...(biz ?? {}),
     contracts: biz?.contracts ?? [],
     invoices: biz?.invoices ?? [],
-    hstRemittances: biz?.hstRemittances ?? [],
+    hstRemittances: (biz?.hstRemittances ?? []).map((remittance) => ({
+      ...remittance,
+      period: normalizeText(remittance.period) ?? remittance.period,
+    })),
     corporateInstalments: biz?.corporateInstalments ?? [],
     payrollRemittances: biz?.payrollRemittances ?? [],
-    arrearsPayments: biz?.arrearsPayments ?? [],
+    arrearsPayments: (biz?.arrearsPayments ?? []).map((payment) => ({
+      ...payment,
+      note: normalizeText(payment.note) ?? payment.note,
+    })),
     rateSettings: {
       ...EMPTY_BUSINESS.rateSettings,
       ...(biz?.rateSettings ?? {}),
@@ -215,39 +227,17 @@ export function useBusiness() {
   }, []);
 
 
-  // ── Accounts helper (read-only inside this hook) ──
-  const getAccounts = (): Account[] => accountRepository.getAll();
-
   // ── Transaction helpers ───────────────────────────────────────────────────
 
   const addTransactionAndDebit = useCallback(
-    (txn: Transaction, accountId: string) => {
-      transactionRepository.add(txn);
-      const accounts = getAccounts();
-      const updated = accounts.map((a) =>
-        a.id === accountId
-          ? { ...a, openingBalance: toFixed2(a.openingBalance - txn.amount) }
-          : a
-      );
-      accountRepository.saveAll(updated);
+    (txn: Transaction) => {
+      persistCanonicalTransaction(txn);
     },
     []
   );
 
   const deleteTransactionAndCredit = useCallback((txnId: string) => {
-    const txns = transactionRepository.getAll();
-    const txn = txns.find((t) => t.id === txnId);
-    if (!txn) return;
-    transactionRepository.saveAll(txns.filter((t) => t.id !== txnId));
-    if (txn.type === "expense") {
-      const accounts = getAccounts();
-      const updated = accounts.map((a) =>
-        a.id === txn.sourceId
-          ? { ...a, openingBalance: toFixed2(a.openingBalance + txn.amount) }
-          : a
-      );
-      accountRepository.saveAll(updated);
-    }
+    deleteCanonicalTransaction(txnId);
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -535,7 +525,7 @@ export function useBusiness() {
         rs
       );
 
-      const inv: Invoice = {
+      let inv: Invoice = {
         ...fields,
         id: fields.id ?? uid(),
         invoiceNumber: fields.invoiceNumber || getNextInvoiceNumber(fields.workYear),
@@ -543,6 +533,46 @@ export function useBusiness() {
       };
 
       const isNew = !fields.id;
+      const previousInvoice = fields.id
+        ? biz.invoices.find((invoice) => invoice.id === fields.id)
+        : undefined;
+      const previousDepositTxnId = previousInvoice?.depositTxnId;
+      const depositAccount = accountRepository.getAll().find(
+        (account) => account.name === inv.depositAccount
+      );
+      const existingTransactions = transactionRepository.getAll();
+      const matchingLegacyDeposit = inv.paymentDate && depositAccount
+        ? existingTransactions.find((transaction) =>
+            transaction.status !== "pending"
+            && transaction.type === "income"
+            && transaction.sourceId === depositAccount.id
+            && transaction.date === inv.paymentDate
+            && toFixed2(transaction.amount) === toFixed2(inv.total)
+          )
+        : undefined;
+      const existingDeposit = previousDepositTxnId
+        ? existingTransactions.find((transaction) => transaction.id === previousDepositTxnId)
+        : matchingLegacyDeposit;
+
+      if (previousDepositTxnId && (!inv.paymentDate || !depositAccount)) {
+        deleteCanonicalTransaction(previousDepositTxnId);
+        inv = { ...inv, depositTxnId: null };
+      } else if (inv.paymentDate && depositAccount) {
+        const depositTxnId = existingDeposit?.id ?? uid();
+        persistCanonicalTransaction(buildCanonicalTransaction({
+          id: depositTxnId,
+          purpose: "invoice_deposit",
+          amount: inv.total,
+          date: inv.paymentDate,
+          sourceId: depositAccount.id,
+          description: existingDeposit?.description ?? `Invoice Deposit - ${inv.invoiceNumber}`,
+          linkedInvoiceId: inv.id,
+          tag: "Business",
+          mode: "Direct Deposit",
+          createdAt: existingDeposit?.createdAt,
+        }));
+        inv = { ...inv, depositTxnId };
+      }
 
       // Upsert invoice
       let newBiz: Business = {
@@ -573,6 +603,7 @@ export function useBusiness() {
       const biz = getBusiness();
       const inv = biz.invoices.find((x) => x.id === invoiceId);
       if (!inv) return;
+      if (inv.depositTxnId) deleteCanonicalTransaction(inv.depositTxnId);
 
       let newBiz: Business = {
         ...biz,
@@ -686,9 +717,14 @@ export function useBusiness() {
           amount,
           paidDate,
           accountId,
-          `CRA Payment - ${label}`
+          `CRA Payment - ${label}`,
+          type === "HST"
+            ? "hst_remittance"
+            : type === "Corp Tax"
+              ? "corporate_tax_payment"
+              : "payroll_remittance"
         );
-        addTransactionAndDebit(txn, accountId);
+        addTransactionAndDebit(txn);
       }
     },
     [commit, addTransactionAndDebit, getBusiness]
@@ -916,9 +952,10 @@ export function useBusiness() {
           payment.amount,
           payment.date,
           accountId,
-          `CRA Arrears Payment - ${payment.type}${payment.note ? ` (${payment.note})` : ""}`
+          `CRA Arrears Payment - ${payment.type}${payment.note ? ` (${payment.note})` : ""}`,
+          payment.type === "HST" ? "hst_remittance" : "corporate_tax_payment"
         );
-        addTransactionAndDebit(txn, accountId);
+        addTransactionAndDebit(txn);
       }
     },
     [commit, addTransactionAndDebit, getBusiness]
@@ -968,9 +1005,10 @@ export function useBusiness() {
           updated.amount,
           updated.date,
           accountId,
-          `CRA Arrears Payment - ${updated.type}${updated.note ? ` (${updated.note})` : ""}`
+          `CRA Arrears Payment - ${updated.type}${updated.note ? ` (${updated.note})` : ""}`,
+          updated.type === "HST" ? "hst_remittance" : "corporate_tax_payment"
         );
-        addTransactionAndDebit(txn, accountId);
+        addTransactionAndDebit(txn);
       }
     },
     [commit, addTransactionAndDebit, deleteTransactionAndCredit, getBusiness]

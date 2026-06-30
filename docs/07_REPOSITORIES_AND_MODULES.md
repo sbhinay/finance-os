@@ -24,6 +24,7 @@ export const [domain]Repository = {
 - `finance_os_business`
 - `finance_os_vehicles`
 - `finance_os_house_loans`
+- `finance_os_liabilities`
 - `finance_os_property_taxes`
 - `finance_os_fixed_payments`
 
@@ -38,6 +39,7 @@ export const [domain]Repository = {
 | `useBusiness` | `modules/business/useBusiness.ts` | Business domain normalization and CRA data |
 | `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD, history, and owned insurance recurring sync |
 | `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD and owned property-tax recurring sync |
+| `useLiabilities` | `modules/business/useLiabilities.ts` | Lender records and principal-based liability balances |
 | `usePropertyTax` | `modules/business/useAssets.ts` | Property tax CRUD |
 
 ### UI Sections
@@ -70,7 +72,8 @@ export const [domain]Repository = {
 - Detail pages like `Transaction History`, `Projection`, `Subscriptions`, `Planned Payments`, `Vehicles`, `House Loans`, `Property Tax`, and `Import / Export` remain active, but they are now intended to be reached from their parent hubs.
 - `Assets & Liabilities` is now the new cross-domain shell for asset and debt workflows.
 - Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
-- New actions should prefer launching the canonical `TransactionForm` from the unified page rather than inventing separate transaction-entry behavior.
+- New actions must use `services/transactionPipeline.ts`; interactive actions should prefer launching the canonical `TransactionForm`.
+- `utils/transactionSemantics.ts` owns purpose inference, balance effects, report effects, list signs, and semantic duplicate identity.
 - `FixedPaymentsSection.tsx` is now serving as the shared recurring engine and also exports focused recurring views rather than acting only as a generic fixed-payments page.
 - Vehicle and mortgage backfill now use `nextPaymentDate` as the preferred cadence anchor.
 - Category add/edit UI now exposes vehicle/property linking flags used by `TransactionForm`.

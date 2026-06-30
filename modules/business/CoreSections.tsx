@@ -7,15 +7,17 @@ import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { useCategories } from "@/modules/categories/useCategories";
 import { useVehicles, useHouseLoans } from "./useAssets";
+import { useLiabilities } from "./useLiabilities";
 import { useFixedPayments } from "./useFixedPayments";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
-import { transactionRepository } from "@/repositories/transactionRepository";
-import { fmtCAD, toFixed2, uid } from "@/utils/finance";
+import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
 import { syncBalances } from "@/utils/syncBalances";
-import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction } from "@/types/transaction";
+import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction, getSubTypeLabel } from "@/types/transaction";
+import { getExpenseReportEffect, getTransactionEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
+import { buildCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
 import { theme } from "@/lib/theme";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -122,41 +124,6 @@ function txDate(t: Transaction) {
   return t.date ?? t.createdAt?.slice(0, 10) ?? "";
 }
 
-function ledgerEffect(t: Transaction, entityId: string, kind: LedgerKind) {
-  const isSource = t.sourceId === entityId;
-  const isDestination = t.destinationId === entityId;
-  if (!isSource && !isDestination) return 0;
-
-  switch (t.type) {
-    case "expense":
-    case "tax_payment":
-    case "loan_payment":
-    case "withdrawal":
-      if (isSource) return kind === "card" ? t.amount : -t.amount;
-      return 0;
-
-    case "income":
-    case "refund":
-    case "dividend":
-    case "loan_receipt":
-      if (isSource) return kind === "card" ? -t.amount : t.amount;
-      return 0;
-
-    case "transfer":
-      if (isSource) return kind === "card" && t.subType === "loc_draw" ? t.amount : -t.amount;
-      if (isDestination) return kind === "card" ? -t.amount : t.amount;
-      return 0;
-
-    case "adjustment":
-      if (isSource) return t.amount;
-      if (isDestination) return -t.amount;
-      return 0;
-
-    default:
-      return 0;
-  }
-}
-
 function ledgerEffectColor(effect: number, kind: LedgerKind) {
   if (effect === 0) return "#6b7280";
   if (kind === "card") return effect > 0 ? "#a31515" : "#1a7f3c";
@@ -198,7 +165,10 @@ function LedgerModal({
     })
     .slice(0, 30);
   const displayRows = view === "afterSnapshot" ? afterSnapshot : latest30;
-  const afterSnapshotTotal = toFixed2(afterSnapshot.reduce((sum, t) => sum + ledgerEffect(t, entity.id, kind), 0));
+  const afterSnapshotTotal = toFixed2(afterSnapshot.reduce(
+    (sum, t) => sum + getTransactionEffect(t, entity.id, kind),
+    0
+  ));
   const calculated = typeof snapshotAmount === "number" ? toFixed2(snapshotAmount + afterSnapshotTotal) : undefined;
   const difference = calculated == null ? undefined : toFixed2(entity.openingBalance - calculated);
 
@@ -234,14 +204,14 @@ function LedgerModal({
             No cleared transactions found for this view.
           </div>
         ) : displayRows.map((t) => {
-          const effect = toFixed2(ledgerEffect(t, entity.id, kind));
+          const effect = toFixed2(getTransactionEffect(t, entity.id, kind));
           if (view === "afterSnapshot") running = toFixed2(running + effect);
           return (
             <div key={t.id} style={{ display: "grid", gridTemplateColumns: view === "afterSnapshot" ? "90px 1fr 90px 90px" : "90px 1fr 90px", gap: 8, padding: "9px 10px", borderTop: "1px solid #f3f4f6", fontSize: 12, alignItems: "center" }}>
               <span style={{ color: "#374151" }}>{txDate(t)}</span>
               <span>
                 <span style={{ fontWeight: 600 }}>{t.description || TYPE_LABELS[t.type]}</span>
-                <span style={{ color: "#6b7280" }}> - {TYPE_LABELS[t.type]}{t.subType ? ` / ${SUB_TYPE_LABELS[t.subType] ?? t.subType}` : ""}</span>
+                <span style={{ color: "#6b7280" }}> - {TYPE_LABELS[t.type]}{t.subType ? ` / ${getSubTypeLabel(t.type, t.subType)}` : ""}</span>
                 {counterparty(t) && <span style={{ color: "#6b7280" }}> - {counterparty(t)}</span>}
               </span>
               <span style={{ textAlign: "right", fontWeight: 700, color: ledgerEffectColor(effect, kind) }}>{effect >= 0 ? "+" : ""}{fmtCAD(effect)}</span>
@@ -625,6 +595,7 @@ export function CreditCardsSection() {
     const linkedAccount = accounts.find((a) => a.id === c.linkedAccountId);
     setPendingPayCard(c);
     setTxFormInitial({
+      purpose: "credit_card_payment",
       type: "transfer",
       subType: c.type === "loc" ? "loc_payment" : "cc_payment",
       amount: c.openingBalance > 0 ? toFixed2(c.openingBalance) : undefined,
@@ -685,37 +656,28 @@ export function CreditCardsSection() {
     const tag = linkedAccount?.type === "business" || locPaymentCard.type === "business" ? "Business" : "Personal";
 
     if (principal > 0) {
-      transactionRepository.add({
-        id: uid(),
-        type: "transfer",
-        subType: "loc_payment",
+      persistCanonicalTransaction(buildCanonicalTransaction({
+        purpose: "loc_payment",
         amount: principal,
-        description: `LOC Principal Payment - ${locPaymentCard.name}`,
         sourceId: locPaymentSourceId,
         destinationId: locPaymentCard.id,
         date: locPaymentDate,
-        createdAt: new Date().toISOString(),
-        currency: "CAD",
-        status: "cleared",
+        destinationName: locPaymentCard.name,
         tag,
         mode: "Bank Transfer",
-      });
+      }));
     }
 
     if (interest > 0) {
-      transactionRepository.add({
-        id: uid(),
-        type: "expense",
+      persistCanonicalTransaction(buildCanonicalTransaction({
+        purpose: "loan_interest",
         amount: interest,
         description: `LOC Interest - ${locPaymentCard.name}`,
         sourceId: locPaymentSourceId,
         date: locPaymentDate,
-        createdAt: new Date().toISOString(),
-        currency: "CAD",
-        status: "cleared",
         tag,
         mode: "Bank Transfer",
-      });
+      }));
     }
 
     syncBalances();
@@ -928,6 +890,7 @@ export function TransactionHistorySection() {
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
+  const { liabilities } = useLiabilities();
 
   useAutoReload(reloadTransactions as () => void);
   useAutoReload(reloadAccounts);
@@ -949,11 +912,12 @@ export function TransactionHistorySection() {
 
   const acctName = useCallback((id: string) => [...accounts, ...cards].find((x) => x.id === id)?.name ?? id, [accounts, cards]);
   const catName = useCallback((id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "", [categories]);
-  const linkedLabel = useCallback((vehicleId?: string, propertyId?: string) => {
+  const linkedLabel = useCallback((vehicleId?: string, propertyId?: string, liabilityId?: string) => {
     if (vehicleId) return vehicles.find((v) => v.id === vehicleId)?.name ?? vehicleId;
     if (propertyId) return houseLoans.find((h) => h.id === propertyId)?.name ?? propertyId;
+    if (liabilityId) return liabilities.find((liability) => liability.id === liabilityId)?.name ?? liabilityId;
     return "";
-  }, [vehicles, houseLoans]);
+  }, [vehicles, houseLoans, liabilities]);
 
   const availableSubTypes = useMemo(
     () =>
@@ -966,8 +930,9 @@ export function TransactionHistorySection() {
   const availableLinks = useMemo(() => {
     const vehicleItems = vehicles.map((v) => ({ value: `vehicle:${v.id}`, label: `Vehicle - ${v.name}` }));
     const propertyItems = houseLoans.map((h) => ({ value: `property:${h.id}`, label: `Property - ${h.name}` }));
-    return [...vehicleItems, ...propertyItems];
-  }, [vehicles, houseLoans]);
+    const liabilityItems = liabilities.map((liability) => ({ value: `liability:${liability.id}`, label: `Loan - ${liability.name}` }));
+    return [...vehicleItems, ...propertyItems, ...liabilityItems];
+  }, [vehicles, houseLoans, liabilities]);
 
   const accountOptions = useMemo(() => [
     ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
@@ -978,13 +943,21 @@ export function TransactionHistorySection() {
     return transactions.filter((t) => {
       const d = (t.date ?? t.createdAt ?? "").slice(0, 10);
       if (d < dateFrom || d > dateTo) return false;
-      if (filter !== "all" && t.type !== filter) return false;
+      if (
+        filter !== "all"
+        && !(
+          (filter === "expense" && (t.type === "expense" || t.type === "refund"))
+          || (filter === "income" && (t.type === "income" || t.type === "dividend"))
+          || t.type === filter
+        )
+      ) return false;
       if (accountFilter && t.sourceId !== accountFilter && t.destinationId !== accountFilter) return false;
       if (catFilter && t.categoryId !== catFilter) return false;
       if (subTypeFilter && t.subType !== subTypeFilter) return false;
       if (linkedFilter) {
         if (linkedFilter.startsWith("vehicle:") && t.linkedVehicleId !== linkedFilter.slice("vehicle:".length)) return false;
         if (linkedFilter.startsWith("property:") && t.linkedPropertyId !== linkedFilter.slice("property:".length)) return false;
+        if (linkedFilter.startsWith("liability:") && t.linkedLiabilityId !== linkedFilter.slice("liability:".length)) return false;
       }
       if (search) {
         const haystack = [
@@ -993,8 +966,8 @@ export function TransactionHistorySection() {
           t.sourceId ? acctName(t.sourceId) : "",
           t.destinationId ? acctName(t.destinationId) : "",
           catName(t.categoryId),
-          t.subType ? SUB_TYPE_LABELS[t.subType] ?? t.subType : "",
-          linkedLabel(t.linkedVehicleId, t.linkedPropertyId),
+          t.subType ? getSubTypeLabel(t.type, t.subType) : "",
+          linkedLabel(t.linkedVehicleId, t.linkedPropertyId, t.linkedLiabilityId),
           t.tag ?? "",
           t.mode ?? "",
           t.type,
@@ -1009,8 +982,14 @@ export function TransactionHistorySection() {
     });
   }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, search, acctName, catName, linkedLabel]);
 
-  const totalIn = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const totalOut = filtered.filter((t) => ["expense", "loan_payment", "tax_payment", "withdrawal"].includes(t.type)).reduce((s, t) => s + t.amount, 0);
+  const totalIn = filtered.filter((t) => t.type === "income" || t.type === "dividend").reduce((s, t) => s + t.amount, 0);
+  const totalOut = filtered.reduce((sum, transaction) => {
+    const expenseEffect = getExpenseReportEffect(transaction);
+    if (expenseEffect !== 0) return sum + expenseEffect;
+    return ["loan_payment", "tax_payment", "withdrawal"].includes(transaction.type)
+      ? sum + transaction.amount
+      : sum;
+  }, 0);
   const totalTransfers = filtered.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -1020,9 +999,9 @@ export function TransactionHistorySection() {
 
   // Top categories bar chart
   const catMap: Record<string, number> = {};
-  filtered.filter((t) => t.type === "expense").forEach((t) => {
+  filtered.filter((t) => t.type === "expense" || t.type === "refund").forEach((t) => {
     const key = t.categoryId ?? "uncategorized";
-    catMap[key] = (catMap[key] ?? 0) + t.amount;
+    catMap[key] = (catMap[key] ?? 0) + getExpenseReportEffect(t);
   });
   const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
@@ -1043,13 +1022,14 @@ export function TransactionHistorySection() {
   }
 
   function exportCSV() {
-    const rows = [["Date", "Type", "Amount", "Category", "Account", "Mode", "Tag", "Description", "Vehicle", "Property"]];
+    const rows = [["Date", "Type", "Amount", "Category", "Account", "Mode", "Tag", "Description", "Vehicle", "Property", "Loan/Lender"]];
     filtered.forEach((t) => {
       const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId)?.name ?? "" : "";
       const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId)?.name ?? "" : "";
+      const liability = t.linkedLiabilityId ? liabilities.find((item) => item.id === t.linkedLiabilityId)?.name ?? "" : "";
       const acct = [...accounts, ...cards].find((x) => x.id === t.sourceId)?.name ?? t.sourceId;
       const cat = categories.find((c) => c.id === t.categoryId)?.name ?? "";
-      rows.push([(t.date ?? t.createdAt ?? "").slice(0, 10), t.type, String(t.amount), cat, acct, t.mode ?? "", t.tag ?? "", t.description ?? "", veh, prop]);
+      rows.push([(t.date ?? t.createdAt ?? "").slice(0, 10), t.type, String(t.amount), cat, acct, t.mode ?? "", t.tag ?? "", t.description ?? "", veh, prop, liability]);
     });
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -1167,6 +1147,8 @@ export function TransactionHistorySection() {
         {pagedTransactions.map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
+          const liability = t.linkedLiabilityId ? liabilities.find((item) => item.id === t.linkedLiabilityId) : null;
+          const listEffect = getTransactionListEffect(t);
           return (
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 16px", borderBottom: "1px solid #edf2f7", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 220 }}>
@@ -1174,27 +1156,30 @@ export function TransactionHistorySection() {
                 <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span>{(t.date ?? t.createdAt ?? "").slice(0, 10)}</span>
                   {catName(t.categoryId) && <span>- {catName(t.categoryId)}</span>}
-                  {t.subType && <span>- {SUB_TYPE_LABELS[t.subType] ?? t.subType}</span>}
+                  {t.subType && <span>- {getSubTypeLabel(t.type, t.subType)}</span>}
                   {t.mode && <span>- {t.mode}</span>}
                   {t.sourceId && <span>- {acctName(t.sourceId)}</span>}
                   {t.tag === "Business" && <Pill color="blue">Biz</Pill>}
                   {veh && <Pill color="orange">{veh.name}</Pill>}
                   {prop && <Pill color="purple">{prop.name}</Pill>}
+                  {liability && <Pill color="amber">{liability.name}</Pill>}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginLeft: "auto" }}>
-                <Pill color={t.type === "income" ? "green" : t.type === "transfer" ? "gray" : "red"}>
-                  {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{fmtCAD(t.amount)}
+                <Pill color={listEffect == null ? "gray" : listEffect >= 0 ? "green" : "red"}>
+                  {listEffect == null ? "" : listEffect >= 0 ? "+" : "-"}{fmtCAD(t.amount)}
                 </Pill>
                 <button onClick={() => {
                   setEditTx({
                     id: t.id, type: t.type, amount: t.amount,
+                    purpose: t.purpose,
                     date: t.date ?? t.createdAt?.slice(0, 10),
                     createdAt: t.createdAt,
                     description: t.description, notes: t.notes, sourceId: t.sourceId,
                     destinationId: t.destinationId, subType: t.subType,
                     categoryId: t.categoryId, tag: t.tag, mode: t.mode,
                     linkedVehicleId: t.linkedVehicleId, linkedPropertyId: t.linkedPropertyId,
+                    linkedLiabilityId: t.linkedLiabilityId,
                     odometer: t.odometer, interestAmount: t.interestAmount, principalAmount: t.principalAmount,
                   });
                   setTxFormOpen(true);
