@@ -982,14 +982,11 @@ export function TransactionHistorySection() {
     });
   }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, search, acctName, catName, linkedLabel]);
 
-  const totalIn = filtered.filter((t) => t.type === "income" || t.type === "dividend").reduce((s, t) => s + t.amount, 0);
-  const totalOut = filtered.reduce((sum, transaction) => {
-    const expenseEffect = getExpenseReportEffect(transaction);
-    if (expenseEffect !== 0) return sum + expenseEffect;
-    return ["loan_payment", "tax_payment", "withdrawal"].includes(transaction.type)
-      ? sum + transaction.amount
-      : sum;
-  }, 0);
+  const activityEffects = filtered
+    .map(getTransactionListEffect)
+    .filter((effect): effect is number => effect != null);
+  const totalIn = activityEffects.reduce((sum, effect) => sum + Math.max(0, effect), 0);
+  const totalOut = activityEffects.reduce((sum, effect) => sum + Math.max(0, -effect), 0);
   const totalTransfers = filtered.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -1086,10 +1083,10 @@ export function TransactionHistorySection() {
 
       {/* Stats */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
-        <StatBox label="Income" value={fmtCAD(totalIn)} color="#1a7f3c" />
-        <StatBox label="Outflows" value={fmtCAD(totalOut)} color="#a31515" />
+        <StatBox label="Inflows" value={fmtCAD(totalIn)} color="#1a7f3c" sub="income + refunds + borrowing" />
+        <StatBox label="Outflows" value={fmtCAD(totalOut)} color="#a31515" sub="expenses + debt + tax" />
         <StatBox label="Transfers" value={fmtCAD(totalTransfers)} color="#6b7280" sub="not counted in net" />
-        <StatBox label="Net" value={fmtCAD(totalIn - totalOut)} color={totalIn - totalOut >= 0 ? "#1a7f3c" : "#a31515"} />
+        <StatBox label="Net Activity" value={fmtCAD(totalIn - totalOut)} color={totalIn - totalOut >= 0 ? "#1a7f3c" : "#a31515"} />
         <StatBox label="Entries" value={String(filtered.length)} />
       </div>
 
