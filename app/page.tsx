@@ -34,6 +34,7 @@ import { fmtCAD } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { theme } from "@/lib/theme";
 import { useProperties } from "@/modules/business/useAssets";
+import { StatementScannerSection } from "@/modules/business/StatementScannerSection";
 
 type SectionId =
   | "accounts"
@@ -43,6 +44,7 @@ type SectionId =
   | "dailylog"
   | "healthreport"
   | "transactions"
+  | "scanner"
   | "fixedpayments"
   | "vehicles"
   | "properties"
@@ -60,6 +62,7 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "dailylog", label: "Daily Log", group: "Daily Activity", icon: "*" },
   { id: "healthreport", label: "Health Report", group: "Daily Activity", icon: "*" },
   { id: "transactions", label: "Transaction History", group: "Daily Activity", icon: "*" },
+  { id: "scanner", label: "Scan Statement", group: "Daily Activity", icon: "*" },
   { id: "dashboard", label: "Dashboard", group: "Daily Activity", icon: "*" },
   { id: "importexport", label: "Import / Export", group: "Daily Activity", icon: "*" },
   { id: "accountscards", label: "Accounts & Cards", group: "Personal Finance", icon: "*" },
@@ -95,6 +98,7 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   dailylog: "dailylog",
   healthreport: "healthreport",
   transactions: "dailylog",
+  scanner: "dailylog",
   fixedpayments: "fixedpayments",
   vehicles: "assetsliabilities",
   properties: "assetsliabilities",
@@ -113,10 +117,17 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
   dailylog: [
     { id: "dailylog", label: "Daily Log" },
     { id: "transactions", label: "Transaction History" },
+    { id: "scanner", label: "Scan Statement" },
   ],
   transactions: [
     { id: "dailylog", label: "Daily Log" },
     { id: "transactions", label: "Transaction History" },
+    { id: "scanner", label: "Scan Statement" },
+  ],
+  scanner: [
+    { id: "dailylog", label: "Daily Log" },
+    { id: "transactions", label: "Transaction History" },
+    { id: "scanner", label: "Scan Statement" },
   ],
   accountscards: [
     { id: "accountscards", label: "Combined View" },
@@ -511,6 +522,7 @@ export default function Home() {
         {section === "accountscards"  && wrap(<AccountsCardsSection />)}
         {section === "assetsliabilities" && wrap(<AssetsLiabilitiesSection onNavigate={(target) => setSection(target)} />)}
         {section === "transactions"   && wrap(<TransactionHistorySection />)}
+        {section === "scanner"        && wrap(<StatementScannerSection />)}
         {section === "fixedpayments"  && wrap(<FixedPaymentsSection />)}
         {section === "vehicles"       && wrap(
           <VehiclesSection

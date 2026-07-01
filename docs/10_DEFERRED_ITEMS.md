@@ -87,7 +87,15 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Legitimate non-blocking warnings can be dismissed and restored.
 - Import preview supports source/destination relinking, transaction exclusion, semantic-duplicate review, and explicit acceptance of normalized cleanup before confirmation.
 
-### Phase 6: AI Statement Scanner MVP - next
+### Phase 6: AI Statement Scanner MVP - landed
+- Daily Log and Transaction History expose a shared Scan Statement subview.
+- One to five images are validated and sent through a server-only, replaceable provider adapter.
+- The editable candidate table requires explicit account/card assignment, supports categories, transfer destinations, row exclusion, confidence review, and semantic duplicate warnings.
+- Exact duplicates default to skipped, while users may explicitly keep legitimate duplicates.
+- Confirmed rows use canonical batch persistence; nothing writes before confirmation.
+- Privacy, provider retention, request limits, and server-only credential configuration are documented.
+
+### Phase 7: Guarded Cloud Persistence - next
 
 ### Phase 5: Findability, Data Health, and import review
 - Add tag and recurring-origin filters.

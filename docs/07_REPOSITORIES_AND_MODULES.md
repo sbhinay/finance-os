@@ -62,6 +62,7 @@ export const [domain]Repository = {
 | Property Tax | `modules/business/AssetsSections.tsx` | Property tax schedules |
 | Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Unified transition page with upcoming obligations and selected direct actions |
 | Import / Export | `modules/business/ImportExportSection.tsx` | Current-app export plus legacy migration support |
+| Scan Statement | `modules/business/StatementScannerSection.tsx` | Image upload, editable candidates, duplicate review, and explicit canonical batch confirmation |
 
 ### Transition Notes
 - The sidebar is now intentionally simplified around stronger hubs rather than exposing every detail page as a primary tab.
@@ -90,3 +91,4 @@ export const [domain]Repository = {
 - `utils/propertyMigration.ts` safely creates Property parents from house loans and merges standalone property-tax records only on an exact unique property-name match.
 - Transaction History supports exact tag and recurring-origin filters in addition to account/card, category, subtype, and linked-item filters.
 - Import preview exposes transaction-level source/destination relinking, exclusion, and explicit acceptance of normalized cleanup before any local write.
+- `/api/statement-scanner` is the server-only image boundary; `lib/statementScanner` owns replaceable provider integration and response validation.
