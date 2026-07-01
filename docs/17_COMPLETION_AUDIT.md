@@ -40,11 +40,17 @@ At completion:
 - the production dependency audit reported zero vulnerabilities
 - touched source files were scanned for mojibake before commit
 
+## Browser Acceptance
+
+The supported in-app browser acceptance pass completed after the browser runtime became available:
+
+- desktop navigation and rendering passed for lender details and running ledger, Properties, recurring ownership, Data Health, scanner, guarded cloud controls, and CRA working papers/exports
+- the mobile navigation drawer and responsive Daily Log and Data Health layouts passed at a 390 by 844 viewport
+- no browser console errors were observed
+
+The browser session used isolated local browser data and did not mutate the user's financial dataset.
+
 ## External Acceptance Boundaries
-
-### Browser acceptance
-
-Phase 3 browser acceptance passed earlier. Automated browser checks for Phases 4 through 8 could not run because the bundled in-app browser client runtime was missing. The browser skill prohibits substituting an unmanaged browser runner. These checks remain pending until that runtime is restored or the user performs manual acceptance.
 
 ### AI provider
 
@@ -52,8 +58,8 @@ Scanner parsing, normalization, invalid-row rejection, privacy controls, and ser
 
 ### Supabase
 
-Schema, guarded RPC, revision checks, history, and client access restrictions are validated statically. Applying the migration or changing an external project requires explicit deployment approval and remains pending.
+Schema, guarded RPC, revision checks, history, and client access restrictions are validated statically. A read-only check against the configured project confirmed that the legacy `app_snapshots` table is deployed but `app_snapshot_history` is not. The guarded Phase 7 migration therefore remains unapplied. Applying `supabase/02_guarded_snapshots.sql` requires explicit deployment approval.
 
 ## Result
 
-All eight phases are implemented and locally verified. No known local code or data blocker remains. Production deployment readiness still depends on the three external acceptance boundaries above.
+All eight phases are implemented and locally verified, including browser acceptance. No known local code or data blocker remains. Production deployment readiness still depends on live AI provider verification and the explicitly approved Supabase migration.

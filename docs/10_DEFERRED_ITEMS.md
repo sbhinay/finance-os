@@ -46,13 +46,14 @@ This file records work that remains after the eight-phase production-completion 
 - Missing-information and accountant-review states remain explicit.
 - Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries.
 
-## Remaining Acceptance Work
+## Remaining External Acceptance Work
 
 These are environment or external-service checks, not missing local implementations:
 
-- Run browser acceptance for Phases 4 through 8 when the in-app browser runtime is available.
 - Run one live AI extraction after a server-side provider credential is supplied.
-- Apply and verify the guarded Supabase migration only with explicit deployment approval.
+- Apply and verify `supabase/02_guarded_snapshots.sql` only with explicit deployment approval.
+
+Browser acceptance is complete at desktop and mobile breakpoints for lender, Property, recurring, Data Health, scanner, cloud, and tax/report surfaces. No browser console errors were observed.
 
 ## Deferred Product Enhancements
 
