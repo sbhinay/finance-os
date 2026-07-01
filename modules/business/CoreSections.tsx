@@ -121,7 +121,7 @@ type LedgerEntity = {
 };
 
 function txDate(t: Transaction) {
-  return t.date ?? t.createdAt?.slice(0, 10) ?? "";
+  return t.date;
 }
 
 function ledgerEffectColor(effect: number, kind: LedgerKind) {
@@ -965,7 +965,7 @@ export function TransactionHistorySection() {
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
-      const d = (t.date ?? t.createdAt ?? "").slice(0, 10);
+      const d = t.date;
       if (d < dateFrom || d > dateTo) return false;
       if (
         filter !== "all"
@@ -1005,9 +1005,8 @@ export function TransactionHistorySection() {
       }
       return true;
     }).sort((a, b) => {
-      const da = (a.date ?? a.createdAt ?? "");
-      const db = (b.date ?? b.createdAt ?? "");
-      return db > da ? 1 : -1;
+      const dateCompare = b.date.localeCompare(a.date);
+      return dateCompare || b.createdAt.localeCompare(a.createdAt);
     });
   }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, tagFilter, recurringFilter, search, acctName, catName, linkedLabel]);
 
@@ -1057,7 +1056,7 @@ export function TransactionHistorySection() {
       const liability = t.linkedLiabilityId ? liabilities.find((item) => item.id === t.linkedLiabilityId)?.name ?? "" : "";
       const acct = [...accounts, ...cards].find((x) => x.id === t.sourceId)?.name ?? t.sourceId;
       const cat = categories.find((c) => c.id === t.categoryId)?.name ?? "";
-      rows.push([(t.date ?? t.createdAt ?? "").slice(0, 10), t.type, String(t.amount), cat, acct, t.mode ?? "", t.tag ?? "", t.description ?? "", veh, prop, liability]);
+      rows.push([t.date, t.type, String(t.amount), cat, acct, t.mode ?? "", t.tag ?? "", t.description ?? "", veh, prop, liability]);
     });
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -1193,7 +1192,7 @@ export function TransactionHistorySection() {
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.text }}>{t.description || catName(t.categoryId) || "--"}</div>
                 <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                  <span>{(t.date ?? t.createdAt ?? "").slice(0, 10)}</span>
+                  <span>{t.date}</span>
                   {catName(t.categoryId) && <span>- {catName(t.categoryId)}</span>}
                   {t.subType && <span>- {getSubTypeLabel(t.type, t.subType)}</span>}
                   {t.mode && <span>- {t.mode}</span>}
@@ -1212,7 +1211,7 @@ export function TransactionHistorySection() {
                   setEditTx({
                     id: t.id, type: t.type, amount: t.amount,
                     purpose: t.purpose,
-                    date: t.date ?? t.createdAt?.slice(0, 10),
+                    date: t.date,
                     createdAt: t.createdAt,
                     description: t.description, notes: t.notes, sourceId: t.sourceId,
                     destinationId: t.destinationId, subType: t.subType,

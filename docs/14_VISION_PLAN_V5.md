@@ -162,15 +162,13 @@ The current model is:
 
 This keeps balance correction on the account/card record itself instead of spreading it across separate reconciliation rows.
 
-### AI-assisted import is a future input path
-Statement scanning is strategically valuable, but it is not a current feature.
-
-The scanner should be treated as a new input path:
+### AI-assisted import is a guarded input path
+Statement scanning is now implemented as a guarded candidate-review workflow:
 - images become candidate rows
 - the user reviews and confirms
 - confirmed rows use the same transaction-save pipeline as manual entries
 
-It must not become a second ledger-writing system. It also needs a secure backend boundary so API keys and statement images are not handled unsafely in browser-only code.
+It does not create a second ledger-writing system. A secure server boundary keeps provider keys out of browser code, and images are not persisted by FinanceOS.
 
 ## Delivery Discipline
 

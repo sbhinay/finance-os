@@ -582,8 +582,8 @@ export function VehiclesSection({
             const txns = transactions
               .filter((t) => t.linkedVehicleId === detail.id && t.type !== "adjustment")
               .sort((a, b) => {
-                const aTime = Date.parse(a.date ?? a.createdAt ?? "") || 0;
-                const bTime = Date.parse(b.date ?? b.createdAt ?? "") || 0;
+                const aTime = Date.parse(a.date) || 0;
+                const bTime = Date.parse(b.date) || 0;
                 if (bTime !== aTime) return bTime - aTime;
                 return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
               });
@@ -627,7 +627,7 @@ export function VehiclesSection({
                   <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
                     <div>
                       <span style={{ fontWeight: 500 }}>{t.description || t.categoryId || "--"}</span>
-                      <span style={{ color: "#6b7280", fontSize: 11 }}> - {fmtDate((t.date ?? t.createdAt ?? "").slice(0, 10))}</span>
+                      <span style={{ color: "#6b7280", fontSize: 11 }}> - {fmtDate(t.date)}</span>
                       {t.odometer && <span style={{ color: "#1a5fa8", fontSize: 11 }}> - {Number(t.odometer).toLocaleString()} km</span>}
                     </div>
                     <Pill color="red">{fmtCAD(t.amount)}</Pill>

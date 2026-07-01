@@ -7,6 +7,7 @@ import { uid } from "@/utils/finance";
 import { ensureRequiredCategories, seedDefaultCategories } from "@/utils/defaultCategories";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { transactionRepository } from "@/repositories/transactionRepository";
+import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
 
 function migrateVehicleLeaseCategories(categories: Category[]) {
   const leaseCategory = categories.find(
@@ -34,7 +35,7 @@ function migrateVehicleLeaseCategories(categories: Category[]) {
     }
     return transaction;
   });
-  if (changed) transactionRepository.saveAll(migrated);
+  if (changed) replaceCanonicalTransactions(migrated);
 }
 
 export function useCategories() {

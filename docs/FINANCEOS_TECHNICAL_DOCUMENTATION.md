@@ -23,6 +23,7 @@
 15. [Vision Plan v5](14_VISION_PLAN_V5.md)
 16. [AI Statement Scanner](15_AI_STATEMENT_SCANNER.md)
 17. [Tax Working Papers And Exports](16_TAX_WORKING_PAPERS_AND_EXPORTS.md)
+18. [Production Completion Audit](17_COMPLETION_AUDIT.md)
 
 ---
 
@@ -128,6 +129,7 @@ The docs are organized into the following cross-linked files:
 - `14_VISION_PLAN_V5.md`
 - `15_AI_STATEMENT_SCANNER.md`
 - `16_TAX_WORKING_PAPERS_AND_EXPORTS.md`
+- `17_COMPLETION_AUDIT.md`
 
 ## 5. Notes for Review
 - The documentation prefers current code behavior over legacy wording.

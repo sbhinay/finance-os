@@ -54,8 +54,8 @@ export function recalculateBalances(transactions: Transaction[]) {
   });
 
   const sorted = [...transactions].sort((a, b) => {
-    const da = a.date ?? a.createdAt?.slice(0, 10) ?? "";
-    const db = b.date ?? b.createdAt?.slice(0, 10) ?? "";
+    const da = a.date;
+    const db = b.date;
     if (da !== db) return da < db ? -1 : 1;
     return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
   });
@@ -63,7 +63,7 @@ export function recalculateBalances(transactions: Transaction[]) {
   for (const t of sorted) {
     if (t.status === "pending") continue;
 
-    const txDate = t.date ?? t.createdAt?.slice(0, 10) ?? "";
+    const txDate = t.date;
     if (txDate > today) continue;
     if (t.type === "adjustment" && (t.subType as string) === "reconciliation") continue;
 

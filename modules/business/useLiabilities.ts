@@ -7,7 +7,7 @@ import type { Liability } from "@/types/domain";
 import type { Transaction } from "@/types/transaction";
 import { notifyDataChanged, DATA_CHANGED_EVENT } from "@/utils/events";
 import { toFixed2, uid } from "@/utils/finance";
-import { persistCanonicalTransaction } from "@/services/transactionPipeline";
+import { persistCanonicalTransaction, replaceCanonicalTransactions } from "@/services/transactionPipeline";
 
 function migrateNumberedPersonalLenders(): Liability[] {
   const liabilities = liabilityRepository.getAll();
@@ -58,7 +58,7 @@ function migrateNumberedPersonalLenders(): Liability[] {
 
   if (changedTransactions) {
     liabilityRepository.saveAll(liabilities);
-    transactionRepository.saveAll(transactions);
+    replaceCanonicalTransactions(transactions);
   }
   return liabilities;
 }

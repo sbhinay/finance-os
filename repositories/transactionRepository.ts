@@ -8,11 +8,7 @@ export const transactionRepository = {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return [];
     const parsed = JSON.parse(data) as Transaction[];
-    const normalized = normalizeTransactionCollection(parsed);
-    if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-    }
-    return normalized;
+    return normalizeTransactionCollection(parsed);
   },
 
   saveAll(tx: Transaction[]) {

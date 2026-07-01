@@ -27,7 +27,7 @@ function hasMatchingIncomeTransaction(
     transaction.status !== "pending" &&
     transaction.type === "income" &&
     transaction.sourceId === accountId &&
-    (transaction.date ?? transaction.createdAt?.slice(0, 10)) === paymentDate &&
+    transaction.date === paymentDate &&
     toFixed2(transaction.amount) === toFixed2(amount)
   );
 }

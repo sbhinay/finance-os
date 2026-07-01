@@ -183,7 +183,7 @@ function percentAmount(total: number, pct: number) {
 }
 
 function byDateDesc(a: Transaction, b: Transaction) {
-  return (b.date ?? b.createdAt ?? "").localeCompare(a.date ?? a.createdAt ?? "");
+  return b.date.localeCompare(a.date);
 }
 
 export function CRAReviewSection({

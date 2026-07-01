@@ -11,7 +11,6 @@ import type { Session } from "@supabase/supabase-js";
 import { migrateFromPrototype, MigrationResult } from "@/utils/migrationService";
 import { accountRepository } from "@/repositories/accountRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
-import { transactionRepository } from "@/repositories/transactionRepository";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { businessRepository } from "@/repositories/businessRepository";
 import { ImportPayload, validateImportPayload } from "@/utils/referenceIntegrity";
@@ -31,6 +30,7 @@ import {
   type CloudSnapshotHistoryItem,
 } from "@/lib/supabase/cloudSnapshots";
 import { migratePropertyParents } from "@/utils/propertyMigration";
+import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
 
 type RawObject = Record<string, unknown>;
 type ImportResult = ImportPayload | MigrationResult;
@@ -372,7 +372,7 @@ export function ImportExportSection() {
 
       accountRepository.saveAll(result.accounts);
       creditCardRepository.saveAll(result.creditCards);
-      transactionRepository.saveAll(result.transactions);
+      replaceCanonicalTransactions(result.transactions);
       categoryRepository.saveAll(result.categories);
       businessRepository.save(result.business);
       vehicleRepository.saveAll(result.vehicles);

@@ -362,7 +362,7 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
   });
 
   // Monthly actuals
-  const monthTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(monthStr));
+  const monthTx = transactions.filter((t) => t.date.startsWith(monthStr));
   const mIn = monthTx.reduce((sum, transaction) => sum + Math.max(0, getTransactionListEffect(transaction) ?? 0), 0);
   const mOut = monthTx.reduce((sum, transaction) => sum + Math.max(0, -(getTransactionListEffect(transaction) ?? 0)), 0);
 
@@ -587,18 +587,18 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
 
     // Past: actual transactions grouped by day
     const monthTx = transactions.filter((t) => {
-      const d = (t.date ?? t.createdAt ?? "").slice(0, 7);
+      const d = t.date.slice(0, 7);
       return d === selectedMonth && t.type !== "adjustment";
     }).sort((a, b) => {
-      const da = a.date ?? a.createdAt ?? "";
-      const db = b.date ?? b.createdAt ?? "";
+      const da = a.date;
+      const db = b.date;
       return da > db ? 1 : -1;
     });
 
     // Group transactions by date
     const txByDay: Record<string, typeof monthTx> = {};
     monthTx.forEach((t) => {
-      const d = (t.date ?? t.createdAt ?? "").slice(0, 10);
+      const d = t.date;
       (txByDay[d] = txByDay[d] ?? []).push(t);
     });
 

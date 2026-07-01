@@ -260,6 +260,19 @@ export function persistCanonicalTransactions(
   return persisted;
 }
 
+export function replaceCanonicalTransactions(transactions: Transaction[]): Transaction[] {
+  const prepared = transactions.map(prepareCanonicalTransaction);
+  const errors = prepared.flatMap((transaction) =>
+    validateCanonicalTransaction(transaction).map((error) => `${transaction.id}: ${error}`)
+  );
+  if (errors.length) throw new Error(errors.join(" "));
+
+  transactionRepository.saveAll(prepared);
+  syncBalances();
+  notifyDataChanged("transactions");
+  return prepared;
+}
+
 export function deleteCanonicalTransaction(id: string): void {
   transactionRepository.saveAll(
     transactionRepository.getAll().filter((transaction) => transaction.id !== id)

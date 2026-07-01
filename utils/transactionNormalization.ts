@@ -38,6 +38,7 @@ export function normalizeTransactionShape<T extends RawTransaction>(tx: T): Tran
 
   const normalized = {
     ...tx,
+    date: tx.date?.slice(0, 10) ?? tx.createdAt?.slice(0, 10) ?? "",
     type: normalizedType,
     subType: normalizedSubType,
     description: normalizeText(tx.description) ?? "",

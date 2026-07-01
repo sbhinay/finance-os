@@ -132,7 +132,7 @@ export function DailyLogSection() {
     setTxFormInitial({
       id: t.id,
       amount: t.amount,
-      date: t.date ?? t.createdAt?.slice(0, 10),
+      date: t.date,
       createdAt: t.createdAt,
       type: t.type,
       purpose: t.purpose,
@@ -163,8 +163,8 @@ export function DailyLogSection() {
   }
 
   const monthStr = now.toISOString().slice(0, 7);
-  const todayTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(todayStr));
-  const monthTx = transactions.filter((t) => (t.date ?? t.createdAt ?? "").startsWith(monthStr));
+  const todayTx = transactions.filter((t) => t.date.startsWith(todayStr));
+  const monthTx = transactions.filter((t) => t.date.startsWith(monthStr));
   const tIn = todayTx.reduce((sum, t) => sum + Math.max(0, getTransactionListEffect(t) ?? 0), 0);
   const tOut = todayTx.reduce((sum, t) => sum + Math.max(0, -(getTransactionListEffect(t) ?? 0)), 0);
   const mIn = monthTx.reduce((sum, t) => sum + Math.max(0, getTransactionListEffect(t) ?? 0), 0);
@@ -173,7 +173,7 @@ export function DailyLogSection() {
   const filtered = useMemo(() => {
     return transactions
       .filter((t) => {
-        const dateStr = (t.date ?? t.createdAt ?? "").slice(0, 10);
+        const dateStr = t.date;
         if (!showAll && !search && dateStr !== viewDate) return false;
         if (filter !== "all" && t.type !== filter) return false;
         if (search) {
@@ -184,9 +184,8 @@ export function DailyLogSection() {
         return true;
       })
       .sort((a, b) => {
-        const da = a.createdAt ?? a.date ?? "";
-        const db = b.createdAt ?? b.date ?? "";
-        return db > da ? 1 : -1;
+        const dateCompare = b.date.localeCompare(a.date);
+        return dateCompare || b.createdAt.localeCompare(a.createdAt);
       });
   }, [transactions, showAll, search, viewDate, filter]);
 
@@ -260,7 +259,7 @@ export function DailyLogSection() {
         {filtered.slice(0, 60).map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? properties.find((property) => property.id === t.linkedPropertyId) : null;
-          const dateStr = (t.date ?? t.createdAt ?? "").slice(0, 10);
+          const dateStr = t.date;
           const listEffect = getTransactionListEffect(t);
 
           return (

@@ -105,7 +105,7 @@ function transactionMatchesPending(
 ): boolean {
     if (txn.status === "pending" || txn.type === "adjustment") return false;
 
-    const txnDate = txn.date ?? txn.createdAt?.slice(0, 10) ?? "";
+    const txnDate = txn.date;
     if (txnDate !== pending.dueDate) return false;
     if (toFixed2(txn.amount) !== toFixed2(pending.amount)) return false;
     if (pending.account && txn.sourceId !== pending.account) return false;

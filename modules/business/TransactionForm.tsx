@@ -281,7 +281,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     const normalizedInitial = canonicalizeInitial(initial);
 
     if (normalizedInitial) {
-      const raw = normalizedInitial.date ?? normalizedInitial.createdAt;
+      const raw = normalizedInitial.date;
       let dateVal = todayLocal;
 
       if (raw) {
