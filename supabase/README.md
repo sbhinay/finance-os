@@ -9,14 +9,17 @@ This folder holds the first cloud-save scaffolding for FinanceOS.
 
 ## First setup steps
 1. In Supabase SQL Editor, run `01_phase1_schema.sql`.
-2. In the app root, create `.env.local` from `.env.example`.
-3. Fill in:
+2. Run `02_guarded_snapshots.sql` to create revisioned snapshot history and the guarded save RPC.
+3. In the app root, create `.env.local` from `.env.example`.
+4. Fill in:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-4. Add email/password auth in Supabase Auth settings.
-5. Keep JSON export/import as backup until repository migration is complete.
+5. Add email/password auth in Supabase Auth settings.
+6. Keep JSON export/import as backup even after cloud snapshots are enabled.
 
 ## Important safety note
 - Do not commit service-role keys.
 - Do not put the direct Postgres password into client-side code.
 - The publishable key is safe for browser use when combined with Row Level Security.
+- Snapshot tables are client-read-only. Writes go through `save_app_snapshot_guarded`, which rejects stale revisions and appends a restore point.
+- Applying SQL migrations or deploying the app remains an explicit external operation; neither happens automatically from the client.

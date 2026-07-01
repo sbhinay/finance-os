@@ -95,7 +95,16 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Confirmed rows use canonical batch persistence; nothing writes before confirmation.
 - Privacy, provider retention, request limits, and server-only credential configuration are documented.
 
-### Phase 7: Guarded Cloud Persistence - next
+### Phase 7: Guarded Cloud Persistence - landed
+- Manual cloud saves use optimistic revision checks and reject stale overwrites.
+- Every successful save appends an immutable, user-scoped restore point.
+- Current and historical snapshots load through import preview before local replacement.
+- The UI shows in-sync, local-changes, no-snapshot, checking, and newer-cloud states.
+- Snapshot tables are client-read-only; authenticated writes use the guarded RPC.
+- Manual JSON export/import remains available.
+- Supabase migration and deployment documentation is included; no external migration or deployment is performed automatically.
+
+### Phase 8: Tax and Reporting Exports - next
 
 ### Phase 5: Findability, Data Health, and import review
 - Add tag and recurring-origin filters.

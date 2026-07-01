@@ -8,8 +8,9 @@
 - No authentication
 - App state lives entirely client-side
 - Manual JSON export/import remains available as the safest portable backup path.
-- Manual Supabase cloud save and manual restore preview exist as guarded backup/restore groundwork.
-- Automatic cloud write-back is intentionally not active because overwrite guards, conflict detection, and sync-state visibility are not strong enough yet.
+- Manual Supabase cloud save now uses guarded revisions, append-only restore history, conflict detection, and visible local-versus-cloud state.
+- Current and historical cloud revisions always enter the existing import preview before replacing local data.
+- Automatic cloud write-back remains intentionally disabled.
 
 ### Future Target
 - Supabase backend with PostgreSQL storage
@@ -28,7 +29,7 @@
 ### Migration Roadmap
 1. Map localStorage keys to Supabase tables.
 2. Keep manual cloud save/restore preview stable and guarded.
-3. Add snapshot history, overwrite guards, and conflict protection.
+3. Add snapshot history, overwrite guards, and conflict protection. Complete.
 4. Add authentication and user-scoped repositories.
 5. Implement repository layer swap only after guarded persistence is proven.
 6. Migrate local data to Supabase in a one-time import script.
@@ -40,6 +41,7 @@
 - `.env.example` now documents the required public Supabase variables.
 - `lib/supabase/client.ts` provides the shared browser client entry point.
 - `supabase/01_phase1_schema.sql` defines the first user-owned schema and RLS policies.
+- `supabase/02_guarded_snapshots.sql` defines read-only snapshot tables, append-only history, and the optimistic-lock save RPC.
 - `supabase/README.md` captures the initial setup sequence for local development.
 
 ### Table Design Notes
@@ -51,3 +53,12 @@
 - Keep UI/business logic unchanged by preserving repository interfaces.
 - Consider moving balance replay or running balances to database materialized views if transaction volume grows.
 - Initial goal is reliability and backup safety, not advanced real-time collaboration.
+
+### Guarded Snapshot Contract
+- Every save supplies the revision last observed by the client.
+- The database locks the current row and rejects stale revisions with `snapshot_conflict`.
+- Successful saves append a new immutable restore point and advance the current revision atomically.
+- Local payload hashes ignore only `meta.exportedAt`, allowing the UI to distinguish in-sync and locally changed data.
+- A detected newer cloud revision blocks saving until the user refreshes and reviews it.
+- Restore points never overwrite local data directly; they load into import preview first.
+- Manual JSON export/import remains available and independent of Supabase.
