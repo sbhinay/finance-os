@@ -96,8 +96,11 @@ export function getVehicleReferenceReasonsWithRecurring(
 export function getHouseLoanReferenceReasons(houseLoanId: string, transactions: Transaction[]) {
   const reasons: string[] = [];
   const txCount = transactions.filter((tx) =>
-    tx.recurringOriginType === "house_loan"
-    && tx.recurringOriginId === houseLoanId
+    tx.linkedHouseLoanId === houseLoanId
+    || (
+      tx.recurringOriginType === "house_loan"
+      && tx.recurringOriginId === houseLoanId
+    )
   ).length;
   if (txCount > 0) reasons.push(`${txCount} linked transaction(s)`);
   return reasons;
@@ -230,6 +233,10 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
     if (tx.linkedPropertyId && !payload.properties.some((property) => property.id === tx.linkedPropertyId)) {
       warnings.push(`Transaction ${tx.id}: linked property "${tx.linkedPropertyId}" was not found and was detached.`);
       normalizedTx.linkedPropertyId = undefined;
+    }
+    if (tx.linkedHouseLoanId && !payload.houseLoans.some((loan) => loan.id === tx.linkedHouseLoanId)) {
+      warnings.push(`Transaction ${tx.id}: linked mortgage "${tx.linkedHouseLoanId}" was not found and was detached.`);
+      normalizedTx.linkedHouseLoanId = undefined;
     }
     if (tx.linkedLiabilityId && !payload.liabilities.some((liability) => liability.id === tx.linkedLiabilityId)) {
       warnings.push(`Transaction ${tx.id}: linked liability "${tx.linkedLiabilityId}" was not found and was detached.`);

@@ -524,6 +524,7 @@ export default function Home() {
         {section === "houseloans"     && wrap(
           <HouseLoansSection
             accounts={accounts}
+            transactions={transactions}
             editHouseLoanId={editHouseLoanId}
             onEditHandled={() => setEditHouseLoanId(null)}
           />

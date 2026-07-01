@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "validate:fixture": "node scripts/validate-finance-export.mjs",
-    "validate:properties": "node --no-warnings --experimental-strip-types scripts/validate-property-migration.mjs"
+    "validate:properties": "node --no-warnings --experimental-strip-types scripts/validate-property-migration.mjs",
+    "validate:debt": "node --no-warnings --experimental-strip-types scripts/validate-debt-reporting.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",

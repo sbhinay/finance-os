@@ -76,6 +76,7 @@ export interface CanonicalTransactionInput {
   createdAt?: string;
   linkedVehicleId?: string;
   linkedPropertyId?: string;
+  linkedHouseLoanId?: string;
   linkedLiabilityId?: string;
   linkedInvoiceId?: string;
   recurringOriginType?: RecurringOriginType;
@@ -162,6 +163,7 @@ export function buildCanonicalTransaction(
     status: input.status ?? "cleared",
     linkedVehicleId: input.linkedVehicleId || undefined,
     linkedPropertyId: input.linkedPropertyId || undefined,
+    linkedHouseLoanId: input.linkedHouseLoanId || undefined,
     linkedLiabilityId: input.linkedLiabilityId || undefined,
     linkedInvoiceId: input.linkedInvoiceId || undefined,
     recurringOriginType: input.recurringOriginType,

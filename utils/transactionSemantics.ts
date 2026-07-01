@@ -140,6 +140,7 @@ export function getTransactionListEffect(transaction: Transaction): number | nul
 export function getExpenseReportEffect(transaction: Transaction): number {
   if (transaction.type === "expense") return toFixed2(transaction.amount);
   if (transaction.type === "refund") return toFixed2(-transaction.amount);
+  if (transaction.type === "loan_payment") return toFixed2(transaction.interestAmount ?? 0);
   return 0;
 }
 
@@ -152,6 +153,7 @@ export function transactionFingerprint(transaction: Transaction): string {
     transaction.destinationId ?? "",
     transaction.linkedVehicleId ?? "",
     transaction.linkedPropertyId ?? "",
+    transaction.linkedHouseLoanId ?? "",
     transaction.linkedLiabilityId ?? "",
     transaction.linkedInvoiceId ?? "",
     transaction.recurringOriginType ?? "",
@@ -191,6 +193,7 @@ export function isSemanticDuplicate(
   return sameCoreIdentity
     && compatibleLink(candidate.linkedVehicleId, existing.linkedVehicleId)
     && compatibleLink(candidate.linkedPropertyId, existing.linkedPropertyId)
+    && compatibleLink(candidate.linkedHouseLoanId, existing.linkedHouseLoanId)
     && compatibleLink(candidate.linkedLiabilityId, existing.linkedLiabilityId)
     && compatibleLink(candidate.linkedInvoiceId, existing.linkedInvoiceId)
     && compatibleLink(candidate.recurringOriginType, existing.recurringOriginType)

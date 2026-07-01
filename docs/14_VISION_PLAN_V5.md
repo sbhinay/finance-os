@@ -197,7 +197,7 @@ The ordered path to production completion is now:
 1. Complete lender and debt-detail UX.
 2. Consolidate recurring architecture.
 3. Build the first-class Property parent model. (Landed)
-4. Improve optional detailed mortgage/vehicle debt reporting.
+4. Improve optional detailed mortgage/vehicle debt reporting. (Landed)
 5. Expand findability, Data Health, and import review.
 6. Build the secure AI Statement Scanner MVP.
 7. Add guarded cloud history and conflict protection.
@@ -232,6 +232,9 @@ As of this version:
 - first-class primary, rental, and commercial Property records are live
 - Property details unify linked mortgages, property tax, insurance, expenses, carrying costs, equity, and transaction history
 - unambiguous legacy house-loan/property-tax migration is fixture validated
+- mortgage and financed-vehicle balances replay explicit principal from their latest snapshots
+- debt details separate cash paid, principal, interest, and unsplit payments without guessing
+- dashboard, Property equity, net worth, and debt detail views share derived secured-debt owing
 - the June 29 fixture replays all stored account/card balances without drift
 
-The next major challenge is detailed mortgage and financed-vehicle principal/interest reporting, followed by expanded Data Health and import review.
+The next major challenge is expanded findability, Data Health, and import review.

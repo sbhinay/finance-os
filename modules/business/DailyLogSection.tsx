@@ -146,6 +146,7 @@ export function DailyLogSection() {
       tag: t.tag ?? "Personal",
       linkedVehicleId: t.linkedVehicleId ?? "",
       linkedPropertyId: t.linkedPropertyId ?? "",
+      linkedHouseLoanId: t.linkedHouseLoanId ?? "",
       linkedLiabilityId: t.linkedLiabilityId ?? "",
       recurringOriginType: t.recurringOriginType,
       recurringOriginId: t.recurringOriginId,

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useProperties, useVehicles } from "./useAssets";
+import { useHouseLoans, useProperties, useVehicles } from "./useAssets";
 import { useLiabilities } from "./useLiabilities";
 import { detectCategory, learnedRulesRepository, uncategorizedRepository } from "@/rules/categoryRules";
 import { buildSourceOptions, fmtCAD, toFixed2, uid } from "@/utils/finance";
@@ -37,6 +37,7 @@ export interface TransactionFormInitial {
   mode?: string;
   linkedVehicleId?: string;
   linkedPropertyId?: string;
+  linkedHouseLoanId?: string;
   linkedLiabilityId?: string;
   recurringOriginType?: RecurringOriginType;
   recurringOriginId?: string;
@@ -132,6 +133,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
   const { properties } = useProperties();
+  const { houseLoans } = useHouseLoans();
   const { liabilities } = useLiabilities();
 
   const now = new Date();
@@ -154,6 +156,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     mode:            "Debit" as string,
     linkedVehicleId: "",
     linkedPropertyId: "",
+    linkedHouseLoanId: "",
     linkedLiabilityId: "",
     odometer:        "",
   }), [todayLocal]);
@@ -185,6 +188,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const destinationName = [...accounts, ...cards].find((x) => x.id === form.destinationId)?.name ?? "";
   const selectedVehicle = vehicles.find((v) => v.id === form.linkedVehicleId);
   const selectedProperty = properties.find((property) => property.id === form.linkedPropertyId);
+  const selectedHouseLoan = houseLoans.find((loan) => loan.id === form.linkedHouseLoanId);
   const selectedLiability = liabilities.find((liability) => liability.id === form.linkedLiabilityId);
   const selectedSubTypeLabel = form.subType
     ? getSubTypeLabel(txType, form.subType as TransactionSubType)
@@ -201,6 +205,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
     if (txType === "loan_payment") {
       if (selectedLiability?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedLiability.name}`;
+      if (selectedHouseLoan?.name) return `Mortgage Payment - ${selectedHouseLoan.name}`;
       if (selectedProperty?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedProperty.name}`;
       if (selectedVehicle?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedVehicle.name}`;
       return selectedSubTypeLabel || "Loan Payment";
@@ -225,7 +230,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (selectedSubTypeLabel) return selectedSubTypeLabel;
     if (sourceName && TYPE_LABELS[txType]) return `${TYPE_LABELS[txType]} - ${sourceName}`;
     return TYPE_LABELS[txType] ?? "Transaction";
-  }, [txType, form.subType, sourceName, destinationName, selectedVehicle, selectedProperty, selectedLiability, selectedCatById, selectedSubTypeLabel]);
+  }, [txType, form.subType, sourceName, destinationName, selectedVehicle, selectedProperty, selectedHouseLoan, selectedLiability, selectedCatById, selectedSubTypeLabel]);
 
   const effectiveDescription = useMemo(() => (form.description || generatedDescription).trim(), [form.description, generatedDescription]);
 
@@ -307,6 +312,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         mode:            normalizedInitial.mode ?? "Debit",
         linkedVehicleId: normalizedInitial.linkedVehicleId ?? "",
         linkedPropertyId: normalizedInitial.linkedPropertyId ?? "",
+        linkedHouseLoanId: normalizedInitial.linkedHouseLoanId ?? "",
         linkedLiabilityId: normalizedInitial.linkedLiabilityId ?? "",
         odometer:        normalizedInitial.odometer ?? "",
       });
@@ -337,6 +343,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
   const showDestination = txType === "transfer" || txType === "adjustment";
   const showLoanSplit = txType === "loan_payment";
+  const showMortgageLink = txType === "loan_payment" && form.subType === "mortgage";
   const showLiability = txType === "loan_receipt" || txType === "loan_payment";
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
@@ -373,6 +380,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     if (!form.sourceId) errs.push("Please select an account or card.");
     if (requiresDestination(txType) && !form.destinationId) errs.push("Please select a destination account or card.");
     if (requiresSubType(txType) && !form.subType) errs.push("Please select a sub-type.");
+    if (txType === "loan_payment" && form.subType === "mortgage" && !form.linkedHouseLoanId) {
+      errs.push("Please select the mortgage this payment belongs to.");
+    }
     if (
       txType === "loan_payment"
       && hasLoanSplit
@@ -448,6 +458,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       taxYear:         deriveTaxYear(form.date.slice(0, 10)),
       linkedVehicleId:  form.linkedVehicleId || undefined,
       linkedPropertyId: form.linkedPropertyId || undefined,
+      linkedHouseLoanId: form.linkedHouseLoanId || undefined,
       linkedLiabilityId: form.linkedLiabilityId || undefined,
       recurringOriginType: initial?.recurringOriginType,
       recurringOriginId: initial?.recurringOriginId,
@@ -506,7 +517,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 sourceId: "",
                 destinationId: "",
                 mode: newType === "transfer" ? "Bank Transfer" : p.mode,
-                ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", odometer: "" }),
+                ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", odometer: "" }),
               }));
             }}
               disabled={!!lockType}
@@ -519,7 +530,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                   ...p,
                   subType: nextSubType,
                   mode: txType === "transfer" && nextSubType === "cc_payment" ? "Bank Transfer" : p.mode,
-                  ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", odometer: "" } : {}),
+                  ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", odometer: "" } : {}),
                 }));
               }}
                 options={[{ value: "", label: "— Select sub-type —" }, ...subTypeOptions]}
@@ -670,6 +681,26 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 options={[{ value: "", label: "— Select vehicle —" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} />
               <Inp label="Odometer (km)" type="number" value={form.odometer} onChange={f("odometer")} placeholder="e.g. 42500" />
             </Grid2>
+          )}
+
+          {showMortgageLink && (
+            <Sel
+              label="Mortgage"
+              value={form.linkedHouseLoanId}
+              onChange={(event) => {
+                const mortgage = houseLoans.find((loan) => loan.id === event.target.value);
+                setForm((previous) => ({
+                  ...previous,
+                  linkedHouseLoanId: event.target.value,
+                  linkedPropertyId: mortgage?.propertyId ?? previous.linkedPropertyId,
+                }));
+              }}
+              options={[
+                { value: "", label: "— Select mortgage —" },
+                ...houseLoans.map((loan) => ({ value: loan.id, label: loan.name })),
+              ]}
+              required
+            />
           )}
 
           {/* Property link */}

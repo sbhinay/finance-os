@@ -13,6 +13,7 @@ import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { useEffect } from "react";
 import { theme } from "@/lib/theme";
 import { getExpenseReportEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
+import { calculateDebtSummary, matchesMortgagePayment, matchesVehicleFinancePayment } from "@/utils/debtReporting";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -302,8 +303,24 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
     .reduce((sum, property) => sum + (property.estimatedValue ?? 0), 0);
   const totalAssets = toFixed2(totalBank + propertyAssets);
   const ccDebt = cards.reduce((s, c) => s + c.openingBalance, 0);
-  const loanDebt = houseLoans.reduce((s, l) => s + l.remaining, 0);
-  const vehicleDebt = vehicles.filter((v) => v.vtype === "Finance").reduce((s, v) => s + v.remaining, 0);
+  const debtOwing = (item: (typeof houseLoans)[number] | (typeof vehicles)[number]) => {
+    const isMortgage = "propertyId" in item;
+    return calculateDebtSummary({
+      transactions,
+      matches: isMortgage
+        ? matchesMortgagePayment(
+            item.id,
+            item.propertyId,
+            houseLoans.filter((candidate) => candidate.propertyId === item.propertyId).length === 1
+          )
+        : matchesVehicleFinancePayment(item.id),
+      balanceSnapshotAmount: item.balanceSnapshotAmount,
+      balanceSnapshotDate: item.balanceSnapshotDate,
+      fallbackBalance: item.remaining,
+    }).currentOwing;
+  };
+  const loanDebt = houseLoans.reduce((sum, loan) => sum + debtOwing(loan), 0);
+  const vehicleDebt = vehicles.filter((vehicle) => vehicle.vtype === "Finance").reduce((sum, vehicle) => sum + debtOwing(vehicle), 0);
   const craDebt = toFixed2((business.arrearsHST ?? 0) + (business.arrearsCorp ?? 0));
   const totalDebt = toFixed2(ccDebt + loanDebt + vehicleDebt + craDebt);
   const netWorth = toFixed2(totalAssets - totalDebt);
@@ -457,11 +474,11 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
           <div key={l.id} style={{ marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
               <span>{l.name}</span>
-              <span style={{ color: "#a31515" }}>{fmtCAD(l.remaining)} remaining</span>
+              <span style={{ color: "#a31515" }}>{fmtCAD(debtOwing(l))} owing</span>
             </div>
             {l.principal > 0 && (
               <div style={{ height: 4, background: "#e5e7eb", borderRadius: 99 }}>
-                <div style={{ height: "100%", width: `${((l.principal - l.remaining) / l.principal) * 100}%`, background: "#1a5fa8", borderRadius: 99 }} />
+                <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, ((l.principal - debtOwing(l)) / l.principal) * 100))}%`, background: "#1a5fa8", borderRadius: 99 }} />
               </div>
             )}
           </div>

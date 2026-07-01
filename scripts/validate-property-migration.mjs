@@ -51,6 +51,22 @@ const synthetic = migratePropertyParents(
   ],
   [
     {
+      id: "mortgage-tx",
+      type: "loan_payment",
+      subType: "mortgage",
+      purpose: "mortgage_payment",
+      amount: 10,
+      date: "2026-05-01",
+      createdAt: "2026-05-01T12:00:00.000Z",
+      description: "Mortgage Payment - Primary",
+      sourceId: "bank",
+      currency: "CAD",
+      status: "cleared",
+      linkedPropertyId: "loan-a",
+      recurringOriginType: "house_loan",
+      recurringOriginId: "loan-a",
+    },
+    {
       id: "tax-tx",
       type: "expense",
       purpose: "recurring_expense",
@@ -72,7 +88,10 @@ const synthetic = migratePropertyParents(
 if (synthetic.properties.length !== 2) {
   throw new Error("Synthetic migration should merge one exact match and preserve one distinct property.");
 }
-if (synthetic.transactions[0].linkedPropertyId !== "loan-a") {
+if (synthetic.transactions[0].linkedHouseLoanId !== "loan-a") {
+  throw new Error("Unambiguous mortgage transaction was not linked to its mortgage parent.");
+}
+if (synthetic.transactions[1].linkedPropertyId !== "loan-a") {
   throw new Error("Unambiguous property-tax transaction was not relinked to its Property parent.");
 }
 

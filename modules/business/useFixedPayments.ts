@@ -127,6 +127,7 @@ function transactionMatchesPending(
         mode: pending.mode as Transaction["mode"],
         linkedVehicleId: pending.linkedVehicleId,
         linkedPropertyId: pending.linkedPropertyId,
+        linkedHouseLoanId: pending.linkedHouseLoanId,
         recurringOriginType: pending.recurringOriginType,
         recurringOriginId: pending.recurringOriginId,
     });
@@ -337,6 +338,7 @@ export function generatePendingTransactions(
                 mode: "Debit",
                 tag: "Personal",
                 linkedPropertyId: l.propertyId ?? l.id,
+                linkedHouseLoanId: l.id,
                 recurringOriginType: "house_loan",
                 recurringOriginId: l.id,
                 purpose: "mortgage_payment",
@@ -709,6 +711,7 @@ export function useFixedPayments() {
             mode: p.mode as Transaction["mode"],
             linkedVehicleId: p.linkedVehicleId,
             linkedPropertyId: p.linkedPropertyId,
+            linkedHouseLoanId: p.linkedHouseLoanId,
             recurringOriginType: p.recurringOriginType,
             recurringOriginId: p.recurringOriginId,
         });

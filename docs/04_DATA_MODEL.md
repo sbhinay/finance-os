@@ -27,6 +27,7 @@ interface Transaction {
   status: TransactionStatus;
   linkedVehicleId?: string;
   linkedPropertyId?: string;
+  linkedHouseLoanId?: string;
   linkedLiabilityId?: string;
   odometer?: string;
 }
@@ -39,6 +40,7 @@ interface Transaction {
 - `createdAt` is the system-assigned timestamp when the row was created.
 - `linkedVehicleId` and `linkedPropertyId` connect expenses to assets.
 - `interestAmount` and `principalAmount` are optional detail fields for debt payments; the total `amount` remains the cash amount that leaves the source account.
+- `linkedHouseLoanId` identifies the exact mortgage when a Property has more than one loan.
 
 ### Transaction Types
 Supported transaction types:
@@ -251,6 +253,9 @@ interface Property {
 - Missing detailed fields must not block normal cash projection or upcoming-obligation views.
 - Legacy standalone property-tax and house-loan records remain readable, while unambiguous records migrate to a first-class Property parent.
 - Vehicle, account, card, and house-loan records can carry balance snapshot fields. These snapshots are the user-entered real-world anchor for replay and ledger explanation views.
+- Secured-debt replay starts from the latest balance snapshot and reduces owing only by explicit principal on later accounting dates.
+- An unsplit payment remains a full cash outflow but does not reduce derived owing; the detail view reports it as awaiting allocation.
+- Explicit interest contributes to expense reporting while principal remains a balance-sheet reduction.
 
 ### PropertyTax
 ```typescript

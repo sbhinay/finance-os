@@ -185,6 +185,15 @@ export function HealthReportSection({
           hint: "Property-linked transactions should map to a current house/property record.",
         });
       }
+      if (tx.linkedHouseLoanId && !houseLoanIds.has(tx.linkedHouseLoanId)) {
+        nextIssues.push({
+          id: `mortgage-link-${tx.id}`,
+          severity: "medium",
+          title: "Broken linked mortgage reference",
+          detail: `${summarizeTx(tx)} - linkedHouseLoanId=${tx.linkedHouseLoanId}`,
+          hint: "Mortgage payments should point to a current mortgage record.",
+        });
+      }
 
       if ((tx.recurringOriginType && !tx.recurringOriginId) || (!tx.recurringOriginType && tx.recurringOriginId)) {
         nextIssues.push({
@@ -220,6 +229,21 @@ export function HealthReportSection({
           title: "Mortgage payment has no principal or interest split",
           detail: summarizeTx(tx),
           hint: "Regular mode is fine without this, but detailed debt reporting will be less precise.",
+        });
+      }
+      if (
+        tx.type === "loan_payment"
+        && tx.subType === "bank_loan"
+        && tx.linkedVehicleId
+        && tx.principalAmount == null
+        && tx.interestAmount == null
+      ) {
+        nextIssues.push({
+          id: `vehicle-split-${tx.id}`,
+          severity: "low",
+          title: "Financed-vehicle payment has no principal or interest split",
+          detail: summarizeTx(tx),
+          hint: "Cash reporting remains correct, but the vehicle liability cannot be reduced until the split is supplied.",
         });
       }
     });
@@ -308,7 +332,15 @@ export function HealthReportSection({
     houseLoans.forEach((loan) => {
       const latestMortgageTx = latestDate(
         transactions
-          .filter((tx) => tx.subType === "mortgage" && (tx.linkedPropertyId === loan.id || tx.description.includes(loan.name)))
+          .filter((tx) =>
+            tx.subType === "mortgage"
+            && (
+              tx.linkedHouseLoanId === loan.id
+              || (tx.recurringOriginType === "house_loan" && tx.recurringOriginId === loan.id)
+              || tx.linkedPropertyId === loan.propertyId
+              || tx.description.includes(loan.name)
+            )
+          )
           .map((tx) => tx.date)
       );
       if (latestMortgageTx && loan.nextPaymentDate && loan.nextPaymentDate < latestMortgageTx) {

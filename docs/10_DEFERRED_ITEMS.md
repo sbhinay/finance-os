@@ -74,10 +74,13 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Legacy house-loan and property-tax links migrate only when ownership is unambiguous.
 - Import/export, cloud payloads, reference validation, recurring ownership, and the June 29 fixture include Properties.
 
-### Phase 4: Detailed debt reporting - next
-- Improve optional principal/interest workflows for mortgages and financed vehicles.
-- Keep full payments in cash planning while reducing liabilities only by principal.
-- Report interest and carrying costs separately without blocking regular mode.
+### Phase 4: Detailed debt reporting - landed
+- Mortgage and financed-vehicle detail views report cash paid, principal, interest, unallocated payments, and snapshot-derived current owing.
+- Full payments remain in cash planning while only explicit principal reduces liabilities.
+- Interest enters expense reporting separately; unsplit regular-mode payments remain valid without guessed amortization.
+- Mortgage payments now carry an explicit `linkedHouseLoanId`; historical links migrate only when ownership is unambiguous.
+
+### Phase 5: Findability and Data Health - next
 
 ### Phase 5: Findability, Data Health, and import review
 - Add tag and recurring-origin filters.

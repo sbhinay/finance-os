@@ -77,6 +77,10 @@
 - Only the interest portion of a mortgage or financed debt payment is expense-like; principal reduces liability and is not generic spending.
 - Lease payments are closer to ordinary recurring outflows and may remain expense-like unless a more specialized model is added.
 - `loan_payment` rows should support optional `principalAmount` and `interestAmount`, but regular mode must still work if the split is unknown.
+- Mortgage rows use `linkedHouseLoanId` for exact debt ownership; legacy rows migrate only from a valid house-loan origin or a Property with exactly one mortgage.
+- Mortgage and financed-vehicle owing is derived from the latest balance snapshot plus later explicit principal reductions.
+- Unsplit secured-debt payments remain full cash outflows but do not reduce derived owing.
+- Explicit interest is included in expense reporting; principal is excluded from expense totals.
 - `transfer + loc_draw` is the canonical way to represent borrowed cash moving from a line of credit into a receiving account.
 - Personal, bank, and shareholder lenders are represented by `Liability` records.
 - Multiple receipts may link to one lender liability and increase its amount owed.

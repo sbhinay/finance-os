@@ -12,6 +12,7 @@ import { useLiabilities } from "./useLiabilities";
 import type { Liability } from "@/types/domain";
 import { getLiabilityLedger, getLiabilitySummary } from "./useLiabilities";
 import { useTransactions } from "@/modules/transactions/useTransactions";
+import { calculateDebtSummary, matchesMortgagePayment } from "@/utils/debtReporting";
 
 type NavTarget = "accounts" | "cards" | "properties" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
@@ -160,7 +161,18 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
 
   const liquidAssets = toFixed2(activeAccounts.reduce((sum, a) => sum + a.openingBalance, 0));
   const cardLiabilities = toFixed2(activeCards.reduce((sum, c) => sum + c.openingBalance, 0));
-  const houseLoanLiabilities = toFixed2(houseLoans.reduce((sum, l) => sum + l.remaining, 0));
+  const mortgageOwing = (loan: HouseLoan) => calculateDebtSummary({
+    transactions,
+    matches: matchesMortgagePayment(
+      loan.id,
+      loan.propertyId,
+      houseLoans.filter((candidate) => candidate.propertyId === loan.propertyId).length === 1
+    ),
+    balanceSnapshotAmount: loan.balanceSnapshotAmount,
+    balanceSnapshotDate: loan.balanceSnapshotDate,
+    fallbackBalance: loan.remaining,
+  }).currentOwing;
+  const houseLoanLiabilities = toFixed2(houseLoans.reduce((sum, loan) => sum + mortgageOwing(loan), 0));
   const lenderLiabilities = toFixed2(
     liabilities.reduce((sum, liability) => sum + (liabilityBalances[liability.id] ?? 0), 0)
   );
@@ -480,7 +492,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {properties.filter((property) => !property.archived).slice(0, 3).map((property) => {
                 const propertyLoans = houseLoans.filter((loan) => loan.propertyId === property.id);
-                const mortgageBalance = propertyLoans.reduce((sum, loan) => sum + loan.remaining, 0);
+                const mortgageBalance = propertyLoans.reduce((sum, loan) => sum + mortgageOwing(loan), 0);
                 return (
                 <div key={property.id} style={{ paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{property.name}</div>

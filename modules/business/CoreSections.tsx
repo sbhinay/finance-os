@@ -1175,7 +1175,7 @@ export function TransactionHistorySection() {
                     description: t.description, notes: t.notes, sourceId: t.sourceId,
                     destinationId: t.destinationId, subType: t.subType,
                     categoryId: t.categoryId, tag: t.tag, mode: t.mode,
-                    linkedVehicleId: t.linkedVehicleId, linkedPropertyId: t.linkedPropertyId,
+                    linkedVehicleId: t.linkedVehicleId, linkedPropertyId: t.linkedPropertyId, linkedHouseLoanId: t.linkedHouseLoanId,
                     linkedLiabilityId: t.linkedLiabilityId,
                     recurringOriginType: t.recurringOriginType, recurringOriginId: t.recurringOriginId,
                     odometer: t.odometer, interestAmount: t.interestAmount, principalAmount: t.principalAmount,

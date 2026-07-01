@@ -146,6 +146,7 @@ export interface Transaction {
   // ── Links ─────────────────────────────────────────────────────────────────
   linkedVehicleId?: string;        // vehicle expense tracking
   linkedPropertyId?: string;       // property expense tracking
+  linkedHouseLoanId?: string;      // explicit mortgage/debt parent
   linkedLiabilityId?: string;      // loan_receipt, loan_payment — links to liability account (future)
   linkedInvoiceId?: string;        // invoice deposit source
   recurringOriginType?: RecurringOriginType;

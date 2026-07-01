@@ -8,6 +8,7 @@ import type { Property } from "@/types/domain";
 import type { Transaction } from "@/types/transaction";
 import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
 import { getTransactionListEffect } from "@/utils/transactionSemantics";
+import { calculateDebtSummary, matchesMortgagePayment } from "@/utils/debtReporting";
 import { theme } from "@/lib/theme";
 import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 import { useHouseLoans, useProperties, usePropertyTax } from "./useAssets";
@@ -130,7 +131,13 @@ export function PropertiesSection() {
     const trailingOutflow = toFixed2(linkedTransactions
       .filter((transaction) => transaction.date >= oneYearAgoDate)
       .reduce((sum, transaction) => sum + transactionCashOutflow(transaction), 0));
-    const mortgageBalance = toFixed2(mortgages.reduce((sum, loan) => sum + loan.remaining, 0));
+    const mortgageBalance = toFixed2(mortgages.reduce((sum, loan) => sum + calculateDebtSummary({
+      transactions,
+      matches: matchesMortgagePayment(loan.id, property.id, mortgages.length === 1),
+      balanceSnapshotAmount: loan.balanceSnapshotAmount,
+      balanceSnapshotDate: loan.balanceSnapshotDate,
+      fallbackBalance: loan.remaining,
+    }).currentOwing, 0));
     const scheduledMortgageMonthly = toFixed2(mortgages.reduce(
       (sum, loan) => sum + toMonthly(loan.payment, loan.schedule),
       0
@@ -341,7 +348,18 @@ export function PropertiesSection() {
                 <div style={{ fontSize: 12, color: theme.colors.textSoft }}>No mortgage linked to this property.</div>
               ) : selectedMetrics.mortgages.map((loan) => (
                 <div key={loan.id} style={{ padding: "9px 0", borderTop: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", gap: 12 }}>
-                  <span>{loan.name}</span><strong>{fmtCAD(loan.remaining)}</strong>
+                  <span>{loan.name}</span>
+                  <strong>{fmtCAD(calculateDebtSummary({
+                    transactions,
+                    matches: matchesMortgagePayment(
+                      loan.id,
+                      selected.id,
+                      (selectedMetrics?.mortgages.length ?? 0) === 1
+                    ),
+                    balanceSnapshotAmount: loan.balanceSnapshotAmount,
+                    balanceSnapshotDate: loan.balanceSnapshotDate,
+                    fallbackBalance: loan.remaining,
+                  }).currentOwing)}</strong>
                 </div>
               ))}
 

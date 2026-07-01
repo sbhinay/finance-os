@@ -107,9 +107,27 @@ export function migratePropertyParents(
     const isPropertyTaxRow =
       transaction.recurringOriginType === "property_tax"
       || /property\s*tax/i.test(transaction.description);
-    if (!replacement || !isPropertyTaxRow) return transaction;
+    const linkedPropertyId = replacement && isPropertyTaxRow
+      ? replacement
+      : transaction.linkedPropertyId;
+    const originLoan = transaction.recurringOriginType === "house_loan"
+      ? houseLoans.find((loan) => loan.id === transaction.recurringOriginId)
+      : undefined;
+    const propertyLoans = transaction.subType === "mortgage" && linkedPropertyId
+      ? houseLoans.filter((loan) => loan.propertyId === linkedPropertyId)
+      : [];
+    const linkedHouseLoanId = transaction.linkedHouseLoanId
+      ?? originLoan?.id
+      ?? (propertyLoans.length === 1 ? propertyLoans[0].id : undefined);
+
+    if (
+      linkedPropertyId === transaction.linkedPropertyId
+      && linkedHouseLoanId === transaction.linkedHouseLoanId
+    ) {
+      return transaction;
+    }
     changed = true;
-    return { ...transaction, linkedPropertyId: replacement };
+    return { ...transaction, linkedPropertyId, linkedHouseLoanId };
   });
 
   return { properties, houseLoans, propertyTaxes, transactions, changed };

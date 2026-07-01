@@ -211,6 +211,7 @@ export interface PendingTransaction {
   tag: "Personal" | "Business";
   linkedVehicleId?: string;
   linkedPropertyId?: string;
+  linkedHouseLoanId?: string;
   recurringOriginType?: RecurringOriginType;
   recurringOriginId?: string;
   purpose?: TransactionPurpose;

@@ -34,6 +34,7 @@ function loadPropertyModel() {
     const changedTransactions = result.transactions.filter(
       (transaction, index) =>
         transaction.linkedPropertyId !== existingTransactions[index]?.linkedPropertyId
+        || transaction.linkedHouseLoanId !== existingTransactions[index]?.linkedHouseLoanId
     );
     persistCanonicalTransactions(changedTransactions);
   }

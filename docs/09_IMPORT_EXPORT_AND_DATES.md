@@ -28,6 +28,7 @@ The import process supports:
 - Restores lender liabilities and validates `linkedLiabilityId` references.
 - Preserves and validates optional recurring-origin links and recurring parent ownership.
 - Validates Property references from mortgages, property taxes, recurring owners, and transactions.
+- Validates optional `linkedHouseLoanId` references and detaches broken mortgage links with an import warning.
 - Preserves balance snapshot metadata on accounts and cards.
 - Resolves asset source references by ID or name.
 - Normalizes legacy `credit_card_payment` rows into canonical `transfer + cc_payment`.

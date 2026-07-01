@@ -12,6 +12,12 @@ import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useF
 import { theme } from "@/lib/theme";
 import { buildCanonicalTransaction, persistCanonicalTransactions } from "@/services/transactionPipeline";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
+import {
+  calculateDebtSummary,
+  matchesMortgagePayment,
+  matchesVehicleFinancePayment,
+  type DebtSummary,
+} from "@/utils/debtReporting";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // Primitives
@@ -99,6 +105,36 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
   };
   const c = m[color] ?? m.gray;
   return <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: c.bg, color: c.fg }}>{children}</span>;
+}
+
+function DebtSummaryView({ summary }: { summary: DebtSummary }) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <StatBox label="Current Owing" value={fmtCAD(summary.currentOwing)} sub={summary.anchorDate ? `from snapshot ${summary.anchorDate}` : "stored regular-mode balance"} color="#a31515" />
+        <StatBox label="Cash Paid" value={fmtCAD(summary.cashPaid)} sub={`${summary.rows.length} linked payments`} />
+        <StatBox label="Principal" value={fmtCAD(summary.principalPaid)} color="#1a7f3c" />
+        <StatBox label="Interest" value={fmtCAD(summary.interestPaid)} color="#a05c00" />
+      </div>
+      {summary.unallocatedPaid > 0 && (
+        <div style={{ padding: "9px 12px", borderRadius: 8, background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: 12 }}>
+          {fmtCAD(summary.unallocatedPaid)} of linked payments has no principal/interest split. It remains in cash history but does not reduce the derived liability.
+        </div>
+      )}
+      <div style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 8, overflow: "hidden" }}>
+        {summary.rows.length === 0 && <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 12 }}>No linked debt payments yet.</div>}
+        {[...summary.rows].reverse().map((row) => (
+          <div key={row.transaction.id} style={{ display: "grid", gridTemplateColumns: "90px minmax(140px, 1fr) repeat(3, minmax(70px, auto))", gap: 8, padding: "8px 10px", borderBottom: `1px solid ${theme.colors.border}`, fontSize: 12, alignItems: "center" }}>
+            <span>{row.transaction.date}</span>
+            <span style={{ fontWeight: 600 }}>{row.transaction.description}</span>
+            <span>{fmtCAD(row.transaction.amount)}</span>
+            <span style={{ color: "#1a7f3c" }}>P {fmtCAD(row.principal)}</span>
+            <span style={{ color: row.unallocated ? "#a05c00" : theme.colors.textMuted }}>{row.unallocated ? "Unsplit" : `I ${fmtCAD(row.interest)}`}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 const SCHEDULES: PaymentSchedule[] = ["Monthly", "Bi-weekly", "Weekly", "Semi-monthly", "Annual"];
@@ -349,7 +385,19 @@ export function VehiclesSection({
       </div>
 
       {vehicles.map((v) => {
-        const st = getVehicleStatus(v);
+        const debtSummary = v.vtype === "Finance"
+          ? calculateDebtSummary({
+              transactions,
+              matches: matchesVehicleFinancePayment(v.id),
+              balanceSnapshotAmount: v.balanceSnapshotAmount,
+              balanceSnapshotDate: v.balanceSnapshotDate,
+              fallbackBalance: v.remaining,
+            })
+          : undefined;
+        const currentOwing = debtSummary?.currentOwing ?? v.remaining;
+        const st = v.vtype === "Finance" && currentOwing <= 0 && v.principal > 0
+          ? "Paid Off"
+          : getVehicleStatus(v);
         const mp = mileageProjection(v);
         const next = getNextOccurrence(v.nextPaymentDate, v.schedule);
         const categorySpend = getVehicleSpendByCategory(v.id);
@@ -386,11 +434,14 @@ export function VehiclesSection({
                 {v.vtype === "Finance" && v.principal > 0 && (
                   <div style={{ marginTop: 6 }}>
                     <div style={{ height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
-                      <div style={{ height: "100%", width: `${Math.min(100 - ((v.remaining / v.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
+                      <div style={{ height: "100%", width: `${Math.max(0, Math.min(100 - ((currentOwing / v.principal) * 100), 100))}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-                      {fmtCAD(v.principal - v.remaining)} paid - {fmtCAD(v.remaining)} remaining
+                      {fmtCAD(v.principal - currentOwing)} reduced - {fmtCAD(currentOwing)} owing
                     </div>
+                    {debtSummary && debtSummary.unallocatedPaid > 0 && (
+                      <div style={{ fontSize: 11, color: "#a05c00", marginTop: 2 }}>{fmtCAD(debtSummary.unallocatedPaid)} awaiting payment split</div>
+                    )}
                   </div>
                 )}
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
@@ -544,8 +595,18 @@ export function VehiclesSection({
               return acc;
             }, {});
             const categoryRows = Object.entries(spendByCategory).sort((a, b) => b[1] - a[1]);
+            const debtSummary = detail.vtype === "Finance"
+              ? calculateDebtSummary({
+                  transactions,
+                  matches: matchesVehicleFinancePayment(detail.id),
+                  balanceSnapshotAmount: detail.balanceSnapshotAmount,
+                  balanceSnapshotDate: detail.balanceSnapshotDate,
+                  fallbackBalance: detail.remaining,
+                })
+              : undefined;
             return (
               <>
+                {debtSummary && <DebtSummaryView summary={debtSummary} />}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <StatBox label="Total Spent" value={fmtCAD(total)} sub="linked expense transactions" />
                   <StatBox label="Expense Entries" value={String(txns.length)} />
@@ -595,10 +656,12 @@ export function VehiclesSection({
 
 export function HouseLoansSection({
   accounts,
+  transactions,
   editHouseLoanId,
   onEditHandled,
 }: {
   accounts: Account[];
+  transactions: Transaction[];
   editHouseLoanId?: string | null;
   onEditHandled?: () => void;
 }) {
@@ -621,6 +684,7 @@ export function HouseLoansSection({
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [detailLoan, setDetailLoan] = useState<HouseLoan | null>(null);
   const [txFormOpen, setTxFormOpen] = useState(false);
   const [txFormInitial, setTxFormInitial] = useState<TransactionFormInitial>(undefined);
   const [txScheduledAmount, setTxScheduledAmount] = useState<number | undefined>();
@@ -660,7 +724,18 @@ export function HouseLoansSection({
   }
 
   const acctOpts = [{ value: "", label: "-- Select account --" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
-  const totalRemaining = houseLoans.reduce((s, l) => s + l.remaining, 0);
+  const getMortgageSummary = (loan: HouseLoan) => calculateDebtSummary({
+    transactions,
+    matches: matchesMortgagePayment(
+      loan.id,
+      loan.propertyId,
+      houseLoans.filter((candidate) => candidate.propertyId === loan.propertyId).length === 1
+    ),
+    balanceSnapshotAmount: loan.balanceSnapshotAmount,
+    balanceSnapshotDate: loan.balanceSnapshotDate,
+    fallbackBalance: loan.remaining,
+  });
+  const totalRemaining = houseLoans.reduce((sum, loan) => sum + getMortgageSummary(loan).currentOwing, 0);
   const totalMonthly = houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0);
 
   // Helper to get account name from ID
@@ -700,6 +775,7 @@ export function HouseLoansSection({
       sourceId: loan.source ?? "",
       description: `Mortgage Payment - ${loan.name}`,
       linkedPropertyId: loan.propertyId ?? loan.id,
+      linkedHouseLoanId: loan.id,
       recurringOriginType: "house_loan",
       recurringOriginId: loan.id,
       mode: "Debit",
@@ -747,6 +823,7 @@ export function HouseLoansSection({
         status: "cleared",
         tag: "Personal",
         linkedPropertyId: loan.propertyId ?? loan.id,
+        linkedHouseLoanId: loan.id,
         linkedName: loan.name,
         recurringOriginType: "house_loan",
         recurringOriginId: loan.id,
@@ -786,6 +863,7 @@ export function HouseLoansSection({
         const next = getNextOccurrence(l.nextPaymentDate, l.schedule);
         const acct = accounts.find((a) => a.id === l.source);
         const property = properties.find((candidate) => candidate.id === l.propertyId);
+        const debtSummary = getMortgageSummary(l);
         return (
           <div key={l.id} style={{ ...theme.cardStyle(), padding: "16px 18px", marginBottom: 12, background: theme.colors.surface }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
@@ -821,19 +899,23 @@ export function HouseLoansSection({
                 {l.principal > 0 && (
                   <div style={{ marginTop: 6 }}>
                     <div style={{ height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
-                      <div style={{ height: "100%", width: `${Math.min(100 - ((l.remaining / l.principal) * 100), 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
+                      <div style={{ height: "100%", width: `${Math.max(0, Math.min(100 - ((debtSummary.currentOwing / l.principal) * 100), 100))}%`, background: "#1a5fa8", borderRadius: 99 }} />
                     </div>
                     <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4 }}>
-                      {fmtCAD(l.principal - l.remaining)} paid - {fmtCAD(l.remaining)} remaining
+                      {fmtCAD(l.principal - debtSummary.currentOwing)} reduced - {fmtCAD(debtSummary.currentOwing)} owing
                     </div>
+                    {debtSummary.unallocatedPaid > 0 && (
+                      <div style={{ fontSize: 11, color: "#a05c00", marginTop: 2 }}>{fmtCAD(debtSummary.unallocatedPaid)} awaiting payment split</div>
+                    )}
                   </div>
                 )}
               </div>
               <div style={{ textAlign: "right", marginLeft: "auto", minWidth: 150 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: "#a31515" }}>{fmtCAD(l.remaining)}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: "#a31515" }}>{fmtCAD(debtSummary.currentOwing)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 4, justifyContent: "flex-end" }}>
                   <Btn variant="green" small onClick={() => openLog(l)}>Log Payment</Btn>
                   <Btn variant="secondary" small onClick={() => openBackfill(l)}>Backfill</Btn>
+                  <Btn variant="secondary" small onClick={() => setDetailLoan(l)}>Debt Details</Btn>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...l, id: l.id }); setShowForm(true); }}>Edit</Btn>
                   <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${l.name}?`)) deleteHouseLoan(l.id); }}>Delete</Btn>
                 </div>
@@ -844,6 +926,12 @@ export function HouseLoansSection({
       })}
 
       {houseLoans.length === 0 && <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No mortgages yet.</div>}
+
+      {detailLoan && (
+        <Modal title={`${detailLoan.name} - Debt Details`} onClose={() => setDetailLoan(null)} wide>
+          <DebtSummaryView summary={getMortgageSummary(detailLoan)} />
+        </Modal>
+      )}
 
       {showForm && (
         <Modal title={form.id ? "Edit Mortgage" : "Add Mortgage"} onClose={() => setShowForm(false)} wide>

@@ -71,10 +71,13 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Account and credit-card balance snapshots can be set directly from the account/card record and inspected through ledger views.
 - Assets & Liabilities now supports full lender management: edit/notes, snapshots, archive/restore, safe deletion, linked borrowing and repayment, canonical relinking, principal/interest summaries, and a running debt ledger.
 - Lender snapshots use a known owing amount/date as the replay anchor; later repayments reduce owing only by principal while interest remains separately reported.
+- Mortgage and financed-vehicle snapshots now use the same conservative principal-only replay contract.
+- Debt details separate cash paid, principal, interest, unallocated payments, and current owing; dashboard, Property equity, and net-worth views consume the same calculation.
+- `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Production Phases 1 through 3 are landed. The active roadmap now proceeds through detailed debt reporting, Data Health/import review, AI scanning, guarded cloud persistence, and tax/report exports.
+- Production Phases 1 through 4 are landed. The active roadmap now proceeds through Data Health/import review, AI scanning, guarded cloud persistence, and tax/report exports.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:
