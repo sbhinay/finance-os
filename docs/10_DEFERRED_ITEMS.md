@@ -58,11 +58,15 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Guided Borrow and Repay actions remain available from both lender rows and lender details.
 - Existing unlinked loan transactions can be attached safely; linked lenders are archived instead of hard-deleted.
 
-### Phase 2: Recurring architecture - next
-- Consolidate schedule generation, confirmation, Log Payment, backfill, ownership, origin links, and semantic duplicate handling.
-- Cover subscriptions, planned transfers, fees, insurance, and property tax without introducing another ledger writer.
+### Phase 2: Recurring architecture - landed
+- Schedule generation, confirmation, Log Payment, fixed/vehicle/mortgage backfill, ownership, origin links, and semantic duplicate handling now share canonical rules.
+- Recurring definitions separate stable `startDate` from advancing next-due `date`.
+- Calendar-safe cadence preserves weekdays, month ends, and annual dates.
+- Subscriptions, planned transfers, fees, insurance, property tax, vehicle payments, mortgages, and tax obligations post through canonical transaction paths.
+- Parent-owned rows are protected from independent edit/delete; used standalone schedules archive instead of orphaning history.
+- Import and Data Health validate recurring origins and parent-owner pairs.
 
-### Phase 3: Property parent model
+### Phase 3: Property parent model - next
 - Add first-class primary, rental, and commercial Property records.
 - Let properties own mortgages, property tax, insurance, expenses, carrying-cost views, and transaction history.
 - Migrate only unambiguous house-loan/property relationships.
@@ -91,18 +95,10 @@ The following order is authoritative for the next implementation cycle. Each pha
 
 ## 1. Recurring Architecture
 
-### High priority
-- Continue the redesign of `Fixed Payments` into a shared recurring engine with clearer parent ownership.
-- Keep one recurring engine underneath for schedules, next due, backfill, log payment, and dedup logic.
-- Reframe the user-facing page over time from a generic fixed-payments list into a clearer recurring dashboard.
-- Continue extending asset-originated recurring payment workflows so parent records can launch recurring logic directly.
-- Auto-derive `nextPaymentDate` from schedule plus posted history wherever the rules are reliable enough.
-- Expand backfill and log-payment behavior consistently across recurring domains.
-- Add separate activation / start dates where historical backfill and lifetime cost should differ from the next due date:
-  - account fees
-  - card annual fees
-  - vehicle insurance
-  - property tax when needed
+### Landed foundation
+- One recurring engine now owns pending generation, confirmation, Log Payment, backfill, semantic duplicate handling, origin links, and safe schedule lifecycle.
+- Stable activation/start dates are separate from advancing next-due dates.
+- Parent ownership is enforced for account/card fees, vehicle insurance, and transitional house-loan property tax.
 
 ### Parent-owned recurring items to deepen further
 - Vehicle insurance should continue moving from basic vehicle-owned recurring setup toward richer vehicle-owned modeling.

@@ -147,6 +147,8 @@ export function DailyLogSection() {
       linkedVehicleId: t.linkedVehicleId ?? "",
       linkedPropertyId: t.linkedPropertyId ?? "",
       linkedLiabilityId: t.linkedLiabilityId ?? "",
+      recurringOriginType: t.recurringOriginType,
+      recurringOriginId: t.recurringOriginId,
       odometer: t.odometer ?? "",
       interestAmount: t.interestAmount,
       principalAmount: t.principalAmount,

@@ -28,7 +28,8 @@ import {
 import {
     uid,
     toFixed2,
-    advanceOneInterval
+    advanceOneInterval,
+    shiftOneInterval
 } from "@/utils/finance";
 import {
     Transaction,
@@ -37,15 +38,9 @@ import {
     TransactionPurpose
 } from "@/types/transaction";
 import {
-    notifyDataChanged
-} from "@/utils/events";
-import {
-    syncBalances
-} from "@/utils/syncBalances";
-import {
     buildCanonicalTransaction,
-    findSemanticDuplicate,
     persistCanonicalTransaction,
+    persistCanonicalTransactions,
 } from "@/services/transactionPipeline";
 import { inferTransactionPurpose, isSemanticDuplicate } from "@/utils/transactionSemantics";
 
@@ -71,14 +66,12 @@ function getOccurrencesBetween(
     windowEnd: Date
 ): string[] {
     if (!anchorDateStr || schedule === "One-time") return [];
-    const interval = SCHED_DAYS[schedule];
-    if (!interval) return [];
     const results: string[] = [];
     let d = new Date(anchorDateStr + "T12:00:00");
-    while (d < windowStart) d = new Date(d.getTime() + interval * 86400000);
+    while (d < windowStart) d = shiftDateBySchedule(d, schedule, 1);
     while (d <= windowEnd) {
         results.push(d.toISOString().slice(0, 10));
-        d = new Date(d.getTime() + interval * 86400000);
+        d = shiftDateBySchedule(d, schedule, 1);
     }
     return results;
 }
@@ -132,6 +125,8 @@ function transactionMatchesPending(
         mode: pending.mode as Transaction["mode"],
         linkedVehicleId: pending.linkedVehicleId,
         linkedPropertyId: pending.linkedPropertyId,
+        recurringOriginType: pending.recurringOriginType,
+        recurringOriginId: pending.recurringOriginId,
     });
     if (pending.category && txn.categoryId && txn.categoryId !== pending.category) return false;
     return isSemanticDuplicate(candidate, txn);
@@ -178,19 +173,9 @@ export function calculateBackfillDates(
 }
 
 function shiftDateBySchedule(date: Date, schedule: PaymentSchedule, direction: 1 | -1): Date {
-    const next = new Date(date);
-    switch (schedule) {
-        case "Monthly":
-            next.setMonth(next.getMonth() + direction);
-            return next;
-        case "Annual":
-            next.setFullYear(next.getFullYear() + direction);
-            return next;
-        default: {
-            const interval = SCHED_DAYS[schedule];
-            return interval ? new Date(next.getTime() + direction * interval * 86400000) : next;
-        }
-    }
+    return new Date(
+        shiftOneInterval(date.toISOString().slice(0, 10), schedule, direction) + "T12:00:00"
+    );
 }
 
 export function calculateBackfillDatesFromAnchor(
@@ -282,7 +267,7 @@ export function generatePendingTransactions(
 
     // Fixed payments
     fixedPayments.forEach((p) => {
-        if (!p.amount || !p.date) return;
+        if (p.archived || !p.amount || !p.date) return;
         if (p.endDate && new Date(p.endDate + "T12:00:00") < windowStart) return;
         const dates = getOccurrencesBetween(p.date, p.schedule, windowStart, today);
         dates.forEach((dateStr) => {
@@ -298,6 +283,8 @@ export function generatePendingTransactions(
                 transactionType: p.transactionType,
                 subType: p.subType,
                 purpose: getPendingPurpose("fixed", p.transactionType, p.subType, p.purpose),
+                recurringOriginType: "fixed_payment",
+                recurringOriginId: p.id,
                 destinationId: p.destinationId,
                 mode: p.mode ?? "Debit",
                 tag: (p.tag ?? "Personal") as "Personal" | "Business",
@@ -313,7 +300,9 @@ export function generatePendingTransactions(
             addIfNew(`v_${v.id}_${dateStr}`, {
                 sourceType: "vehicle",
                 sourceId: v.id,
-                name: `${v.name} Payment`,
+                name: v.vtype === "Finance"
+                    ? `Vehicle Finance Payment - ${v.name}`
+                    : `Vehicle Lease Payment - ${v.name}`,
                 amount: v.payment,
                 dueDate: dateStr,
                 account: v.source,
@@ -322,6 +311,8 @@ export function generatePendingTransactions(
                 mode: "Debit",
                 tag: "Personal",
                 linkedVehicleId: v.id,
+                recurringOriginType: "vehicle",
+                recurringOriginId: v.id,
                 purpose: v.vtype === "Finance" ? "vehicle_finance_payment" : "vehicle_lease_payment",
             });
         });
@@ -335,7 +326,7 @@ export function generatePendingTransactions(
             addIfNew(`hl_${l.id}_${dateStr}`, {
                 sourceType: "loan",
                 sourceId: l.id,
-                name: `${l.name} Mortgage Payment`,
+                name: `Mortgage Payment - ${l.name}`,
                 amount: l.payment,
                 dueDate: dateStr,
                 account: l.source,
@@ -344,6 +335,8 @@ export function generatePendingTransactions(
                 mode: "Debit",
                 tag: "Personal",
                 linkedPropertyId: l.id,
+                recurringOriginType: "house_loan",
+                recurringOriginId: l.id,
                 purpose: "mortgage_payment",
             });
         });
@@ -366,6 +359,8 @@ export function generatePendingTransactions(
                 mode: "Bank Transfer",
                 tag: "Business",
                 purpose: "payroll_remittance",
+                recurringOriginType: "tax_obligation",
+                recurringOriginId: r.id,
             });
         }
     });
@@ -387,6 +382,8 @@ export function generatePendingTransactions(
                 mode: "Bank Transfer",
                 tag: "Business",
                 purpose: "corporate_tax_payment",
+                recurringOriginType: "tax_obligation",
+                recurringOriginId: i.id,
             });
         }
     });
@@ -407,6 +404,8 @@ export function generatePendingTransactions(
                 mode: "Bank Transfer",
                 tag: "Business",
                 purpose: "hst_remittance",
+                recurringOriginType: "tax_obligation",
+                recurringOriginId: h.id,
             });
         }
     });
@@ -426,6 +425,8 @@ export function generatePendingTransactions(
                     type: "Expense",
                     mode: "Bank Transfer",
                     tag: "Personal",
+                    recurringOriginType: "property_tax",
+                    recurringOriginId: p.id,
                 });
             }
         });
@@ -496,7 +497,14 @@ export function useFixedPayments() {
 
     const load = useCallback(() => {
         fixedPaymentRepository.pruneOldDismissedKeys();
-        const fps = fixedPaymentRepository.getAll();
+        const storedPayments = fixedPaymentRepository.getAll();
+        const fps = storedPayments.map((payment) => ({
+            ...payment,
+            startDate: payment.startDate ?? payment.date,
+        }));
+        if (storedPayments.some((payment) => !payment.startDate)) {
+            fixedPaymentRepository.saveAll(fps);
+        }
         const dismissed = fixedPaymentRepository.getDismissedKeys();
         const biz = businessRepository.get();
         const existingTransactions = transactionRepository.getAll();
@@ -538,6 +546,7 @@ export function useFixedPayments() {
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         load();
     }, [load]);
 
@@ -548,7 +557,8 @@ export function useFixedPayments() {
         const fp: FixedPayment = {
             ...fields,
             id: uid(),
-            amount: toFixed2(fields.amount)
+            amount: toFixed2(fields.amount),
+            startDate: fields.startDate ?? fields.date,
         };
         fixedPaymentRepository.saveAll([...all, fp]);
         load();
@@ -561,7 +571,17 @@ export function useFixedPayments() {
     }, [load]);
 
     const deleteFixedPayment = useCallback((id: string) => {
-        fixedPaymentRepository.saveAll(fixedPaymentRepository.getAll().filter((p) => p.id !== id));
+        const all = fixedPaymentRepository.getAll();
+        const hasPostedTransactions = transactionRepository.getAll().some(
+            (transaction) =>
+                transaction.recurringOriginType === "fixed_payment"
+                && transaction.recurringOriginId === id
+        );
+        fixedPaymentRepository.saveAll(
+            hasPostedTransactions
+                ? all.map((payment) => payment.id === id ? { ...payment, archived: true } : payment)
+                : all.filter((payment) => payment.id !== id)
+        );
         load();
     }, [load]);
 
@@ -573,13 +593,10 @@ export function useFixedPayments() {
         accountId: string
     ): number => {
         if (!dates.length || !accountId) return 0;
-        const existing = transactionRepository.getAll();
-
-        let count = 0;
         const posting = getFixedPaymentPosting(fp);
         const purpose = getPendingPurpose("fixed", fp.transactionType, fp.subType, fp.purpose);
-        dates.forEach((date) => {
-            const txn = buildCanonicalTransaction({
+        const candidates = dates.map((date) =>
+            buildCanonicalTransaction({
                 purpose,
                 amount: toFixed2(fp.amount),
                 description: fp.name,
@@ -591,19 +608,23 @@ export function useFixedPayments() {
                 categoryId: posting.categoryId || undefined,
                 tag: (fp.tag ?? "Personal") as "Personal" | "Business",
                 mode: (fp.mode ?? "Debit") as Transaction["mode"],
-            });
-            if (findSemanticDuplicate(txn, existing)) return;
-            existing.push(txn);
-            count++;
-        });
+                recurringOriginType: "fixed_payment",
+                recurringOriginId: fp.id,
+            })
+        );
 
-        if (count > 0) {
-            transactionRepository.saveAll(existing);
-            syncBalances();
-            notifyDataChanged("transactions");
+        const inserted = persistCanonicalTransactions(candidates, { skipSemanticDuplicates: true }).length;
+        if (inserted > 0) {
+            const nextDate = advanceOneInterval(dates[dates.length - 1], fp.schedule);
+            fixedPaymentRepository.saveAll(
+                fixedPaymentRepository.getAll().map((payment) =>
+                    payment.id === fp.id ? { ...payment, date: nextDate } : payment
+                )
+            );
+            load();
         }
-        return count;
-    }, []);
+        return inserted;
+    }, [load]);
 
     // ── Log payment (+ Log button) ─────────────────────────────────────────────
 
@@ -631,6 +652,8 @@ export function useFixedPayments() {
             categoryId: (posting.type === "expense" ? (categoryId || posting.categoryId) : undefined) || undefined,
             tag: tag ?? "Personal",
             mode: mode ?? "Debit",
+            recurringOriginType: "fixed_payment",
+            recurringOriginId: fp.id,
         });
         persistCanonicalTransaction(txn);
 
@@ -639,7 +662,7 @@ export function useFixedPayments() {
             fixedPaymentRepository.saveAll(all.map((f) =>
                 f.id === fp.id ? {
                     ...f,
-                    date: advanceOneInterval(f.date, f.schedule)
+                    date: advanceOneInterval(date, f.schedule)
                 } : f
             ));
         }
@@ -677,6 +700,8 @@ export function useFixedPayments() {
             mode: p.mode as Transaction["mode"],
             linkedVehicleId: p.linkedVehicleId,
             linkedPropertyId: p.linkedPropertyId,
+            recurringOriginType: p.recurringOriginType,
+            recurringOriginId: p.recurringOriginId,
         });
 
         persistCanonicalTransaction(txn);
@@ -685,12 +710,12 @@ export function useFixedPayments() {
         // Auto-advance fixed payment date
         if (p.sourceType === "fixed") {
             const all = fixedPaymentRepository.getAll();
-            const fp = all.find((f) => f.name === p.name);
+            const fp = all.find((f) => f.id === p.sourceId);
             if (fp && fp.schedule !== "One-time") {
                 fixedPaymentRepository.saveAll(all.map((f) =>
                     f.id === fp.id ? {
                         ...f,
-                        date: advanceOneInterval(f.date, f.schedule)
+                        date: advanceOneInterval(p.dueDate, f.schedule)
                     } : f
                 ));
             }

@@ -35,7 +35,7 @@ export const [domain]Repository = {
 | `useCreditCards` | `modules/creditCards/useCreditCards.ts` | Card CRUD, LOC/card behavior, payments, fees, and balance snapshots |
 | `useTransactions` | `modules/transactions/useTransactions.ts` | Transaction CRUD and balance sync |
 | `useCategories` | `modules/categories/useCategories.ts` | Category CRUD and defaults |
-| `useFixedPayments` | `modules/business/useFixedPayments.ts` | Fixed payment definition and pending generation |
+| `useFixedPayments` | `modules/business/useFixedPayments.ts` | Shared recurring definitions, stable start/next dates, pending generation, confirmation, Log Payment, backfill, archive, and origin links |
 | `useBusiness` | `modules/business/useBusiness.ts` | Business domain normalization and CRA data |
 | `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD, history, and owned insurance recurring sync |
 | `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD and owned property-tax recurring sync |
@@ -75,6 +75,8 @@ export const [domain]Repository = {
 - Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
 - New actions must use `services/transactionPipeline.ts`; interactive actions should prefer launching the canonical `TransactionForm`.
 - `utils/transactionSemantics.ts` owns purpose inference, balance effects, report effects, list signs, and semantic duplicate identity.
+- `services/transactionPipeline.ts` provides both single-row and batch canonical persistence; recurring and asset backfills use the batch path.
+- `utils/finance.ts` owns shared calendar-safe forward/backward schedule advancement, including month-end preservation.
 - `FixedPaymentsSection.tsx` is now serving as the shared recurring engine and also exports focused recurring views rather than acting only as a generic fixed-payments page.
 - Vehicle and mortgage backfill now use `nextPaymentDate` as the preferred cadence anchor.
 - Category add/edit UI now exposes vehicle/property linking flags used by `TransactionForm`.

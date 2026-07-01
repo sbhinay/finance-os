@@ -28,11 +28,12 @@
 - Multiple primaries are allowed across domains.
 - Source option sorting is handled by `buildSourceOptions()` in `utils/finance.ts`.
 
-### Fixed Payment Rules
-- The `date` field is the recurring anchor.
-- `advanceOneInterval()` advances fixed payments after a logged payment.
-- Monthly advances by calendar month, not fixed days.
-- Annual advances by calendar year.
+### Recurring Payment Rules
+- `startDate` is the stable first-known occurrence and historical backfill anchor.
+- `date` is the next due date and advances from the actual confirmed/logged accounting date.
+- `shiftOneInterval()` is the shared forward/backward cadence rule for pending generation, Log Payment, confirmation, and backfill.
+- Monthly advances by calendar month, preserves month-end schedules, and never uses a fixed 30-day approximation.
+- Annual advances by calendar year and clamps leap-day schedules safely.
 - One-time payments do not auto-advance.
 - Overdue and due fixed payments surface in the Daily Log pending banner.
 - Recurring items may now carry a `kind` so one shared engine can power:
@@ -45,6 +46,10 @@
   - account fees
   - card fees
 - Parent-owned recurring rows should be auto-created from their parent records when that parent owns the schedule data.
+- Parent-owned rows are edited through their parent and cannot be independently deleted from the recurring hub.
+- Posted recurring transactions store `recurringOriginType` and `recurringOriginId`; legacy rows remain valid without those optional fields.
+- Unused recurring definitions may be deleted. Definitions with posted transactions are archived so historical origin links remain valid.
+- All recurring backfill batches use `persistCanonicalTransactions()`; direct repository transaction writes are prohibited.
 - `Planned Payments` must behave by record-declared posting type rather than page-level hardcoded assumptions.
 - `Recurring Payments` is the primary recurring hub; `Subscriptions` and `Planned Payments` are focused views over the same shared engine, not separate scheduling engines.
 
@@ -60,6 +65,7 @@
 - House-loan/property parent records may also own recurring property-tax setup during the transition away from a standalone property-tax-only model.
 - A lease payment is `expense` + `vehicle_lease_payment` + `Vehicle Lease` category + `linkedVehicleId`.
 - Manual logging, Log Payment, pending confirmation, and backfill use the same canonical naming and classification rules.
+- Duplicate prevention and Data Health both use the same semantic comparator and do not rely on descriptions.
 
 ### Regular vs Detailed Rules
 - Regular mode must ask only for the minimum needed to answer cash-flow questions like what came in, what went out, what is due next, and whether the account will be ready.

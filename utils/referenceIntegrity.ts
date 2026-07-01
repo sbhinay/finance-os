@@ -214,6 +214,33 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
       warnings.push(`Transaction ${tx.id}: linked liability "${tx.linkedLiabilityId}" was not found and was detached.`);
       normalizedTx.linkedLiabilityId = undefined;
     }
+    if (tx.recurringOriginType && tx.recurringOriginId) {
+      const originExists = tx.recurringOriginType === "fixed_payment"
+        ? payload.futurePayments.some((payment) => payment.id === tx.recurringOriginId)
+        : tx.recurringOriginType === "vehicle"
+          ? payload.vehicles.some((vehicle) => vehicle.id === tx.recurringOriginId)
+          : tx.recurringOriginType === "house_loan"
+            ? payload.houseLoans.some((loan) => loan.id === tx.recurringOriginId)
+            : tx.recurringOriginType === "property_tax"
+              ? payload.propertyTaxes.some((property) =>
+                  property.id === tx.recurringOriginId
+                  || property.payments?.some((payment) => payment.id === tx.recurringOriginId)
+                )
+              : [
+                  ...(payload.business.payrollRemittances ?? []),
+                  ...(payload.business.corporateInstalments ?? []),
+                  ...(payload.business.hstRemittances ?? []),
+                ].some((obligation) => obligation.id === tx.recurringOriginId);
+      if (!originExists) {
+        warnings.push(`Transaction ${tx.id}: recurring origin "${tx.recurringOriginType}:${tx.recurringOriginId}" was not found and was detached.`);
+        normalizedTx.recurringOriginType = undefined;
+        normalizedTx.recurringOriginId = undefined;
+      }
+    } else if (tx.recurringOriginType || tx.recurringOriginId) {
+      warnings.push(`Transaction ${tx.id}: incomplete recurring origin metadata was detached.`);
+      normalizedTx.recurringOriginType = undefined;
+      normalizedTx.recurringOriginId = undefined;
+    }
 
     if (normalizedTx.type === "transfer" && normalizedTx.subType === "cc_payment" && normalizedTx.destinationId) {
       const isCard = payload.creditCards.some((c) => c.id === normalizedTx.destinationId);
@@ -241,7 +268,26 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
 
   const resolvedVehicles = payload.vehicles.map((v) => ({ ...v, source: resolveSource(v.source, `Vehicle ${v.name}`) }));
   const resolvedHouseLoans = payload.houseLoans.map((l) => ({ ...l, source: resolveSource(l.source, `House loan ${l.name}`) }));
-  const resolvedFixedPayments = payload.futurePayments.map((p) => ({ ...p, source: resolveSource(p.source, `Fixed payment ${p.name}`) }));
+  const resolvedFixedPayments = payload.futurePayments.map((p) => {
+    const ownerExists = !p.ownerType || !p.ownerId
+      ? !p.ownerType && !p.ownerId
+      : p.ownerType === "account"
+        ? payload.accounts.some((account) => account.id === p.ownerId)
+        : p.ownerType === "card"
+          ? payload.creditCards.some((card) => card.id === p.ownerId)
+          : p.ownerType === "vehicle"
+            ? payload.vehicles.some((vehicle) => vehicle.id === p.ownerId)
+            : payload.houseLoans.some((loan) => loan.id === p.ownerId);
+    if (!ownerExists) {
+      warnings.push(`Fixed payment ${p.name}: invalid or incomplete parent ownership was detached.`);
+    }
+    return {
+      ...p,
+      source: resolveSource(p.source, `Fixed payment ${p.name}`),
+      ownerType: ownerExists ? p.ownerType : undefined,
+      ownerId: ownerExists ? p.ownerId : undefined,
+    };
+  });
 
   return {
     errors,

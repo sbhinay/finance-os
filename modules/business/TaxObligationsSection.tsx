@@ -169,14 +169,22 @@ function ObligationsList({
 
   function openMarkPaid(o: FlatObligation) {
     setMarkingPaid(o);
+    const purpose = o.type === "HST"
+      ? "hst_remittance"
+      : o.type === "Corp Tax"
+        ? "corporate_tax_payment"
+        : "payroll_remittance";
     setTxFormInitial({
-      type: "expense",
+      type: "tax_payment",
+      purpose,
       amount: o.amount,
       date: o.plannedDate ?? o.dueDate,
       description: o.label,
       sourceId: defaultCRAAccountId,
       tag: "Business",
       mode: "Bank Transfer",
+      recurringOriginType: "tax_obligation",
+      recurringOriginId: o.id,
     });
     setTxFormOpen(true);
   }
@@ -297,7 +305,7 @@ function ObligationsList({
         onClose={() => { setTxFormOpen(false); setMarkingPaid(null); setTxFormInitial(undefined); }}
         initial={txFormInitial}
         scheduledAmount={markingPaid?.amount}
-        lockType="expense"
+        lockType="tax_payment"
         title={markingPaid ? `Pay CRA — ${markingPaid.label}` : "CRA Payment"}
         onSaved={(txn) => {
           if (markingPaid) {

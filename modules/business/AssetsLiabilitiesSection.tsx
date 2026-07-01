@@ -371,9 +371,11 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
       subType: isFinanced ? "bank_loan" : undefined,
       amount: vehicle.payment,
       date: nextDate,
-      description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Payment - ${vehicle.name}`,
+      description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Lease Payment - ${vehicle.name}`,
       sourceId: vehicle.source || "",
       linkedVehicleId: vehicle.id,
+      recurringOriginType: "vehicle",
+      recurringOriginId: vehicle.id,
       mode: "Debit",
       tag: "Personal",
     });
@@ -389,6 +391,9 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
       amount: payment.amount,
       date: payment.date,
       description: `Property Tax - ${property.name}`,
+      linkedPropertyId: property.id,
+      recurringOriginType: "property_tax",
+      recurringOriginId: payment.id,
       mode: "Bank Transfer",
       tag: "Personal",
     });

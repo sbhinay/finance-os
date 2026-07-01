@@ -25,6 +25,7 @@ The import process supports:
 - Reads the same top-level keys the exporter writes.
 - Restores vehicles, house loans, property taxes, and fixed payments.
 - Restores lender liabilities and validates `linkedLiabilityId` references.
+- Preserves and validates optional recurring-origin links and recurring parent ownership.
 - Preserves balance snapshot metadata on accounts and cards.
 - Resolves asset source references by ID or name.
 - Normalizes legacy `credit_card_payment` rows into canonical `transfer + cc_payment`.
@@ -50,6 +51,7 @@ This resolution is applied to vehicles, house loans, and fixed payments.
 - Import should prefer canonical modern shapes rather than preserving stale legacy transaction structures unchanged.
 - Transaction normalization adds stable purposes only when type/subtype or a narrow legacy pattern makes the meaning unambiguous.
 - Numbered personal-loan receipt series such as `Loan DP 1` through `Loan DP 7` can be grouped into one lender liability without changing amounts, dates, accounts, or tags.
+- Invalid or incomplete recurring origins and recurring parent-owner pairs are detached with an import warning; transaction amounts, dates, descriptions, and categories remain unchanged.
 
 ### Date & Time Standards
 | Field | Format | Meaning |
@@ -57,11 +59,13 @@ This resolution is applied to vehicles, house loans, and fixed payments.
 | `createdAt` | ISO UTC | system entry timestamp |
 | `date` | YYYY-MM-DD | accounting date |
 | `nextPaymentDate` | YYYY-MM-DD | scheduled next occurrence |
+| `startDate` | YYYY-MM-DD | stable first-known recurring occurrence/backfill anchor |
 | `balanceSnapshotDate` | YYYY-MM-DD | known real-world balance anchor date |
 
 #### Rules
 - `date` drives filters, reports, and replay.
 - `createdAt` records actual row creation time.
+- Recurring `date` is the next due occurrence; recurring `startDate` remains stable as history advances.
 - UI normalizes dates by appending `T12:00:00` before parsing to avoid timezone shifts.
 - `balanceSnapshotDate` is used as a cutoff in replay logic for the item carrying the snapshot.
 - Future cloud sync must preserve these meanings exactly; cloud persistence should not reinterpret accounting dates as live timestamps.

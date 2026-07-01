@@ -154,6 +154,8 @@ export function transactionFingerprint(transaction: Transaction): string {
     transaction.linkedPropertyId ?? "",
     transaction.linkedLiabilityId ?? "",
     transaction.linkedInvoiceId ?? "",
+    transaction.recurringOriginType ?? "",
+    transaction.recurringOriginId ?? "",
   ].join("|");
 }
 
@@ -190,5 +192,7 @@ export function isSemanticDuplicate(
     && compatibleLink(candidate.linkedVehicleId, existing.linkedVehicleId)
     && compatibleLink(candidate.linkedPropertyId, existing.linkedPropertyId)
     && compatibleLink(candidate.linkedLiabilityId, existing.linkedLiabilityId)
-    && compatibleLink(candidate.linkedInvoiceId, existing.linkedInvoiceId);
+    && compatibleLink(candidate.linkedInvoiceId, existing.linkedInvoiceId)
+    && compatibleLink(candidate.recurringOriginType, existing.recurringOriginType)
+    && compatibleLink(candidate.recurringOriginId, existing.recurringOriginId);
 }

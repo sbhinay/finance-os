@@ -65,18 +65,13 @@ export function getNextOccurrence(
   if (!dateStr) return null;
   if (schedule === "One-time") return dateStr;
 
-  const schedDays: Partial<Record<PaymentSchedule, number>> = {
-    Weekly: 7,
-    "Bi-weekly": 14,
-    "Semi-monthly": 15,
-    Monthly: 30,
-    Annual: 365,
-  };
-  const interval = schedDays[schedule] || 30;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   let d = new Date(dateStr + "T12:00:00");
-  while (d < today) d = new Date(d.getTime() + interval * 86_400_000);
+  while (d < today) {
+    const next = advanceOneInterval(d.toISOString().slice(0, 10), schedule);
+    d = new Date(next + "T12:00:00");
+  }
   return d.toISOString().slice(0, 10);
 }
 
@@ -84,22 +79,45 @@ export function getNextOccurrence(
  * Advance a date by exactly one schedule interval.
  * Used to update nextPaymentDate after a payment is confirmed.
  */
-export function advanceOneInterval(dateStr: string, schedule: PaymentSchedule): string {
+export function shiftOneInterval(
+  dateStr: string,
+  schedule: PaymentSchedule,
+  direction: 1 | -1
+): string {
   if (!dateStr || schedule === "One-time") return dateStr;
   const schedDays: Partial<Record<PaymentSchedule, number>> = {
     Weekly: 7, "Bi-weekly": 14, "Semi-monthly": 15, Monthly: 30, Annual: 365,
   };
   const interval = schedDays[schedule] ?? 30;
   const d = new Date(dateStr + "T12:00:00");
-  // For monthly, advance by calendar month to avoid drift
   if (schedule === "Monthly") {
-    d.setMonth(d.getMonth() + 1);
+    const originalDay = d.getDate();
+    const originalLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const targetMonthStart = new Date(d.getFullYear(), d.getMonth() + direction, 1, 12);
+    const targetLastDay = new Date(
+      targetMonthStart.getFullYear(),
+      targetMonthStart.getMonth() + 1,
+      0
+    ).getDate();
+    targetMonthStart.setDate(
+      originalDay === originalLastDay ? targetLastDay : Math.min(originalDay, targetLastDay)
+    );
+    return targetMonthStart.toISOString().slice(0, 10);
   } else if (schedule === "Annual") {
-    d.setFullYear(d.getFullYear() + 1);
+    const month = d.getMonth();
+    const day = d.getDate();
+    const target = new Date(d.getFullYear() + direction, month, 1, 12);
+    const targetLastDay = new Date(target.getFullYear(), month + 1, 0).getDate();
+    target.setDate(Math.min(day, targetLastDay));
+    return target.toISOString().slice(0, 10);
   } else {
-    d.setTime(d.getTime() + interval * 86_400_000);
+    d.setTime(d.getTime() + direction * interval * 86_400_000);
   }
   return d.toISOString().slice(0, 10);
+}
+
+export function advanceOneInterval(dateStr: string, schedule: PaymentSchedule): string {
+  return shiftOneInterval(dateStr, schedule, 1);
 }
 
 /**

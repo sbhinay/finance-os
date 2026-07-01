@@ -113,7 +113,8 @@ export interface FixedPayment {
   ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;
-  date: string;             // anchor date for schedule rolling
+  startDate?: string;       // first known occurrence; stable backfill anchor
+  date: string;             // next due date; advances after confirmation/logging
   endDate?: string;
   source: string;           // account or card id
   destinationId?: string;
@@ -123,6 +124,7 @@ export interface FixedPayment {
   mode?: string;
   tag?: string;
   purpose?: TransactionPurpose;
+  archived?: boolean;
 }
 
 export function getFixedPaymentKind(fp?: Pick<FixedPayment, "kind"> | null): RecurringKind {
@@ -184,7 +186,9 @@ export interface PendingTransaction {
   tag: "Personal" | "Business";
   linkedVehicleId?: string;
   linkedPropertyId?: string;
+  recurringOriginType?: RecurringOriginType;
+  recurringOriginId?: string;
   purpose?: TransactionPurpose;
   createdAt: string;
 }
-import type { TransactionPurpose, TransactionSubType, TransactionType } from "@/types/transaction";
+import type { RecurringOriginType, TransactionPurpose, TransactionSubType, TransactionType } from "@/types/transaction";

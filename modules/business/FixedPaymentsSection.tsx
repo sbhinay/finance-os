@@ -1,7 +1,7 @@
 "use client";
 
 import { TransactionForm } from "./TransactionForm";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FixedPayment, PendingTransaction, PaymentSchedule, RecurringKind, getFixedPaymentKind } from "@/types/domain";
 import { Account } from "@/types/account";
 import { CreditCard } from "@/types/creditCard";
@@ -17,14 +17,15 @@ type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["init
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 6 }}>{children}</label>;
 }
-function Inp({ label, type = "text", value, onChange, placeholder }: {
+function Inp({ label, type = "text", value, onChange, placeholder, inputRef }: {
   label?: string; type?: string; value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder?: string;
+  inputRef?: React.Ref<HTMLInputElement>;
 }) {
   return (
     <div>
       {label && <Label>{label}</Label>}
-      <input type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder}
+      <input ref={inputRef} type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder}
         style={{ width: "100%", padding: "10px 12px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md, background: "#fff", fontSize: 13, boxSizing: "border-box" as const, color: theme.colors.text }} />
     </div>
   );
@@ -290,6 +291,7 @@ export function FixedPaymentsSection({
   const [backfillModal, setBackfillModal] = useState<{ fp: FixedPayment; dates: string[] } | null>(null);
   const [backfillAccountId, setBackfillAccountId] = useState("");
   const [backfillDone, setBackfillDone] = useState<number | null>(null);
+  const paymentDateRef = useRef<HTMLInputElement>(null);
   const lockedCategoryId =
     form.kind === "subscription"
       ? subscriptionCategoryId
@@ -329,7 +331,8 @@ export function FixedPaymentsSection({
       ownerId: form.ownerId,
       amount: toFixed2(Number(form.amount)),
       schedule: form.schedule,
-      date: form.date,
+      startDate: form.startDate || form.date,
+      date: paymentDateRef.current?.value || form.date,
       endDate: form.endDate || undefined,
       source: form.source,
       destinationId: form.transactionType === "transfer" ? form.destinationId || undefined : undefined,
@@ -349,6 +352,7 @@ export function FixedPaymentsSection({
         ownerId: fp.ownerId,
         amount: fp.amount,
         schedule: fp.schedule,
+        startDate: fp.startDate,
         date: fp.date,
         endDate: fp.endDate,
         source: fp.source,
@@ -378,6 +382,9 @@ export function FixedPaymentsSection({
       mode: fp.mode ?? "Debit",
       tag: (form.tag as "Personal" | "Business") ?? "Personal",
       description: fp.name,
+      purpose: fp.purpose,
+      recurringOriginType: "fixed_payment",
+      recurringOriginId: fp.id,
     });
     setTxScheduledAmount(fp.amount);
     setTxFormOpen(true);
@@ -385,7 +392,7 @@ export function FixedPaymentsSection({
 
   function openBackfill(fp: FixedPayment) {
     // Calculate all dates from start to today
-    const startDate = fp.date; // use anchor date as start
+    const startDate = fp.startDate ?? fp.date;
     const dates = calculateBackfillDates(startDate, fp.schedule, fp.endDate);
     // Only show past dates (up to yesterday)
     const yesterday = new Date();
@@ -401,7 +408,7 @@ export function FixedPaymentsSection({
   }
 
   const totalMonthly = fixedPayments
-    .filter((p) => !p.endDate || new Date(p.endDate + "T12:00:00") >= new Date())
+    .filter((p) => !p.archived && (!p.endDate || new Date(p.endDate + "T12:00:00") >= new Date()))
     .reduce((s, p) => {
       const m: Partial<Record<PaymentSchedule, number>> = { Weekly: 52 / 12, "Bi-weekly": 26 / 12, "Semi-monthly": 2, Monthly: 1, Annual: 1 / 12 };
       return s + p.amount * (m[p.schedule] ?? 1);
@@ -426,7 +433,7 @@ export function FixedPaymentsSection({
         <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
           <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>Active Payments</div>
           <div style={{ fontWeight: 800, fontSize: 21 }}>
-            {fixedPayments.filter((p) => !p.endDate || new Date(p.endDate + "T12:00:00") >= new Date()).length}
+            {fixedPayments.filter((p) => !p.archived && (!p.endDate || new Date(p.endDate + "T12:00:00") >= new Date())).length}
           </div>
         </div>
       </div>
@@ -453,7 +460,7 @@ export function FixedPaymentsSection({
       </div>
 
       {visiblePayments.map((p) => {
-        const isEnded = !!p.endDate && new Date(p.endDate + "T12:00:00") < new Date();
+        const isEnded = p.archived || (!!p.endDate && new Date(p.endDate + "T12:00:00") < new Date());
         const next = getNextOccurrence(p.date, p.schedule);
         const nextLabel = p.schedule === "One-time" ? fmtDate(p.date) : (next ? fmtDate(next) : "--");
         const linkedAcct = accounts.find((a) => a.id === p.source);
@@ -468,13 +475,18 @@ export function FixedPaymentsSection({
                   <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#4b5563" }}>
                     {KIND_LABELS[recurringKind]}
                   </span>
+                  {p.ownerType && (
+                    <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#e0f2fe", color: "#075985" }}>
+                      Parent managed
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>
                   {p.schedule} - Next: {nextLabel}
                   {p.endDate ? ` - Ends: ${fmtDate(p.endDate)}` : ""}
                   {linkedAcct ? ` - From: ${linkedAcct.name}` : ""}
                 </div>
-                {isEnded && <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>Ended</span>}
+                {isEnded && <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>{p.archived ? "Archived" : "Ended"}</span>}
                 {!isEnded && linkedAcct && (
                   <div style={{ fontSize: 12, color: linkedAcct.openingBalance >= p.amount ? "#1a7f3c" : "#a31515", marginTop: 6 }}>
                     Account balance: {fmtCAD(linkedAcct.openingBalance)}
@@ -486,12 +498,19 @@ export function FixedPaymentsSection({
                 {!isEnded && (
                   <Btn variant="secondary" small onClick={() => openLog(p)} style={{ fontSize: 11, color: "#1a7f3c" }}>+ Log</Btn>
                 )}
-                <Btn variant="amber" small onClick={() => openBackfill(p)} style={{ fontSize: 11 }}>Backfill</Btn>
-                <Btn variant="secondary" small onClick={() => {
-                  setForm({ ...emptyForm, ...p, id: p.id, startDate: p.date, endDate: p.endDate ?? "", tag: (p.tag ?? "Personal") as "Personal" | "Business", categoryId: lockedCategoryId || p.categoryId || "" });
-                  setShowForm(true);
-                }}>Edit</Btn>
-                <Btn variant="danger" small onClick={() => { if (confirm(`Delete "${p.name}"?`)) hooks.deleteFixedPayment(p.id); }}>Delete</Btn>
+                {!isEnded && <Btn variant="amber" small onClick={() => openBackfill(p)} style={{ fontSize: 11 }}>Backfill</Btn>}
+                {!p.ownerType && p.archived && (
+                  <Btn variant="secondary" small onClick={() => hooks.updateFixedPayment({ ...p, archived: false })}>Restore</Btn>
+                )}
+                {!p.ownerType && !p.archived && (
+                  <>
+                    <Btn variant="secondary" small onClick={() => {
+                      setForm({ ...emptyForm, ...p, id: p.id, startDate: p.startDate ?? p.date, endDate: p.endDate ?? "", tag: (p.tag ?? "Personal") as "Personal" | "Business", categoryId: lockedCategoryId || p.categoryId || "" });
+                      setShowForm(true);
+                    }}>Edit</Btn>
+                    <Btn variant="danger" small onClick={() => { if (confirm(`Delete "${p.name}"?`)) hooks.deleteFixedPayment(p.id); }}>Delete</Btn>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -529,7 +548,7 @@ export function FixedPaymentsSection({
           <Inp label="Amount ($)" type="number" value={form.amount} onChange={f("amount")} />
           <Sel label="Schedule" value={form.schedule} onChange={f("schedule")} options={SCHEDULES.map((s) => ({ value: s, label: s }))} />
           <Grid2>
-            <Inp label="Next Payment Date" type="date" value={form.date} onChange={f("date")} />
+            <Inp inputRef={paymentDateRef} label="Next Payment Date" type="date" value={form.date} onChange={f("date")} />
             <Inp label="End Date (optional)" type="date" value={form.endDate ?? ""} onChange={f("endDate")} />
           </Grid2>
           <Sel label="Pay From" value={form.source} onChange={f("source")} options={acctOpts} />

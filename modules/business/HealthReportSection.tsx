@@ -11,7 +11,7 @@ import { FixedPayment, getFixedPaymentKind } from "@/types/domain";
 import { TYPE_LABELS, getSubTypeLabel, type Transaction } from "@/types/transaction";
 import type { Category } from "@/types/category";
 import { deleteCanonicalTransaction } from "@/services/transactionPipeline";
-import { transactionFingerprint } from "@/utils/transactionSemantics";
+import { isSemanticDuplicate, transactionFingerprint } from "@/utils/transactionSemantics";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -117,6 +117,8 @@ export function HealthReportSection({
     const vehicleIds = new Set(vehicles.map((v) => v.id));
     const houseLoanIds = new Set(houseLoans.map((h) => h.id));
     const propertyTaxIds = new Set(propertyTaxes.map((p) => p.id));
+    const propertyTaxPaymentIds = new Set(propertyTaxes.flatMap((p) => p.payments?.map((payment) => payment.id) ?? []));
+    const fixedPaymentIds = new Set(fixedPayments.map((payment) => payment.id));
     const accountOrCardIds = new Set([...accountIds, ...cardIds]);
 
     transactions.forEach((tx) => {
@@ -182,6 +184,33 @@ export function HealthReportSection({
         });
       }
 
+      if ((tx.recurringOriginType && !tx.recurringOriginId) || (!tx.recurringOriginType && tx.recurringOriginId)) {
+        nextIssues.push({
+          id: `recurring-origin-incomplete-${tx.id}`,
+          severity: "medium",
+          title: "Recurring transaction has incomplete origin metadata",
+          detail: summarizeTx(tx),
+          hint: "Recurring-origin type and id should always be stored together.",
+        });
+      } else if (tx.recurringOriginType && tx.recurringOriginId && tx.recurringOriginType !== "tax_obligation") {
+        const originExists = tx.recurringOriginType === "fixed_payment"
+          ? fixedPaymentIds.has(tx.recurringOriginId)
+          : tx.recurringOriginType === "vehicle"
+            ? vehicleIds.has(tx.recurringOriginId)
+            : tx.recurringOriginType === "house_loan"
+              ? houseLoanIds.has(tx.recurringOriginId)
+              : propertyTaxIds.has(tx.recurringOriginId) || propertyTaxPaymentIds.has(tx.recurringOriginId);
+        if (!originExists) {
+          nextIssues.push({
+            id: `recurring-origin-broken-${tx.id}`,
+            severity: "medium",
+            title: "Broken recurring-origin reference",
+            detail: `${summarizeTx(tx)} - origin=${tx.recurringOriginType}:${tx.recurringOriginId}`,
+            hint: "The posted row points to a recurring parent that no longer exists.",
+          });
+        }
+      }
+
       if (tx.type === "loan_payment" && tx.subType === "mortgage" && tx.principalAmount == null && tx.interestAmount == null) {
         nextIssues.push({
           id: `mort-split-${tx.id}`,
@@ -193,15 +222,19 @@ export function HealthReportSection({
       }
     });
 
-    const duplicateGroups = new Map<string, Transaction[]>();
+    const duplicateGroups: Transaction[][] = [];
     transactions.forEach((tx) => {
       if (tx.status === "pending" || tx.type === "adjustment") return;
-      const key = transactionFingerprint(tx);
-      duplicateGroups.set(key, [...(duplicateGroups.get(key) ?? []), tx]);
+      const group = duplicateGroups.find((candidateGroup) =>
+        isSemanticDuplicate(tx, candidateGroup[0])
+      );
+      if (group) group.push(tx);
+      else duplicateGroups.push([tx]);
     });
 
-    duplicateGroups.forEach((group, key) => {
+    duplicateGroups.forEach((group) => {
       if (group.length < 2) return;
+      const key = transactionFingerprint(group[0]);
       const issueId = `duplicate-${key}-${group.map((tx) => tx.id).sort().join("-")}`;
       if (dismissedHealthIssues.includes(issueId)) return;
       const [first] = group;

@@ -85,6 +85,13 @@ export type TransactionPurpose =
   | "withdrawal"
   | "adjustment";
 
+export type RecurringOriginType =
+  | "fixed_payment"
+  | "vehicle"
+  | "house_loan"
+  | "property_tax"
+  | "tax_obligation";
+
 // ─── Balance Effect Reference ─────────────────────────────────────────────────
 //
 // expense            → source balance decreases
@@ -141,6 +148,8 @@ export interface Transaction {
   linkedPropertyId?: string;       // property expense tracking
   linkedLiabilityId?: string;      // loan_receipt, loan_payment — links to liability account (future)
   linkedInvoiceId?: string;        // invoice deposit source
+  recurringOriginType?: RecurringOriginType;
+  recurringOriginId?: string;
 
   // ── Vehicle specific ──────────────────────────────────────────────────────
   odometer?: string;               // km reading at time of transaction

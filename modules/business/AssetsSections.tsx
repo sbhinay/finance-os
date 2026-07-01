@@ -8,12 +8,9 @@ import { useCategories } from "@/modules/categories/useCategories";
 import { useVehicles, useHouseLoans } from "./useAssets";
 import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
-import { transactionRepository } from "@/repositories/transactionRepository";
-import { notifyDataChanged } from "@/utils/events";
-import { syncBalances } from "@/utils/syncBalances";
 import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useFixedPayments";
 import { theme } from "@/lib/theme";
-import { buildCanonicalTransaction, findSemanticDuplicate } from "@/services/transactionPipeline";
+import { buildCanonicalTransaction, persistCanonicalTransactions } from "@/services/transactionPipeline";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -231,6 +228,8 @@ export function VehiclesSection({
       sourceId: vehicle.source ?? "",
       description: isFinanced ? `Vehicle Finance Payment - ${vehicle.name}` : `Vehicle Lease Payment - ${vehicle.name}`,
       linkedVehicleId: vehicle.id,
+      recurringOriginType: "vehicle",
+      recurringOriginId: vehicle.id,
       categoryId: leaseCategoryId,
       mode: "Debit",
       tag: "Personal",
@@ -267,12 +266,10 @@ export function VehiclesSection({
   function backfillVehiclePayments(vehicle: Vehicle, dates: string[], accountId: string): number {
     if (!dates.length || !accountId) return 0;
 
-    const existing = transactionRepository.getAll();
-    let inserted = 0;
-    dates.forEach((date) => {
+    const candidates = dates.map((date) => {
       const isFinanced = vehicle.vtype === "Finance";
       const leaseCategoryId = !isFinanced ? pickLeaseVehicleCategoryId(categories) : undefined;
-      const tx = buildCanonicalTransaction({
+      return buildCanonicalTransaction({
         purpose: isFinanced ? "vehicle_finance_payment" : "vehicle_lease_payment",
         amount: toFixed2(vehicle.payment),
         date,
@@ -283,14 +280,13 @@ export function VehiclesSection({
         status: "cleared",
         linkedVehicleId: vehicle.id,
         linkedName: vehicle.name,
+        recurringOriginType: "vehicle",
+        recurringOriginId: vehicle.id,
       });
-      if (findSemanticDuplicate(tx, existing)) return;
-      existing.push(tx);
-      inserted += 1;
     });
+    const inserted = persistCanonicalTransactions(candidates, { skipSemanticDuplicates: true }).length;
 
     if (inserted > 0) {
-      transactionRepository.saveAll(existing);
       const advancedDate = nextOccurrenceAfter(vehicle.nextPaymentDate || dates[dates.length - 1], vehicle.schedule)
         ?? advanceOneInterval(dates[dates.length - 1], vehicle.schedule);
       updateVehicle({
@@ -298,8 +294,6 @@ export function VehiclesSection({
         source: accountId,
         nextPaymentDate: advancedDate,
       });
-      syncBalances();
-      notifyDataChanged("transactions");
     }
 
     return inserted;
@@ -703,7 +697,10 @@ export function HouseLoansSection({
       amount: loan.payment,
       date: nextDate,
       sourceId: loan.source ?? "",
-      description: `${loan.name} Mortgage Payment`,
+      description: `Mortgage Payment - ${loan.name}`,
+      linkedPropertyId: loan.id,
+      recurringOriginType: "house_loan",
+      recurringOriginId: loan.id,
       mode: "Debit",
       tag: "Personal",
     });
@@ -739,10 +736,8 @@ export function HouseLoansSection({
   function backfillLoanPayments(loan: HouseLoan, dates: string[], accountId: string): number {
     if (!dates.length || !accountId) return 0;
 
-    const existing = transactionRepository.getAll();
-    let count = 0;
-    dates.forEach((date) => {
-      const txn = buildCanonicalTransaction({
+    const candidates = dates.map((date) =>
+      buildCanonicalTransaction({
         purpose: "mortgage_payment",
         amount: toFixed2(loan.payment),
         sourceId: accountId,
@@ -752,15 +747,13 @@ export function HouseLoansSection({
         tag: "Personal",
         linkedPropertyId: loan.id,
         linkedName: loan.name,
-      });
-      if (findSemanticDuplicate(txn, existing)) return;
-
-      existing.push(txn);
-      count++;
-    });
+        recurringOriginType: "house_loan",
+        recurringOriginId: loan.id,
+      })
+    );
+    const count = persistCanonicalTransactions(candidates, { skipSemanticDuplicates: true }).length;
 
     if (count > 0) {
-      transactionRepository.saveAll(existing);
       const advancedDate = nextOccurrenceAfter(loan.nextPaymentDate || dates[dates.length - 1], loan.schedule)
         ?? advanceOneInterval(dates[dates.length - 1], loan.schedule);
       updateHouseLoan({
@@ -768,8 +761,6 @@ export function HouseLoansSection({
         source: accountId,
         nextPaymentDate: advancedDate,
       });
-      syncBalances();
-      notifyDataChanged("transactions");
     }
 
     return count;

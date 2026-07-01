@@ -15,6 +15,7 @@ import {
   TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES, getSubTypeLabel,
   requiresDestination, requiresSubType, isExpenseReportable, isIncomeReportable,
   deriveTaxYear, TransactionPurpose,
+  RecurringOriginType,
 } from "@/types/transaction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,6 +38,8 @@ export interface TransactionFormInitial {
   linkedVehicleId?: string;
   linkedPropertyId?: string;
   linkedLiabilityId?: string;
+  recurringOriginType?: RecurringOriginType;
+  recurringOriginId?: string;
   odometer?: string;
   interestAmount?: number;
   principalAmount?: number;
@@ -444,6 +447,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       linkedVehicleId:  form.linkedVehicleId || undefined,
       linkedPropertyId: form.linkedPropertyId || undefined,
       linkedLiabilityId: form.linkedLiabilityId || undefined,
+      recurringOriginType: initial?.recurringOriginType,
+      recurringOriginId: initial?.recurringOriginId,
       odometer:         form.odometer || undefined,
     };
 

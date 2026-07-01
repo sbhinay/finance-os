@@ -3,6 +3,7 @@ import type {
   Transaction,
   TransactionMode,
   TransactionPurpose,
+  RecurringOriginType,
   TransactionStatus,
   TransactionSubType,
   TransactionType,
@@ -77,6 +78,8 @@ export interface CanonicalTransactionInput {
   linkedPropertyId?: string;
   linkedLiabilityId?: string;
   linkedInvoiceId?: string;
+  recurringOriginType?: RecurringOriginType;
+  recurringOriginId?: string;
   principalAmount?: number;
   interestAmount?: number;
   odometer?: string;
@@ -161,6 +164,8 @@ export function buildCanonicalTransaction(
     linkedPropertyId: input.linkedPropertyId || undefined,
     linkedLiabilityId: input.linkedLiabilityId || undefined,
     linkedInvoiceId: input.linkedInvoiceId || undefined,
+    recurringOriginType: input.recurringOriginType,
+    recurringOriginId: input.recurringOriginId || undefined,
     odometer: input.odometer || undefined,
   };
 }
@@ -193,11 +198,20 @@ export function findSemanticDuplicate(
   return existing.find((candidate) => isSemanticDuplicate(transaction, candidate));
 }
 
-export function persistCanonicalTransaction(transaction: Transaction): Transaction {
-  const prepared = {
+function prepareCanonicalTransaction(transaction: Transaction): Transaction {
+  const purpose = inferTransactionPurpose(transaction);
+  const rule = purpose ? PURPOSE_RULES[purpose] : undefined;
+  return {
     ...transaction,
-    purpose: inferTransactionPurpose(transaction),
+    purpose,
+    type: rule?.type ?? transaction.type,
+    subType: rule?.subType ?? transaction.subType,
+    mode: transaction.mode ?? rule?.defaultMode,
   };
+}
+
+export function persistCanonicalTransaction(transaction: Transaction): Transaction {
+  const prepared = prepareCanonicalTransaction(transaction);
   const errors = validateCanonicalTransaction(prepared);
   if (errors.length) throw new Error(errors.join(" "));
 
@@ -210,6 +224,38 @@ export function persistCanonicalTransaction(transaction: Transaction): Transacti
   syncBalances();
   notifyDataChanged("transactions");
   return prepared;
+}
+
+export function persistCanonicalTransactions(
+  transactions: Transaction[],
+  options: { skipSemanticDuplicates?: boolean } = {}
+): Transaction[] {
+  if (!transactions.length) return [];
+  const existing = transactionRepository.getAll();
+  const persisted: Transaction[] = [];
+
+  transactions.forEach((transaction) => {
+    const prepared = prepareCanonicalTransaction(transaction);
+    const errors = validateCanonicalTransaction(prepared);
+    if (errors.length) throw new Error(errors.join(" "));
+
+    const index = existing.findIndex((candidate) => candidate.id === prepared.id);
+    if (index >= 0) {
+      existing[index] = prepared;
+      persisted.push(prepared);
+      return;
+    }
+    if (options.skipSemanticDuplicates && findSemanticDuplicate(prepared, existing)) return;
+    existing.push(prepared);
+    persisted.push(prepared);
+  });
+
+  if (persisted.length) {
+    transactionRepository.saveAll(existing);
+    syncBalances();
+    notifyDataChanged("transactions");
+  }
+  return persisted;
 }
 
 export function deleteCanonicalTransaction(id: string): void {

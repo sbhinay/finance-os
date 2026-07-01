@@ -29,9 +29,20 @@ function upsertOwnedRecurringPayment(next: FixedPayment | null) {
   );
 
   if (existingIndex >= 0) {
-    all[existingIndex] = { ...all[existingIndex], ...next };
+    const existing = all[existingIndex];
+    const anchorChangedAtParent =
+      next.date !== existing.date
+      && next.date !== (existing.startDate ?? existing.date);
+    all[existingIndex] = {
+      ...existing,
+      ...next,
+      date: anchorChangedAtParent ? next.date : existing.date,
+      startDate: anchorChangedAtParent
+        ? next.date
+        : existing.startDate ?? next.startDate ?? existing.date ?? next.date,
+    };
   } else {
-    all.push(next);
+    all.push({ ...next, startDate: next.startDate ?? next.date });
   }
 
   fixedPaymentRepository.saveAll(all);
