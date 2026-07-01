@@ -22,6 +22,7 @@
 14. [Appendices](13_APPENDICES.md)
 15. [Vision Plan v5](14_VISION_PLAN_V5.md)
 16. [AI Statement Scanner](15_AI_STATEMENT_SCANNER.md)
+17. [Tax Working Papers And Exports](16_TAX_WORKING_PAPERS_AND_EXPORTS.md)
 
 ---
 
@@ -82,10 +83,12 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Scanner images are request-memory only in FinanceOS; privacy consent and provider-retention messaging are shown before extraction.
 - Supabase cloud saves now use optimistic revision checks, append-only restore history, conflict blocking, and visible local-versus-cloud comparison.
 - Cloud snapshot tables are client-read-only; every restore enters import preview and manual JSON backup remains available.
+- CRA Review persists explicit proposed/confirmed/excluded/accountant-review tax decisions separately from bookkeeping totals.
+- Multi-sheet Excel and tabular PDF exports include tax, business, lender, mortgage, Property, vehicle, and tax-ledger summaries.
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Production Phases 1 through 7 are landed. The active roadmap now proceeds through tax working papers and report exports.
+- Production Phases 1 through 8 are landed. Final acceptance still requires browser UX checks plus any approved external provider, Supabase migration, and deployment verification.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:
@@ -124,6 +127,7 @@ The docs are organized into the following cross-linked files:
 - `13_APPENDICES.md`
 - `14_VISION_PLAN_V5.md`
 - `15_AI_STATEMENT_SCANNER.md`
+- `16_TAX_WORKING_PAPERS_AND_EXPORTS.md`
 
 ## 5. Notes for Review
 - The documentation prefers current code behavior over legacy wording.

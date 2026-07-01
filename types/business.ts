@@ -26,6 +26,16 @@ export interface CRAReviewProfile {
   vehicleBusinessUsePct: number;
   homeOfficeUsePct: number;
   notes?: string;
+  taxTreatments?: Record<string, TaxTreatmentDecision>;
+}
+
+export type TaxTreatmentStatus = "proposed" | "confirmed" | "excluded" | "accountant_review";
+
+export interface TaxTreatmentDecision {
+  status: TaxTreatmentStatus;
+  confirmedAmount?: number;
+  note?: string;
+  updatedAt?: string;
 }
 
 export interface RateSettings {

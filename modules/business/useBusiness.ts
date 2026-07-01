@@ -148,6 +148,7 @@ const DEFAULT_CRA_REVIEW_PROFILE: CRAReviewProfile = {
   vehicleBusinessUsePct: 0,
   homeOfficeUsePct: 0,
   notes: "",
+  taxTreatments: {},
 };
 
 const EMPTY_BUSINESS: Business = {

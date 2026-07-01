@@ -201,7 +201,7 @@ The ordered path to production completion is now:
 5. Expand findability, Data Health, and import review. (Landed)
 6. Build the secure AI Statement Scanner MVP. (Landed)
 7. Add guarded cloud history and conflict protection. (Landed)
-8. Add tax working papers and Excel/PDF reporting exports.
+8. Add tax working papers and Excel/PDF reporting exports. (Landed)
 
 Every phase must preserve ledger-first behavior, remain backward-compatible with current JSON exports, use accounting `date` rather than `createdAt`, and finish with automated plus browser-level verification.
 
@@ -242,6 +242,8 @@ As of this version:
 - scanner account selection, duplicate review, privacy consent, no-storage behavior, and provider retention messaging are live
 - guarded Supabase saves use optimistic revisions, append-only restore points, conflict blocking, and visible local-versus-cloud state
 - all cloud restores use import preview, while manual JSON backup remains independent
+- CRA working papers separate bookkeeping totals, confidence, and user-confirmed tax treatment
+- genuine Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries
 - the June 29 fixture replays all stored account/card balances without drift
 
-The next major challenge is tax working papers and Excel/PDF reporting exports.
+All eight production-completion phases are implemented. Remaining work is final cross-phase verification, external credential/deployment checks, and browser acceptance testing.

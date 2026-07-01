@@ -104,7 +104,13 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Manual JSON export/import remains available.
 - Supabase migration and deployment documentation is included; no external migration or deployment is performed automatically.
 
-### Phase 8: Tax and Reporting Exports - next
+### Phase 8: Tax and Reporting Exports - landed
+- CRA working-paper rows preserve bookkeeping totals separately from proposed, confirmed, excluded, or accountant-review tax treatment.
+- Confirmed treatments support an explicit amount, note, and update timestamp.
+- Sole-proprietor suggestions use cautious T2125 guidance; corporate treatment remains T2 Schedule 125 / GIFI review rather than guessed codes.
+- Missing-information warnings remain visible and are exported.
+- Genuine multi-sheet Excel and tabular PDF exports include tax, business, lender, mortgage, Property, vehicle, and ledger summaries.
+- Binary export generation and production dependency security are verified.
 
 ### Phase 5: Findability, Data Health, and import review
 - Add tag and recurring-origin filters.
@@ -119,9 +125,8 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Add snapshot history, restore points, overwrite guards, version/conflict checks, and explicit local-vs-cloud state.
 - Preserve manual JSON export/import and prohibit silent replacement of newer data.
 
-### Phase 8: Tax working papers and report exports
-- Add cautious CRA mapping, confidence and missing-input states, and separation between bookkeeping totals and confirmed tax treatment.
-- Add Excel/PDF exports for business, lender, debt, property, and vehicle reporting.
+### Tax working papers and report exports
+- Continue refining mappings only when supported by current CRA guidance and user/accountant confirmation.
 
 ## 1. Recurring Architecture
 

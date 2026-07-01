@@ -63,6 +63,7 @@ export const [domain]Repository = {
 | Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Unified transition page with upcoming obligations and selected direct actions |
 | Import / Export | `modules/business/ImportExportSection.tsx` | Current-app export plus legacy migration support |
 | Scan Statement | `modules/business/StatementScannerSection.tsx` | Image upload, editable candidates, duplicate review, and explicit canonical batch confirmation |
+| CRA Review / Exports | `modules/business/CRAReviewSection.tsx` | Tax questionnaire, cautious mappings, confirmed treatment, missing inputs, and Excel/PDF working papers |
 
 ### Transition Notes
 - The sidebar is now intentionally simplified around stronger hubs rather than exposing every detail page as a primary tab.
@@ -92,3 +93,4 @@ export const [domain]Repository = {
 - Transaction History supports exact tag and recurring-origin filters in addition to account/card, category, subtype, and linked-item filters.
 - Import preview exposes transaction-level source/destination relinking, exclusion, and explicit acceptance of normalized cleanup before any local write.
 - `/api/statement-scanner` is the server-only image boundary; `lib/statementScanner` owns replaceable provider integration and response validation.
+- `utils/reportExports.ts` generates tested XLSX and PDF binaries from shared report-sheet data without mutating repositories.

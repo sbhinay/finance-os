@@ -280,3 +280,4 @@ interface PropertyTaxPayment {
 ### Business
 - Stored as a single `Business` object in `finance_os_business`.
 - Contains invoices, contracts, HST remittances, corporate instalments, payroll remittances, arrears, and rate settings.
+- `craReviewProfile.taxTreatments` stores mapping-level status, optional confirmed amount, note, and update timestamp without changing ledger bookkeeping totals.

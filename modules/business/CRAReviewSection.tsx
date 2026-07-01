@@ -8,6 +8,11 @@ import { Account } from "@/types/account";
 import { fmtCAD, toFixed2 } from "@/utils/finance";
 import { theme } from "@/lib/theme";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
+import { useLiabilities, getLiabilitySummary } from "./useLiabilities";
+import { useHouseLoans, useProperties, useVehicles } from "./useAssets";
+import { calculateDebtSummary, matchesMortgagePayment, matchesVehicleFinancePayment } from "@/utils/debtReporting";
+import { exportReportsExcel, exportReportsPdf, type ReportSheet } from "@/utils/reportExports";
+import type { TaxTreatmentDecision, TaxTreatmentStatus } from "@/types/business";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -191,6 +196,11 @@ export function CRAReviewSection({
   const hooks = useBusiness();
   const { business } = hooks;
   const { categories } = useCategories();
+  const { liabilities } = useLiabilities();
+  const { vehicles } = useVehicles();
+  const { properties } = useProperties();
+  const { houseLoans } = useHouseLoans();
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   const [draft, setDraft] = useState({
     province: business.craReviewProfile?.province ?? "ON",
@@ -204,6 +214,7 @@ export function CRAReviewSection({
     vehicleBusinessUsePct: business.craReviewProfile?.vehicleBusinessUsePct ?? 0,
     homeOfficeUsePct: business.craReviewProfile?.homeOfficeUsePct ?? 0,
     notes: business.craReviewProfile?.notes ?? "",
+    taxTreatments: business.craReviewProfile?.taxTreatments ?? {},
   });
 
   const categoryName = useMemo(() => {
@@ -310,6 +321,11 @@ export function CRAReviewSection({
   const adjustedInternet = percentAmount(phoneInternetTotal, draft.internetBusinessUsePct);
   const adjustedVehicle = percentAmount(vehicleTotal, draft.vehicleBusinessUsePct);
   const adjustedHomeOffice = percentAmount(homeOfficeTotal, draft.homeOfficeUsePct);
+  const filingTarget = (soleProprietorTarget: string) => {
+    if (draft.filingProfile === "sole_prop") return soleProprietorTarget;
+    if (draft.filingProfile === "corporation") return "T2 Schedule 125 / GIFI working paper - accountant mapping required";
+    return `${soleProprietorTarget}; separate corporate T2 Schedule 125 / GIFI review also required`;
+  };
 
   const missingInputs = [
     draft.gstRegistered === "unknown" ? "GST/HST registration status" : "",
@@ -324,6 +340,7 @@ export function CRAReviewSection({
 
   const mappingRows = [
     {
+      id: "business_income",
       label: "Business income",
       target: draft.filingProfile === "corporation" ? "Corporate working paper" : "T2125 - Gross business income",
       amount: draft.filingProfile === "corporation" ? invoiceSubtotal || businessIncomeTotal : Math.max(invoiceSubtotal, businessIncomeTotal),
@@ -333,27 +350,31 @@ export function CRAReviewSection({
         : "Needs user confirmation between invoice-driven revenue and tagged business-income transactions.",
     },
     {
+      id: "phone_internet",
       label: "Phone and internet",
-      target: "Likely T2125 operating expenses",
+      target: filingTarget("Likely T2125 line 9220 or 9270 - confirm allocation"),
       amount: Math.max(adjustedPhone, adjustedInternet),
       confidence: phoneInternetTotal > 0 && (draft.phoneBusinessUsePct > 0 || draft.internetBusinessUsePct > 0) ? "Medium" : "Low",
       note: `Raw total ${fmtCAD(phoneInternetTotal)} adjusted by saved business-use percentages.`,
     },
     {
+      id: "motor_vehicle",
       label: "Motor vehicle",
-      target: "Motor vehicle expense working paper",
+      target: filingTarget("T2125 line 9281 motor vehicle working paper (excluding CCA)"),
       amount: adjustedVehicle,
       confidence: vehicleTotal > 0 && draft.vehicleBusinessUsePct > 0 ? "Medium" : "Low",
       note: `Raw total ${fmtCAD(vehicleTotal)} adjusted by ${draft.vehicleBusinessUsePct}% business use.`,
     },
     {
+      id: "business_use_home",
       label: "Business-use-of-home",
-      target: "Home office working paper",
+      target: filingTarget("T2125 business-use-of-home working paper - detailed eligibility review required"),
       amount: adjustedHomeOffice,
       confidence: homeOfficeTotal > 0 && draft.homeOfficeUsePct > 0 ? "Low" : "Low",
       note: "This area usually needs stronger support and often accountant review.",
     },
     {
+      id: "gst_hst_remittances",
       label: "GST/HST remittances",
       target: "CRA remittance working paper (not a normal expense claim)",
       amount: Math.max(invoiceHSTToRemit, taxPaidTotal),
@@ -373,13 +394,207 @@ export function CRAReviewSection({
 
   const businessAccount = accounts.find((a) => a.type === "business" || a.name.toLowerCase().includes("business"));
 
+  function updateTaxTreatment(id: string, patch: Partial<TaxTreatmentDecision>) {
+    setDraft((current) => {
+      const existing = current.taxTreatments[id];
+      return {
+        ...current,
+        taxTreatments: {
+          ...current.taxTreatments,
+          [id]: {
+            ...existing,
+            ...patch,
+            status: patch.status ?? existing?.status ?? "proposed",
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+    });
+  }
+
+  const reportSheets: ReportSheet[] = (() => {
+    const expenseBuckets = new Map<string, number>();
+    likelyBusinessExpenseTx.forEach((transaction) => {
+      const name = categoryName.get(transaction.categoryId ?? "") ?? "Uncategorized";
+      expenseBuckets.set(name, toFixed2((expenseBuckets.get(name) ?? 0) + getExpenseReportEffect(transaction)));
+    });
+
+    const lenderRows = liabilities.map((liability) => {
+      const summary = getLiabilitySummary(liability, transactions);
+      return {
+        Lender: liability.name,
+        Type: liability.type,
+        Tag: liability.tag,
+        Borrowed: summary.borrowed,
+        "Principal Repaid": summary.principalRepaid,
+        "Interest Paid": summary.interestPaid,
+        "Current Owing": summary.currentBalance,
+      };
+    });
+
+    const mortgageRows = houseLoans.map((loan) => {
+      const summary = calculateDebtSummary({
+        transactions,
+        matches: matchesMortgagePayment(
+          loan.id,
+          loan.propertyId,
+          houseLoans.filter((candidate) => candidate.propertyId === loan.propertyId).length === 1
+        ),
+        balanceSnapshotAmount: loan.balanceSnapshotAmount,
+        balanceSnapshotDate: loan.balanceSnapshotDate,
+        fallbackBalance: loan.remaining,
+      });
+      return {
+        Mortgage: loan.name,
+        Property: properties.find((property) => property.id === loan.propertyId)?.name ?? "",
+        "Property ID": loan.propertyId ?? "",
+        "Current Owing": summary.currentOwing,
+        "Cash Paid": summary.cashPaid,
+        Principal: summary.principalPaid,
+        Interest: summary.interestPaid,
+        Unallocated: summary.unallocatedPaid,
+      };
+    });
+
+    const vehicleRows = vehicles.map((vehicle) => {
+      const summary = vehicle.vtype === "Finance"
+        ? calculateDebtSummary({
+            transactions,
+            matches: matchesVehicleFinancePayment(vehicle.id),
+            balanceSnapshotAmount: vehicle.balanceSnapshotAmount,
+            balanceSnapshotDate: vehicle.balanceSnapshotDate,
+            fallbackBalance: vehicle.remaining,
+          })
+        : null;
+      return {
+        Vehicle: vehicle.name,
+        Type: vehicle.vtype,
+        Payment: vehicle.payment,
+        Schedule: vehicle.schedule,
+        "Current Owing": summary?.currentOwing ?? 0,
+        "Cash Paid": summary?.cashPaid ?? 0,
+        Principal: summary?.principalPaid ?? 0,
+        Interest: summary?.interestPaid ?? 0,
+        Unallocated: summary?.unallocatedPaid ?? 0,
+      };
+    });
+
+    const propertyRows = properties.filter((property) => !property.archived).map((property) => {
+      const mortgages = mortgageRows.filter((row) => row["Property ID"] === property.id);
+      const mortgageOwing = toFixed2(mortgages.reduce((sum, row) => sum + Number(row["Current Owing"]), 0));
+      return {
+        Property: property.name,
+        Type: property.type,
+        Address: property.address ?? "",
+        "Estimated Value": property.estimatedValue ?? 0,
+        "Mortgage Owing": mortgageOwing,
+        Equity: property.estimatedValue == null ? "" : toFixed2(property.estimatedValue - mortgageOwing),
+        "Insurance Schedule": property.insuranceAmount ?? 0,
+        "Property Tax Schedule": property.propertyTaxAmount ?? 0,
+      };
+    });
+
+    return [
+      {
+        name: "Tax Working Papers",
+        rows: mappingRows.map((row) => {
+          const treatment = draft.taxTreatments[row.id] ?? { status: "proposed" as const };
+          return {
+            Item: row.label,
+            "Bookkeeping Amount": row.amount,
+            "Proposed Mapping": row.target,
+            Confidence: row.confidence,
+            "Tax Treatment Status": treatment.status,
+            "Confirmed Tax Amount": treatment.status === "confirmed"
+              ? treatment.confirmedAmount ?? row.amount
+              : "",
+            "User Note": treatment.note ?? "",
+            Evidence: row.note,
+          };
+        }),
+      },
+      {
+        name: "Missing Information",
+        rows: missingInputs.length
+          ? missingInputs.map((item) => ({ Status: "Missing", Item: item }))
+          : [{ Status: "Complete", Item: "No currently detected missing questionnaire inputs" }],
+      },
+      {
+        name: "Bookkeeping Categories",
+        rows: [...expenseBuckets.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([category, amount]) => ({ Category: category, "Bookkeeping Total": amount, Treatment: "Not filing-ready unless confirmed above" })),
+      },
+      {
+        name: "Business Summary",
+        rows: [{
+          "Invoice Revenue Before HST": invoiceSubtotal,
+          "Tagged Business Income": businessIncomeTotal,
+          "Tagged Business Expenses": businessExpenseTotal,
+          "Invoice HST Collected": invoiceHSTCollected,
+          "Invoice HST To Remit": invoiceHSTToRemit,
+          "Tax Payments Found": taxPaidTotal,
+        }],
+      },
+      { name: "Lenders", rows: lenderRows.length ? lenderRows : [{ Lender: "None" }] },
+      { name: "Mortgages", rows: mortgageRows.length ? mortgageRows : [{ Mortgage: "None" }] },
+      { name: "Properties", rows: propertyRows.length ? propertyRows : [{ Property: "None" }] },
+      { name: "Vehicles", rows: vehicleRows.length ? vehicleRows : [{ Vehicle: "None" }] },
+      {
+        name: "Tax Ledger",
+        rows: [...likelyBusinessIncomeTx, ...likelyBusinessExpenseTx, ...likelyTaxPayments]
+          .sort(byDateDesc)
+          .map((transaction) => ({
+            Date: transaction.date,
+            Description: transaction.description,
+            Type: transaction.type,
+            Category: categoryName.get(transaction.categoryId ?? "") ?? "",
+            Amount: transaction.amount,
+            Tag: transaction.tag ?? "",
+          })),
+      },
+      {
+        name: "Read Me",
+        rows: [
+          { Topic: "Purpose", Detail: "Working papers for review; not a filed tax return or tax advice." },
+          { Topic: "Bookkeeping vs tax", Detail: "Bookkeeping totals remain separate from user-confirmed tax treatment." },
+          { Topic: "T2125", Detail: "Proposed sole-proprietor mappings use current CRA T2125 expense-line guidance and require review." },
+          { Topic: "Corporation", Detail: "Corporate amounts require T2 Schedule 125 / GIFI review; FinanceOS does not assign filing codes automatically." },
+          { Topic: "GST/HST", Detail: "ITCs require eligible commercial use and supporting records; remittances are not normal expense deductions." },
+        ],
+      },
+    ];
+  })();
+
+  async function exportWorkingPapers(format: "excel" | "pdf") {
+    setExporting(format);
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      if (format === "excel") {
+        await exportReportsExcel(reportSheets, `FinanceOS_Working_Papers_${date}.xlsx`);
+      } else {
+        await exportReportsPdf("FinanceOS Tax And Financial Working Papers", reportSheets, `FinanceOS_Working_Papers_${date}.pdf`);
+      }
+    } catch (error) {
+      window.alert(`Report export failed: ${String(error)}`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 6 }}>CRA Review</div>
-        <div style={{ fontSize: 14, lineHeight: 1.6, color: theme.colors.textSoft, maxWidth: 860 }}>
-          Warning-first tax review using the transactions, invoices, obligations, and business settings FinanceOS already knows.
-          This page proposes likely CRA working-paper mappings and highlights the missing inputs that still block stronger advice.
+      <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 6 }}>CRA Review</div>
+          <div style={{ fontSize: 14, lineHeight: 1.6, color: theme.colors.textSoft, maxWidth: 860 }}>
+            Warning-first tax review using the transactions, invoices, obligations, and business settings FinanceOS already knows.
+            This page proposes likely CRA working-paper mappings and highlights the missing inputs that still block stronger advice.
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn variant="secondary" onClick={() => exportWorkingPapers("excel")}>{exporting === "excel" ? "Building Excel..." : "Export Excel"}</Btn>
+          <Btn variant="secondary" onClick={() => exportWorkingPapers("pdf")}>{exporting === "pdf" ? "Building PDF..." : "Export PDF"}</Btn>
         </div>
       </div>
 
@@ -473,6 +688,7 @@ export function CRAReviewSection({
                 vehicleBusinessUsePct: draft.vehicleBusinessUsePct,
                 homeOfficeUsePct: draft.homeOfficeUsePct,
                 notes: draft.notes,
+                taxTreatments: draft.taxTreatments,
               })}
             >
               Save CRA Inputs
@@ -483,8 +699,10 @@ export function CRAReviewSection({
         <div style={{ ...theme.cardStyle(theme.colors.warning), padding: 20 }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text, marginBottom: 12 }}>Likely CRA Mapping</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {mappingRows.map((row) => (
-              <div key={row.label} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: "12px 14px", background: theme.colors.surfaceAlt }}>
+            {mappingRows.map((row) => {
+              const treatment = draft.taxTreatments[row.id] ?? { status: "proposed" as TaxTreatmentStatus };
+              return (
+              <div key={row.id} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: "12px 14px", background: theme.colors.surfaceAlt }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, color: theme.colors.text }}>{row.label}</div>
                   <Pill color={row.confidence === "High" ? "green" : row.confidence === "Medium" ? "amber" : "red"}>
@@ -494,8 +712,41 @@ export function CRAReviewSection({
                 <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 6 }}>{row.target}</div>
                 <div style={{ fontWeight: 800, fontSize: 18, color: theme.colors.text }}>{fmtCAD(row.amount)}</div>
                 <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 6, lineHeight: 1.55 }}>{row.note}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, .7fr) minmax(140px, .6fr) minmax(180px, 1fr)", gap: 8, marginTop: 10 }}>
+                  <Sel
+                    label="Tax Treatment"
+                    value={treatment.status}
+                    onChange={(event) => {
+                      const status = event.target.value as TaxTreatmentStatus;
+                      updateTaxTreatment(row.id, {
+                        status,
+                        confirmedAmount: status === "confirmed"
+                          ? treatment.confirmedAmount ?? row.amount
+                          : treatment.confirmedAmount,
+                      });
+                    }}
+                    options={[
+                      { value: "proposed", label: "Proposed only" },
+                      { value: "confirmed", label: "User confirmed" },
+                      { value: "excluded", label: "Excluded from tax" },
+                      { value: "accountant_review", label: "Accountant review" },
+                    ]}
+                  />
+                  <Inp
+                    label="Confirmed Amount"
+                    type="number"
+                    value={treatment.confirmedAmount ?? row.amount}
+                    onChange={(event) => updateTaxTreatment(row.id, { confirmedAmount: Number(event.target.value) })}
+                  />
+                  <Inp
+                    label="Treatment Note"
+                    value={treatment.note ?? ""}
+                    onChange={(event) => updateTaxTreatment(row.id, { note: event.target.value })}
+                    placeholder="Reason, evidence, or accountant note"
+                  />
+                </div>
               </div>
-            ))}
+            );})}
           </div>
         </div>
       </div>
