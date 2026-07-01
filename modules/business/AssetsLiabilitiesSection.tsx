@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, type ReactNode } from "react";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
-import { useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
+import { useProperties, useVehicles, useHouseLoans, usePropertyTax } from "./useAssets";
 import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 import { PaymentSchedule, type PropertyTaxPayment, type Vehicle, type HouseLoan, type PropertyTax } from "@/types/domain";
 import { theme } from "@/lib/theme";
@@ -13,7 +13,7 @@ import type { Liability } from "@/types/domain";
 import { getLiabilityLedger, getLiabilitySummary } from "./useLiabilities";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 
-type NavTarget = "accounts" | "cards" | "vehicles" | "houseloans";
+type NavTarget = "accounts" | "cards" | "properties" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
 
 type UpcomingItem =
@@ -127,6 +127,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
   const { accounts } = useAccounts();
   const { cards } = useCreditCards();
   const { vehicles } = useVehicles();
+  const { properties } = useProperties();
   const { houseLoans } = useHouseLoans();
   const { propertyTaxes, markPaid } = usePropertyTax();
   const { transactions } = useTransactions();
@@ -164,7 +165,10 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
     liabilities.reduce((sum, liability) => sum + (liabilityBalances[liability.id] ?? 0), 0)
   );
   const totalLiabilities = toFixed2(cardLiabilities + houseLoanLiabilities + lenderLiabilities);
-  const netWorth = toFixed2(liquidAssets - totalLiabilities);
+  const realEstateValue = toFixed2(properties
+    .filter((property) => !property.archived)
+    .reduce((sum, property) => sum + (property.estimatedValue ?? 0), 0));
+  const netWorth = toFixed2(liquidAssets + realEstateValue - totalLiabilities);
 
   const vehicleMonthly = toFixed2(vehicles.reduce((sum, v) => sum + amountBySchedule(v.payment, v.schedule), 0));
   const ownedPropertyTaxUnpaid = toFixed2(
@@ -391,7 +395,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
       amount: payment.amount,
       date: payment.date,
       description: `Property Tax - ${property.name}`,
-      linkedPropertyId: property.id,
+      linkedPropertyId: property.propertyId ?? property.id,
       recurringOriginType: "property_tax",
       recurringOriginId: payment.id,
       mode: "Bank Transfer",
@@ -468,35 +472,33 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Real Estate"
           accent="#b45309"
-          actions={undefined}
+          actions={<ActionBtn onClick={() => onNavigate("properties")}>Properties</ActionBtn>}
         >
-          {houseLoans.length === 0 && propertyTaxes.length === 0 ? (
-            <EmptyNote>No real estate items yet. Use the House Loans detail view while this area absorbs more of that workflow.</EmptyNote>
+          {properties.filter((property) => !property.archived).length === 0 ? (
+            <EmptyNote>No properties yet.</EmptyNote>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {houseLoans.slice(0, 3).map((loan) => (
-                <div key={loan.id} style={{ paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{loan.name}</div>
-                  {loan.address && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{loan.address}</div>}
+              {properties.filter((property) => !property.archived).slice(0, 3).map((property) => {
+                const propertyLoans = houseLoans.filter((loan) => loan.propertyId === property.id);
+                const mortgageBalance = propertyLoans.reduce((sum, loan) => sum + loan.remaining, 0);
+                return (
+                <div key={property.id} style={{ paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{property.name}</div>
+                  {property.address && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{property.address}</div>}
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                    Remaining {fmtCAD(loan.remaining)} | Payment {fmtCAD(loan.payment)}/{loan.schedule}
+                    {property.type} | Value {property.estimatedValue == null ? "--" : fmtCAD(property.estimatedValue)} | Mortgage {fmtCAD(mortgageBalance)}
                   </div>
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
-                    Next due {fmtDate(getNextOccurrence(loan.nextPaymentDate, loan.schedule) ?? loan.nextPaymentDate)}
+                    {propertyLoans.length} mortgage{propertyLoans.length === 1 ? "" : "s"} | {propertyTaxes.filter((record) => record.propertyId === property.id).length} tax record{propertyTaxes.filter((record) => record.propertyId === property.id).length === 1 ? "" : "s"}
                   </div>
-                  {!!loan.propertyTaxAmount && (
-                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
-                      Property tax {fmtCAD(loan.propertyTaxAmount)}/{loan.propertyTaxSchedule ?? "Monthly"}
-                      {loan.propertyTaxDate ? ` | Next ${fmtDate(getNextOccurrence(loan.propertyTaxDate, loan.propertyTaxSchedule ?? "Monthly") ?? loan.propertyTaxDate)}` : ""}
-                    </div>
-                  )}
                 </div>
-              ))}
+                );
+              })}
               <div style={{ fontSize: 12, color: "#6b7280" }}>
                 {houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length} property tax schedule{houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length === 1 ? "" : "s"} | unpaid planned tax {fmtCAD(unpaidPropertyTax)}
               </div>
               <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                Direct mortgage logging stays in the House Loans detail view for now until principal vs interest handling is cleaner.
+                Mortgage details remain available in House Loans; property identity and carrying costs live in Properties.
               </div>
             </div>
           )}

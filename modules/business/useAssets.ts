@@ -1,17 +1,109 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Vehicle, HouseLoan, PropertyTax, PropertyTaxPayment } from "@/types/domain";
-import { vehicleRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
+import { Vehicle, Property, HouseLoan, PropertyTax, PropertyTaxPayment } from "@/types/domain";
+import { vehicleRepository, propertyRepository, houseLoanRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import { uid, toFixed2 } from "@/utils/finance";
 import { getVehicleReferenceReasons, getHouseLoanReferenceReasons, getPropertyTaxReferenceReasons } from "@/utils/referenceIntegrity";
 import {
+  removeOwnedRecurringForProperty,
   removeOwnedRecurringForHouseLoan,
   removeOwnedRecurringForVehicle,
   syncHouseLoanPropertyTaxRecurring,
+  syncPropertyInsuranceRecurring,
+  syncPropertyTaxRecurring,
   syncVehicleInsuranceRecurring,
 } from "@/utils/recurringOwners";
+import { migratePropertyParents } from "@/utils/propertyMigration";
+import { persistCanonicalTransactions } from "@/services/transactionPipeline";
+import { DATA_CHANGED_EVENT, notifyDataChanged } from "@/utils/events";
+
+function loadPropertyModel() {
+  const existingTransactions = transactionRepository.getAll();
+  const result = migratePropertyParents(
+    propertyRepository.getAll(),
+    houseLoanRepository.getAll(),
+    propertyTaxRepository.getAll(),
+    existingTransactions
+  );
+  if (result.changed) {
+    propertyRepository.saveAll(result.properties);
+    houseLoanRepository.saveAll(result.houseLoans);
+    propertyTaxRepository.saveAll(result.propertyTaxes);
+    const changedTransactions = result.transactions.filter(
+      (transaction, index) =>
+        transaction.linkedPropertyId !== existingTransactions[index]?.linkedPropertyId
+    );
+    persistCanonicalTransactions(changedTransactions);
+  }
+  return result;
+}
+
+export function useProperties() {
+  const [properties, setProperties] = useState<Property[]>([]);
+
+  const load = useCallback(() => {
+    const result = loadPropertyModel();
+    setProperties(result.properties);
+    if (result.changed) notifyDataChanged("properties");
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+    const handleChange = () => load();
+    window.addEventListener(DATA_CHANGED_EVENT, handleChange);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleChange);
+  }, [load]);
+
+  const saveProperty = useCallback((property: Omit<Property, "id"> & { id?: string }) => {
+    const all = propertyRepository.getAll();
+    const prepared: Property = {
+      ...property,
+      id: property.id || uid(),
+      name: property.name.trim(),
+      address: property.address?.trim() || undefined,
+      purchasePrice: property.purchasePrice == null ? undefined : toFixed2(property.purchasePrice),
+      estimatedValue: property.estimatedValue == null ? undefined : toFixed2(property.estimatedValue),
+      insuranceAmount: property.insuranceAmount == null ? undefined : toFixed2(property.insuranceAmount),
+      propertyTaxAmount: property.propertyTaxAmount == null ? undefined : toFixed2(property.propertyTaxAmount),
+    };
+    const index = all.findIndex((candidate) => candidate.id === prepared.id);
+    if (index >= 0) all[index] = prepared;
+    else all.push(prepared);
+    propertyRepository.saveAll(all);
+    syncPropertyInsuranceRecurring(prepared);
+    syncPropertyTaxRecurring(prepared);
+    notifyDataChanged("properties");
+    load();
+    return prepared;
+  }, [load]);
+
+  const deleteProperty = useCallback((id: string): "archived" | "deleted" => {
+    const hasReferences =
+      transactionRepository.getAll().some((transaction) => transaction.linkedPropertyId === id)
+      || houseLoanRepository.getAll().some((loan) => loan.propertyId === id)
+      || propertyTaxRepository.getAll().some((record) => record.propertyId === id);
+    const all = propertyRepository.getAll();
+    if (hasReferences) {
+      propertyRepository.saveAll(
+        all.map((property) => property.id === id ? { ...property, archived: true } : property)
+      );
+      removeOwnedRecurringForProperty(id);
+      notifyDataChanged("properties");
+      load();
+      return "archived";
+    }
+    propertyRepository.saveAll(all.filter((property) => property.id !== id));
+    removeOwnedRecurringForProperty(id);
+    notifyDataChanged("properties");
+    load();
+    return "deleted";
+  }, [load]);
+
+  return { properties, saveProperty, deleteProperty, reloadProperties: load };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // VEHICLES
@@ -82,10 +174,10 @@ export function useHouseLoans() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHouseLoans(houseLoanRepository.getAll());
+    setHouseLoans(loadPropertyModel().houseLoans);
   }, []);
 
-  const load = useCallback(() => setHouseLoans(houseLoanRepository.getAll()), []);
+  const load = useCallback(() => setHouseLoans(loadPropertyModel().houseLoans), []);
 
   const addHouseLoan = useCallback((fields: Omit<HouseLoan, "id">) => {
     const l: HouseLoan = {
@@ -97,11 +189,16 @@ export function useHouseLoans() {
       propertyTaxAmount: fields.propertyTaxAmount ? toFixed2(fields.propertyTaxAmount) : 0,
     };
     houseLoanRepository.saveAll([...houseLoanRepository.getAll(), l]);
-    syncHouseLoanPropertyTaxRecurring(l);
+    const migrated = loadPropertyModel().houseLoans.find((loan) => loan.id === l.id) ?? l;
+    syncHouseLoanPropertyTaxRecurring(migrated);
+    notifyDataChanged("properties");
     load();
   }, [load]);
 
   const updateHouseLoan = useCallback((updated: HouseLoan) => {
+    const existingLoan = houseLoanRepository.getAll().find((loan) => loan.id === updated.id);
+    const previousPropertyId = existingLoan?.propertyId ?? existingLoan?.id;
+    const nextPropertyId = updated.propertyId ?? updated.id;
     houseLoanRepository.saveAll(
       houseLoanRepository.getAll().map((l) => l.id === updated.id ? {
         ...updated,
@@ -115,6 +212,19 @@ export function useHouseLoans() {
       ...updated,
       propertyTaxAmount: updated.propertyTaxAmount ? toFixed2(updated.propertyTaxAmount) : 0,
     });
+    notifyDataChanged("properties");
+    if (previousPropertyId && previousPropertyId !== nextPropertyId) {
+      const relinked = transactionRepository.getAll()
+        .filter((transaction) =>
+          transaction.linkedPropertyId === previousPropertyId
+          && (
+            transaction.recurringOriginType === "house_loan"
+            || transaction.subType === "mortgage"
+          )
+        )
+        .map((transaction) => ({ ...transaction, linkedPropertyId: nextPropertyId }));
+      persistCanonicalTransactions(relinked);
+    }
     load();
   }, [load]);
 
@@ -141,14 +251,15 @@ export function usePropertyTax() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPropertyTaxes(propertyTaxRepository.getAll());
+    setPropertyTaxes(loadPropertyModel().propertyTaxes);
   }, []);
 
-  const load = useCallback(() => setPropertyTaxes(propertyTaxRepository.getAll()), []);
+  const load = useCallback(() => setPropertyTaxes(loadPropertyModel().propertyTaxes), []);
 
   const commit = useCallback((data: PropertyTax[]) => {
     propertyTaxRepository.saveAll(data);
-    setPropertyTaxes(data);
+    const result = loadPropertyModel();
+    setPropertyTaxes(result.propertyTaxes);
   }, []);
 
   // Properties

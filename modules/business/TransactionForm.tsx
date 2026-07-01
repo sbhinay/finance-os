@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useVehicles, useHouseLoans } from "./useAssets";
+import { useProperties, useVehicles } from "./useAssets";
 import { useLiabilities } from "./useLiabilities";
 import { detectCategory, learnedRulesRepository, uncategorizedRepository } from "@/rules/categoryRules";
 import { buildSourceOptions, fmtCAD, toFixed2, uid } from "@/utils/finance";
@@ -131,7 +131,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const { cards } = useCreditCards();
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
-  const { houseLoans } = useHouseLoans();
+  const { properties } = useProperties();
   const { liabilities } = useLiabilities();
 
   const now = new Date();
@@ -184,7 +184,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const sourceName = [...accounts, ...cards].find((x) => x.id === form.sourceId)?.name ?? "";
   const destinationName = [...accounts, ...cards].find((x) => x.id === form.destinationId)?.name ?? "";
   const selectedVehicle = vehicles.find((v) => v.id === form.linkedVehicleId);
-  const selectedProperty = houseLoans.find((h) => h.id === form.linkedPropertyId);
+  const selectedProperty = properties.find((property) => property.id === form.linkedPropertyId);
   const selectedLiability = liabilities.find((liability) => liability.id === form.linkedLiabilityId);
   const selectedSubTypeLabel = form.subType
     ? getSubTypeLabel(txType, form.subType as TransactionSubType)
@@ -341,7 +341,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
   const showVehicleLink = txType === "expense" && isVehicleCat;
-  const showPropertyLink = txType === "expense" && isPropertyCat;
+  const showPropertyLink =
+    (txType === "expense" && isPropertyCat)
+    || Boolean(form.linkedPropertyId);
   const isHistoricalEdit = !!form.id && form.date < todayLocal;
   const showBalancePreview = Boolean(form.sourceId && Number(form.amount) > 0 && !isHistoricalEdit);
 
@@ -673,7 +675,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           {/* Property link */}
           {showPropertyLink && (
             <Sel label="Property (optional)" value={form.linkedPropertyId} onChange={f("linkedPropertyId")}
-              options={[{ value: "", label: "— Select property —" }, ...houseLoans.map((h) => ({ value: h.id, label: h.name }))]} />
+              options={[{ value: "", label: "— Select property —" }, ...properties.filter((property) => !property.archived).map((property) => ({ value: property.id, label: property.name }))]} />
           )}
 
           {/* Balance preview */}

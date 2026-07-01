@@ -30,7 +30,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 ## 2. Key Current Features
 - Master transaction ledger with replay-based balance computation.
 - Canonical transaction purposes and one shared financial-effect implementation across balances, ledgers, history, and reports.
-- Full support for bank accounts, credit cards, assets, and recurring payments.
+- Full support for bank accounts, credit cards, first-class Properties, assets, liabilities, and recurring payments.
 - Current-app JSON export/import with asset restoration.
 - Balance snapshots on accounts and credit cards.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
@@ -40,7 +40,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
   - bank-account fees
   - credit-card annual fees
   - vehicle insurance
-  - house-loan property tax
+  - property insurance and property tax
 - Dedicated recurring views for:
   - `Subscriptions`
   - `Planned Payments`
@@ -59,7 +59,8 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - `Subscriptions` and `Planned Payments` are now first-class recurring views.
 - Planned payments are record-driven rather than hardcoded: each planned item declares whether it posts as an `expense` or a `transfer`.
 - Vehicle insurance is now owned by the vehicle parent record and auto-creates its recurring item behind the scenes.
-- Property tax can now also be owned by the house-loan/property parent and appears in both recurring views and `Assets & Liabilities`.
+- First-class Properties now own linked mortgages, property tax, insurance, expenses, carrying-cost history, equity, and transaction drill-down.
+- Legacy house loans and standalone property-tax records migrate only through unambiguous matches; current JSON and cloud payloads preserve Property relationships.
 - Import validation now checks stale references more strictly and falls back to `Other` for ambiguous category mappings instead of guessing.
 - Automatic Supabase write-back was rolled back; cloud behavior is currently safe manual save + safe manual restore preview.
 - Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning rather than relying only on generic expense rows.
@@ -73,7 +74,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Production Phases 1 and 2 are landed. The active roadmap now proceeds through Property, debt reporting, Data Health/import review, AI scanning, guarded cloud persistence, and tax/report exports.
+- Production Phases 1 through 3 are landed. The active roadmap now proceeds through detailed debt reporting, Data Health/import review, AI scanning, guarded cloud persistence, and tax/report exports.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:

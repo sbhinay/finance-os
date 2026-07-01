@@ -125,7 +125,7 @@ interface FixedPayment {
   id: string;
   name: string;
   kind?: RecurringKind;
-  ownerType?: "account" | "card" | "vehicle" | "house_loan";
+  ownerType?: "account" | "card" | "vehicle" | "house_loan" | "property";
   ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;
@@ -193,6 +193,7 @@ interface Vehicle {
 ```typescript
 interface HouseLoan {
   id: string;
+  propertyId?: string;
   name: string;
   address?: string;
   principal: number;
@@ -214,11 +215,41 @@ interface HouseLoan {
 }
 ```
 
+### Property
+```typescript
+interface Property {
+  id: string;
+  name: string;
+  type: "primary" | "rental" | "commercial";
+  address?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  estimatedValue?: number;
+  notes?: string;
+  insuranceAmount?: number;
+  insuranceSchedule?: PaymentSchedule;
+  insuranceDate?: string;
+  insuranceSource?: string;
+  propertyTaxAmount?: number;
+  propertyTaxSchedule?: PaymentSchedule;
+  propertyTaxDate?: string;
+  propertyTaxSource?: string;
+  propertyTaxRollNumber?: string;
+  archived?: boolean;
+  createdAt: string;
+}
+```
+
+- `Property` is the first-class parent for mortgages, property tax, insurance, expenses, carrying costs, and property transaction history.
+- `HouseLoan.propertyId`, `PropertyTax.propertyId`, and `Transaction.linkedPropertyId` reference `Property.id`.
+- A property may own separate insurance and property-tax recurring definitions through stable recurring owner/kind identity.
+- Equity is derived from estimated value less linked mortgage balances; carrying costs are derived from linked ledger activity.
+
 #### Regular vs Detailed Liability Inputs
 - Regular mode only needs enough data to plan cash: payment amount, schedule, pay-from account, and next payment date.
 - Detailed mode can add balance-sheet and financing fields like original principal, remaining balance, interest rate, term dates, and principal/interest split support.
 - Missing detailed fields must not block normal cash projection or upcoming-obligation views.
-- Property tax can now either remain in the legacy standalone `PropertyTax` domain or be owned directly by the house-loan/property parent during migration.
+- Legacy standalone property-tax and house-loan records remain readable, while unambiguous records migrate to a first-class Property parent.
 - Vehicle, account, card, and house-loan records can carry balance snapshot fields. These snapshots are the user-entered real-world anchor for replay and ledger explanation views.
 
 ### PropertyTax

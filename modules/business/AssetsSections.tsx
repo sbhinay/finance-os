@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Vehicle, HouseLoan, PaymentSchedule } from "@/types/domain";
 import { Account } from "@/types/account";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useVehicles, useHouseLoans } from "./useAssets";
+import { useProperties, useVehicles, useHouseLoans } from "./useAssets";
 import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
 import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useFixedPayments";
@@ -603,9 +603,10 @@ export function HouseLoansSection({
   onEditHandled?: () => void;
 }) {
   const { houseLoans, addHouseLoan, updateHouseLoan, deleteHouseLoan } = useHouseLoans();
+  const { properties } = useProperties();
 
   const emptyForm = useMemo(() => ({
-    id: "" as string | undefined,
+    id: "" as string | undefined, propertyId: "",
     name: "", address: "", principal: 0, remaining: 0,
     balanceSnapshotDate: todayIsoLocal(),
     payment: 0, schedule: "Bi-weekly" as PaymentSchedule,
@@ -698,7 +699,7 @@ export function HouseLoansSection({
       date: nextDate,
       sourceId: loan.source ?? "",
       description: `Mortgage Payment - ${loan.name}`,
-      linkedPropertyId: loan.id,
+      linkedPropertyId: loan.propertyId ?? loan.id,
       recurringOriginType: "house_loan",
       recurringOriginId: loan.id,
       mode: "Debit",
@@ -745,7 +746,7 @@ export function HouseLoansSection({
         createdAt: new Date().toISOString(),
         status: "cleared",
         tag: "Personal",
-        linkedPropertyId: loan.id,
+        linkedPropertyId: loan.propertyId ?? loan.id,
         linkedName: loan.name,
         recurringOriginType: "house_loan",
         recurringOriginId: loan.id,
@@ -775,7 +776,7 @@ export function HouseLoansSection({
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 18 }}>
         <StatBox label="Total Remaining" value={fmtCAD(totalRemaining)} color="#a31515" />
         <StatBox label="Monthly Equiv." value={fmtCAD(toFixed2(totalMonthly))} color="#a05c00" />
-        <StatBox label="Properties" value={String(houseLoans.length)} />
+        <StatBox label="Properties" value={String(properties.filter((property) => !property.archived).length)} />
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
         <Btn small onClick={() => { setForm(emptyForm); setShowForm(true); }}>+ Add Mortgage</Btn>
@@ -784,11 +785,13 @@ export function HouseLoansSection({
       {houseLoans.map((l) => {
         const next = getNextOccurrence(l.nextPaymentDate, l.schedule);
         const acct = accounts.find((a) => a.id === l.source);
+        const property = properties.find((candidate) => candidate.id === l.propertyId);
         return (
           <div key={l.id} style={{ ...theme.cardStyle(), padding: "16px 18px", marginBottom: 12, background: theme.colors.surface }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: theme.colors.text }}>{l.name}</div>
+                {property && <div style={{ fontSize: 12, color: "#b45309", marginTop: 2 }}>Property: {property.name}</div>}
                 {l.address && <div style={{ fontSize: 12, color: theme.colors.textSoft }}>{l.address}</div>}
                 <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>
                   {fmtCAD(l.payment)}/{l.schedule}
@@ -845,9 +848,18 @@ export function HouseLoansSection({
       {showForm && (
         <Modal title={form.id ? "Edit Mortgage" : "Add Mortgage"} onClose={() => setShowForm(false)} wide>
           <Grid2>
-            <Inp label="Property Name" value={form.name} onChange={f("name")} placeholder="e.g. Primary Residence" />
+            <Inp label="Mortgage Name" value={form.name} onChange={f("name")} placeholder="e.g. Primary Mortgage" />
             <Inp label="Address (optional)" value={form.address ?? ""} onChange={f("address")} />
           </Grid2>
+          <Sel
+            label="Property Parent"
+            value={form.propertyId ?? ""}
+            onChange={f("propertyId")}
+            options={[
+              { value: "", label: "-- Auto-create from mortgage details --" },
+              ...properties.filter((property) => !property.archived).map((property) => ({ value: property.id, label: property.name })),
+            ]}
+          />
           <Grid2>
             <Inp label="Original Principal ($)" type="number" value={form.principal} onChange={f("principal")} />
             <Inp label="Remaining Balance ($)" type="number" value={form.remaining} onChange={f("remaining")} />

@@ -196,7 +196,7 @@ The ordered path to production completion is now:
 
 1. Complete lender and debt-detail UX.
 2. Consolidate recurring architecture.
-3. Build the first-class Property parent model.
+3. Build the first-class Property parent model. (Landed)
 4. Improve optional detailed mortgage/vehicle debt reporting.
 5. Expand findability, Data Health, and import review.
 6. Build the secure AI Statement Scanner MVP.
@@ -229,6 +229,9 @@ As of this version:
 - semantic duplicate detection is shared by backfills and Data Health
 - linked lender liabilities support borrowing, repayment, and principal-based balances
 - lender, account/card, subtype, vehicle, and property history filtering is live
+- first-class primary, rental, and commercial Property records are live
+- Property details unify linked mortgages, property tax, insurance, expenses, carrying costs, equity, and transaction history
+- unambiguous legacy house-loan/property-tax migration is fixture validated
 - the June 29 fixture replays all stored account/card balances without drift
 
-The next major challenge is completing lender/debt UX and then consolidating recurring behavior before introducing the Property parent model.
+The next major challenge is detailed mortgage and financed-vehicle principal/interest reporting, followed by expanded Data Health and import review.

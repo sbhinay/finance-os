@@ -6,7 +6,7 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useVehicles, useHouseLoans } from "./useAssets";
+import { useProperties, useVehicles, useHouseLoans } from "./useAssets";
 import { useLiabilities } from "./useLiabilities";
 import { useFixedPayments } from "./useFixedPayments";
 import { Account } from "@/types/account";
@@ -889,7 +889,7 @@ export function TransactionHistorySection() {
   const { cards } = useCreditCards();
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
-  const { houseLoans } = useHouseLoans();
+  const { properties } = useProperties();
   const { liabilities } = useLiabilities();
 
   useAutoReload(reloadTransactions as () => void);
@@ -914,10 +914,10 @@ export function TransactionHistorySection() {
   const catName = useCallback((id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "", [categories]);
   const linkedLabel = useCallback((vehicleId?: string, propertyId?: string, liabilityId?: string) => {
     if (vehicleId) return vehicles.find((v) => v.id === vehicleId)?.name ?? vehicleId;
-    if (propertyId) return houseLoans.find((h) => h.id === propertyId)?.name ?? propertyId;
+    if (propertyId) return properties.find((property) => property.id === propertyId)?.name ?? propertyId;
     if (liabilityId) return liabilities.find((liability) => liability.id === liabilityId)?.name ?? liabilityId;
     return "";
-  }, [vehicles, houseLoans, liabilities]);
+  }, [vehicles, properties, liabilities]);
 
   const availableSubTypes = useMemo(
     () =>
@@ -929,10 +929,10 @@ export function TransactionHistorySection() {
 
   const availableLinks = useMemo(() => {
     const vehicleItems = vehicles.map((v) => ({ value: `vehicle:${v.id}`, label: `Vehicle - ${v.name}` }));
-    const propertyItems = houseLoans.map((h) => ({ value: `property:${h.id}`, label: `Property - ${h.name}` }));
+    const propertyItems = properties.filter((property) => !property.archived).map((property) => ({ value: `property:${property.id}`, label: `Property - ${property.name}` }));
     const liabilityItems = liabilities.map((liability) => ({ value: `liability:${liability.id}`, label: `Loan - ${liability.name}` }));
     return [...vehicleItems, ...propertyItems, ...liabilityItems];
-  }, [vehicles, houseLoans, liabilities]);
+  }, [vehicles, properties, liabilities]);
 
   const accountOptions = useMemo(() => [
     ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
@@ -1022,7 +1022,7 @@ export function TransactionHistorySection() {
     const rows = [["Date", "Type", "Amount", "Category", "Account", "Mode", "Tag", "Description", "Vehicle", "Property", "Loan/Lender"]];
     filtered.forEach((t) => {
       const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId)?.name ?? "" : "";
-      const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId)?.name ?? "" : "";
+      const prop = t.linkedPropertyId ? properties.find((property) => property.id === t.linkedPropertyId)?.name ?? "" : "";
       const liability = t.linkedLiabilityId ? liabilities.find((item) => item.id === t.linkedLiabilityId)?.name ?? "" : "";
       const acct = [...accounts, ...cards].find((x) => x.id === t.sourceId)?.name ?? t.sourceId;
       const cat = categories.find((c) => c.id === t.categoryId)?.name ?? "";
@@ -1143,7 +1143,7 @@ export function TransactionHistorySection() {
         )}
         {pagedTransactions.map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
-          const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
+          const prop = t.linkedPropertyId ? properties.find((property) => property.id === t.linkedPropertyId) : null;
           const liability = t.linkedLiabilityId ? liabilities.find((item) => item.id === t.linkedLiabilityId) : null;
           const listEffect = getTransactionListEffect(t);
           return (

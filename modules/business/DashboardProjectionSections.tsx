@@ -5,7 +5,7 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useVehicles, useHouseLoans } from "./useAssets";
+import { useProperties, useVehicles, useHouseLoans } from "./useAssets";
 import { useFixedPayments } from "./useFixedPayments";
 import { useBusiness } from "./useBusiness";
 import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
@@ -282,6 +282,7 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
   const { transactions } = useTransactions();
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
+  const { properties } = useProperties();
   const { houseLoans } = useHouseLoans();
   const { business } = useBusiness();
   const hstRemittances = business.hstRemittances ?? [];
@@ -296,7 +297,10 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
 
   // Net worth
   const totalBank = accounts.reduce((s, a) => s + a.openingBalance, 0);
-  const totalAssets = toFixed2(totalBank);
+  const propertyAssets = properties
+    .filter((property) => !property.archived)
+    .reduce((sum, property) => sum + (property.estimatedValue ?? 0), 0);
+  const totalAssets = toFixed2(totalBank + propertyAssets);
   const ccDebt = cards.reduce((s, c) => s + c.openingBalance, 0);
   const loanDebt = houseLoans.reduce((s, l) => s + l.remaining, 0);
   const vehicleDebt = vehicles.filter((v) => v.vtype === "Finance").reduce((s, v) => s + v.remaining, 0);

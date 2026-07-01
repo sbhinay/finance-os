@@ -1,4 +1,4 @@
-import { Vehicle, HouseLoan, PropertyTax, Liability } from "@/types/domain";
+import { Vehicle, Property, HouseLoan, PropertyTax, Liability } from "@/types/domain";
 
 // ─── Vehicle Repository ───────────────────────────────────────────────────────
 
@@ -10,6 +10,17 @@ export const vehicleRepository = {
   },
   saveAll(data: Vehicle[]) {
     localStorage.setItem(VEHICLE_KEY, JSON.stringify(data));
+  },
+};
+
+const PROPERTY_KEY = "finance_os_properties";
+
+export const propertyRepository = {
+  getAll(): Property[] {
+    try { return JSON.parse(localStorage.getItem(PROPERTY_KEY) || "[]"); } catch { return []; }
+  },
+  saveAll(data: Property[]) {
+    localStorage.setItem(PROPERTY_KEY, JSON.stringify(data));
   },
 };
 

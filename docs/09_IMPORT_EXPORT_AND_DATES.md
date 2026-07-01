@@ -11,6 +11,7 @@ The current app exports the following domains:
 - `business`
 - `vehicles`
 - `houseLoans`
+- `properties`
 - `propertyTaxes`
 - `futurePayments`
 
@@ -23,9 +24,10 @@ The import process supports:
 
 #### Current-app import path
 - Reads the same top-level keys the exporter writes.
-- Restores vehicles, house loans, property taxes, and fixed payments.
+- Restores vehicles, properties, house loans, property taxes, and fixed payments.
 - Restores lender liabilities and validates `linkedLiabilityId` references.
 - Preserves and validates optional recurring-origin links and recurring parent ownership.
+- Validates Property references from mortgages, property taxes, recurring owners, and transactions.
 - Preserves balance snapshot metadata on accounts and cards.
 - Resolves asset source references by ID or name.
 - Normalizes legacy `credit_card_payment` rows into canonical `transfer + cc_payment`.
@@ -42,7 +44,7 @@ Imported source references are resolved by:
 2. otherwise doing a case-insensitive name match
 3. otherwise preserving the original string
 
-This resolution is applied to vehicles, house loans, and fixed payments.
+This resolution is applied to vehicles, properties, house loans, and fixed payments.
 
 ### Validation and Integrity
 - Import preview now surfaces warnings and blocking errors before commit.
@@ -52,6 +54,7 @@ This resolution is applied to vehicles, house loans, and fixed payments.
 - Transaction normalization adds stable purposes only when type/subtype or a narrow legacy pattern makes the meaning unambiguous.
 - Numbered personal-loan receipt series such as `Loan DP 1` through `Loan DP 7` can be grouped into one lender liability without changing amounts, dates, accounts, or tags.
 - Invalid or incomplete recurring origins and recurring parent-owner pairs are detached with an import warning; transaction amounts, dates, descriptions, and categories remain unchanged.
+- Legacy house loans create Property parents safely. A standalone property-tax record merges only when its name exactly and uniquely matches a Property; ambiguous records remain unchanged.
 
 ### Date & Time Standards
 | Field | Format | Meaning |

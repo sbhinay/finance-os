@@ -45,6 +45,8 @@ The following items are no longer purely deferred because they are complete or m
 - Lender liabilities now support linked borrowing and repayment transactions with principal-based balances.
 - Numbered legacy personal-loan receipt series can migrate into one lender liability when the lender identity is unambiguous.
 - Vehicle Lease is now a required vehicle-linked category, with consistent manual and backfill naming.
+- First-class Property records now own linked mortgages, property taxes, insurance schedules, expenses, carrying-cost history, equity, and transaction drill-down.
+- Legacy house-loan/property-tax data migrates only through unambiguous Property matches, with fixture validation preserving the June 29 dataset.
 
 The remaining sections below focus on what is still open.
 
@@ -66,12 +68,13 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Parent-owned rows are protected from independent edit/delete; used standalone schedules archive instead of orphaning history.
 - Import and Data Health validate recurring origins and parent-owner pairs.
 
-### Phase 3: Property parent model - next
-- Add first-class primary, rental, and commercial Property records.
-- Let properties own mortgages, property tax, insurance, expenses, carrying-cost views, and transaction history.
-- Migrate only unambiguous house-loan/property relationships.
+### Phase 3: Property parent model - landed
+- First-class primary, rental, and commercial Property records are implemented.
+- Properties own linked mortgages, property tax, insurance, expenses, carrying-cost views, equity, and transaction history.
+- Legacy house-loan and property-tax links migrate only when ownership is unambiguous.
+- Import/export, cloud payloads, reference validation, recurring ownership, and the June 29 fixture include Properties.
 
-### Phase 4: Detailed debt reporting
+### Phase 4: Detailed debt reporting - next
 - Improve optional principal/interest workflows for mortgages and financed vehicles.
 - Keep full payments in cash planning while reducing liabilities only by principal.
 - Report interest and carrying costs separately without blocking regular mode.

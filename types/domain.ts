@@ -32,8 +32,32 @@ export interface Vehicle {
 }
 
 // ─── House Loans ─────────────────────────────────────────────────────────────
+export type PropertyType = "Primary" | "Rental" | "Commercial";
+
+export interface Property {
+  id: string;
+  name: string;
+  type: PropertyType;
+  address?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  estimatedValue?: number;
+  notes?: string;
+  insuranceAmount?: number;
+  insuranceSchedule?: PaymentSchedule;
+  insuranceDate?: string;
+  insuranceSource?: string;
+  propertyTaxAmount?: number;
+  propertyTaxSchedule?: PaymentSchedule;
+  propertyTaxDate?: string;
+  propertyTaxSource?: string;
+  propertyTaxRollNumber?: string;
+  archived?: boolean;
+}
+
 export interface HouseLoan {
   id: string;
+  propertyId?: string;
   name: string;
   address?: string;
   principal: number;
@@ -79,6 +103,7 @@ export interface PropertyTaxPayment {
 
 export interface PropertyTax {
   id: string;
+  propertyId?: string;
   name: string;
   accountNumber: string;
   payments: PropertyTaxPayment[];
@@ -109,7 +134,7 @@ export interface FixedPayment {
   id: string;
   name: string;
   kind?: RecurringKind;
-  ownerType?: "account" | "card" | "vehicle" | "house_loan";
+  ownerType?: "account" | "card" | "vehicle" | "house_loan" | "property";
   ownerId?: string;
   amount: number;
   schedule: PaymentSchedule;

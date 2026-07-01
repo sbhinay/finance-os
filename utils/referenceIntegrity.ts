@@ -2,7 +2,7 @@ import type { Account } from "@/types/account";
 import type { CreditCard } from "@/types/creditCard";
 import type { Category } from "@/types/category";
 import type { Transaction, TransactionType } from "@/types/transaction";
-import type { FixedPayment, HouseLoan, Liability, PropertyTax, Vehicle } from "@/types/domain";
+import type { FixedPayment, HouseLoan, Liability, Property, PropertyTax, Vehicle } from "@/types/domain";
 import type { Business } from "@/types/business";
 import { normalizeTransactionShape } from "@/utils/transactionNormalization";
 
@@ -18,6 +18,7 @@ export interface ImportPayload {
   categories: Category[];
   business: Business;
   vehicles: Vehicle[];
+  properties: Property[];
   houseLoans: HouseLoan[];
   propertyTaxes: PropertyTax[];
   liabilities: Liability[];
@@ -94,7 +95,10 @@ export function getVehicleReferenceReasonsWithRecurring(
 
 export function getHouseLoanReferenceReasons(houseLoanId: string, transactions: Transaction[]) {
   const reasons: string[] = [];
-  const txCount = transactions.filter((tx) => tx.linkedPropertyId === houseLoanId).length;
+  const txCount = transactions.filter((tx) =>
+    tx.recurringOriginType === "house_loan"
+    && tx.recurringOriginId === houseLoanId
+  ).length;
   if (txCount > 0) reasons.push(`${txCount} linked transaction(s)`);
   return reasons;
 }
@@ -177,6 +181,23 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
   const warnings: string[] = [];
 
   const accountAndCardSources = [...payload.accounts, ...payload.creditCards];
+  const propertyIds = new Set<string>();
+  payload.properties.forEach((property) => {
+    if (!property.id) errors.push(`Property "${property.name || "Unnamed"}" has no stable id.`);
+    else if (propertyIds.has(property.id)) errors.push(`Property id "${property.id}" is duplicated.`);
+    else propertyIds.add(property.id);
+    if (!property.name?.trim()) errors.push(`Property ${property.id || "(missing id)"} has no name.`);
+  });
+  payload.houseLoans.forEach((loan) => {
+    if (!loan.propertyId || !propertyIds.has(loan.propertyId)) {
+      errors.push(`House loan ${loan.id} does not reference a valid Property.`);
+    }
+  });
+  payload.propertyTaxes.forEach((record) => {
+    if (!record.propertyId || !propertyIds.has(record.propertyId)) {
+      errors.push(`Property-tax record ${record.id} does not reference a valid Property.`);
+    }
+  });
 
   const resolvedTransactions = payload.transactions.map((tx) => {
     const normalizedTx = normalizeTransactionShape(tx);
@@ -206,7 +227,7 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
       warnings.push(`Transaction ${tx.id}: linked vehicle "${tx.linkedVehicleId}" was not found and was detached.`);
       normalizedTx.linkedVehicleId = undefined;
     }
-    if (tx.linkedPropertyId && !payload.houseLoans.some((h) => h.id === tx.linkedPropertyId)) {
+    if (tx.linkedPropertyId && !payload.properties.some((property) => property.id === tx.linkedPropertyId)) {
       warnings.push(`Transaction ${tx.id}: linked property "${tx.linkedPropertyId}" was not found and was detached.`);
       normalizedTx.linkedPropertyId = undefined;
     }
@@ -268,6 +289,15 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
 
   const resolvedVehicles = payload.vehicles.map((v) => ({ ...v, source: resolveSource(v.source, `Vehicle ${v.name}`) }));
   const resolvedHouseLoans = payload.houseLoans.map((l) => ({ ...l, source: resolveSource(l.source, `House loan ${l.name}`) }));
+  const resolvedProperties = payload.properties.map((property) => ({
+    ...property,
+    insuranceSource: property.insuranceSource
+      ? resolveSource(property.insuranceSource, `Property ${property.name} insurance`)
+      : undefined,
+    propertyTaxSource: property.propertyTaxSource
+      ? resolveSource(property.propertyTaxSource, `Property ${property.name} tax`)
+      : undefined,
+  }));
   const resolvedFixedPayments = payload.futurePayments.map((p) => {
     const ownerExists = !p.ownerType || !p.ownerId
       ? !p.ownerType && !p.ownerId
@@ -277,7 +307,9 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
           ? payload.creditCards.some((card) => card.id === p.ownerId)
           : p.ownerType === "vehicle"
             ? payload.vehicles.some((vehicle) => vehicle.id === p.ownerId)
-            : payload.houseLoans.some((loan) => loan.id === p.ownerId);
+            : p.ownerType === "house_loan"
+              ? payload.houseLoans.some((loan) => loan.id === p.ownerId)
+              : payload.properties.some((property) => property.id === p.ownerId);
     if (!ownerExists) {
       warnings.push(`Fixed payment ${p.name}: invalid or incomplete parent ownership was detached.`);
     }
@@ -296,6 +328,7 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
       ...payload,
       transactions: resolvedTransactions,
       vehicles: resolvedVehicles,
+      properties: resolvedProperties,
       houseLoans: resolvedHouseLoans,
       futurePayments: resolvedFixedPayments,
     },

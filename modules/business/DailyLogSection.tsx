@@ -7,7 +7,7 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { useCategories } from "@/modules/categories/useCategories";
-import { useVehicles, useHouseLoans } from "./useAssets";
+import { useProperties, useVehicles } from "./useAssets";
 import { useFixedPayments } from "./useFixedPayments";
 import { PendingBanner } from "./FixedPaymentsSection";
 import { fmtCAD, fmtDate } from "@/utils/finance";
@@ -104,7 +104,7 @@ export function DailyLogSection() {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
-  const { houseLoans } = useHouseLoans();
+  const { properties } = useProperties();
   const fixedHooks = useFixedPayments();
 
   const now = new Date();
@@ -258,7 +258,7 @@ export function DailyLogSection() {
       <div style={{ ...theme.cardStyle(), overflow: "hidden", background: theme.colors.surface }}>
         {filtered.slice(0, 60).map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
-          const prop = t.linkedPropertyId ? houseLoans.find((h) => h.id === t.linkedPropertyId) : null;
+          const prop = t.linkedPropertyId ? properties.find((property) => property.id === t.linkedPropertyId) : null;
           const dateStr = (t.date ?? t.createdAt ?? "").slice(0, 10);
           const listEffect = getTransactionListEffect(t);
 

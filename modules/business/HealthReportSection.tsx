@@ -5,7 +5,7 @@ import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
 import { useFixedPayments } from "@/modules/business/useFixedPayments";
-import { useHouseLoans, usePropertyTax, useVehicles } from "@/modules/business/useAssets";
+import { useHouseLoans, useProperties, usePropertyTax, useVehicles } from "@/modules/business/useAssets";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { FixedPayment, getFixedPaymentKind } from "@/types/domain";
 import { TYPE_LABELS, getSubTypeLabel, type Transaction } from "@/types/transaction";
@@ -103,6 +103,7 @@ export function HealthReportSection({
   const { categories } = useCategories();
   const { vehicles } = useVehicles();
   const { houseLoans } = useHouseLoans();
+  const { properties } = useProperties();
   const { propertyTaxes } = usePropertyTax();
   const { fixedPayments } = useFixedPayments();
   const [categoryFixes, setCategoryFixes] = useState<Record<string, string>>({});
@@ -116,6 +117,7 @@ export function HealthReportSection({
     const categoryIds = new Set(categories.map((c) => c.id));
     const vehicleIds = new Set(vehicles.map((v) => v.id));
     const houseLoanIds = new Set(houseLoans.map((h) => h.id));
+    const propertyIds = new Set(properties.map((property) => property.id));
     const propertyTaxIds = new Set(propertyTaxes.map((p) => p.id));
     const propertyTaxPaymentIds = new Set(propertyTaxes.flatMap((p) => p.payments?.map((payment) => payment.id) ?? []));
     const fixedPaymentIds = new Set(fixedPayments.map((payment) => payment.id));
@@ -174,7 +176,7 @@ export function HealthReportSection({
         });
       }
 
-      if (tx.linkedPropertyId && !houseLoanIds.has(tx.linkedPropertyId) && !propertyTaxIds.has(tx.linkedPropertyId)) {
+      if (tx.linkedPropertyId && !propertyIds.has(tx.linkedPropertyId)) {
         nextIssues.push({
           id: `prop-${tx.id}`,
           severity: "medium",
@@ -218,6 +220,43 @@ export function HealthReportSection({
           title: "Mortgage payment has no principal or interest split",
           detail: summarizeTx(tx),
           hint: "Regular mode is fine without this, but detailed debt reporting will be less precise.",
+        });
+      }
+    });
+
+    properties.forEach((property) => {
+      if (!property.id) {
+        nextIssues.push({
+          id: `property-empty-id-${property.name}`,
+          severity: "high",
+          title: "Property has no stable id",
+          detail: property.name || "Unnamed property",
+          hint: "Property records need stable ids before mortgages, taxes, and transactions can link safely.",
+        });
+      }
+    });
+
+    houseLoans.forEach((loan) => {
+      if (!loan.propertyId || !propertyIds.has(loan.propertyId)) {
+        nextIssues.push({
+          id: `loan-property-${loan.id}`,
+          severity: "high",
+          title: "Mortgage has no valid Property parent",
+          detail: `${loan.name} - propertyId=${loan.propertyId ?? "missing"}`,
+          hint: "Link the mortgage to a Property so debt and carrying-cost reporting stay coherent.",
+          houseLoanId: loan.id,
+        });
+      }
+    });
+
+    propertyTaxes.forEach((record) => {
+      if (!record.propertyId || !propertyIds.has(record.propertyId)) {
+        nextIssues.push({
+          id: `tax-property-${record.id}`,
+          severity: "high",
+          title: "Property-tax record has no valid Property parent",
+          detail: `${record.name} - propertyId=${record.propertyId ?? "missing"}`,
+          hint: "Link the tax record to a Property so tax history is not orphaned.",
         });
       }
     });
@@ -294,6 +333,26 @@ export function HealthReportSection({
           hint: "Parent-owned recurring rows should keep both ownerType and ownerId together.",
         });
       }
+      if (fp.ownerType && fp.ownerId) {
+        const ownerExists = fp.ownerType === "account"
+          ? accountIds.has(fp.ownerId)
+          : fp.ownerType === "card"
+            ? cardIds.has(fp.ownerId)
+            : fp.ownerType === "vehicle"
+              ? vehicleIds.has(fp.ownerId)
+              : fp.ownerType === "house_loan"
+                ? houseLoanIds.has(fp.ownerId)
+                : propertyIds.has(fp.ownerId);
+        if (!ownerExists) {
+          nextIssues.push({
+            id: `owner-broken-${fp.id}`,
+            severity: "medium",
+            title: "Recurring item has a broken parent reference",
+            detail: recurringLabel(fp),
+            hint: `Owner ${fp.ownerType}:${fp.ownerId} was not found.`,
+          });
+        }
+      }
       if (getFixedPaymentKind(fp) === "planned_payment" && fp.transactionType === "transfer") {
         if (!fp.destinationId) {
           nextIssues.push({
@@ -329,7 +388,7 @@ export function HealthReportSection({
       const rank: Record<HealthSeverity, number> = { high: 0, medium: 1, low: 2 };
       return rank[a.severity] - rank[b.severity] || a.title.localeCompare(b.title);
     });
-  }, [accounts, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, propertyTaxes, transactions, vehicles]);
+  }, [accounts, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, properties, propertyTaxes, transactions, vehicles]);
 
   const highCount = issues.filter((issue) => issue.severity === "high").length;
   const uncategorizedCount = issues.filter((issue) => issue.title === "Uncategorized expense or income").length;

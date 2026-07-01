@@ -5,6 +5,7 @@ import { Category } from "./category";
 import { Business } from "./business";
 import {
   Vehicle,
+  Property,
   HouseLoan,
   PropertyTax,
   Liability,
@@ -37,6 +38,7 @@ export interface AppData {
   dismissedPendingKeys: string[];
   categories: Category[];
   vehicles: Vehicle[];
+  properties: Property[];
   houseLoans: HouseLoan[];
   propertyTaxes: PropertyTax[];
   liabilities: Liability[];

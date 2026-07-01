@@ -43,6 +43,8 @@ import {
     persistCanonicalTransactions,
 } from "@/services/transactionPipeline";
 import { inferTransactionPurpose, isSemanticDuplicate } from "@/utils/transactionSemantics";
+import { syncAllOwnedRecurringPayments } from "@/utils/recurringOwners";
+import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 // ─── Schedule interval helper ─────────────────────────────────────────────────
 type PaymentSourceWithSchedule = {
@@ -220,7 +222,7 @@ export function generatePendingTransactions(
             id: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string;vtype: "Lease" | "Finance"
         } > ;
         houseLoans ? : Array < {
-            id: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string
+            id: string;propertyId?: string;name: string;payment: number;nextPaymentDate: string;schedule: PaymentSchedule;source: string
         } > ;
         payrollRemittances ? : Array < {
             id: string;month: string;amount: number;dueDate: string;plannedDate ? : string;paid: boolean
@@ -232,7 +234,7 @@ export function generatePendingTransactions(
             id: string;quarter: string;amount: number;dueDate: string;plannedDate ? : string;paid: boolean
         } > ;
         propertyTaxes ? : Array < {
-            id: string;name: string;payments: Array < {
+            id: string;propertyId?: string;name: string;payments: Array < {
                 id: string;amount: number;date: string;paid: boolean
             } >
         } > ;
@@ -334,7 +336,7 @@ export function generatePendingTransactions(
                 type: "Expense",
                 mode: "Debit",
                 tag: "Personal",
-                linkedPropertyId: l.id,
+                linkedPropertyId: l.propertyId ?? l.id,
                 recurringOriginType: "house_loan",
                 recurringOriginId: l.id,
                 purpose: "mortgage_payment",
@@ -425,6 +427,7 @@ export function generatePendingTransactions(
                     type: "Expense",
                     mode: "Bank Transfer",
                     tag: "Personal",
+                    linkedPropertyId: prop.propertyId ?? prop.id,
                     recurringOriginType: "property_tax",
                     recurringOriginId: p.id,
                 });
@@ -497,6 +500,7 @@ export function useFixedPayments() {
 
     const load = useCallback(() => {
         fixedPaymentRepository.pruneOldDismissedKeys();
+        syncAllOwnedRecurringPayments();
         const storedPayments = fixedPaymentRepository.getAll();
         const fps = storedPayments.map((payment) => ({
             ...payment,
@@ -524,6 +528,7 @@ export function useFixedPayments() {
             })),
             houseLoans: houseLoans.map((l) => ({
                 id: l.id,
+                propertyId: l.propertyId,
                 name: l.name,
                 payment: l.payment,
                 nextPaymentDate: l.nextPaymentDate,
@@ -535,6 +540,7 @@ export function useFixedPayments() {
             hstRemittances: biz.hstRemittances ?? [],
             propertyTaxes: propertyTaxes.map((prop) => ({
                 id: prop.id,
+                propertyId: prop.propertyId,
                 name: prop.name,
                 payments: prop.payments ?? [],
             })),
@@ -548,6 +554,9 @@ export function useFixedPayments() {
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         load();
+        const handleChange = () => load();
+        window.addEventListener(DATA_CHANGED_EVENT, handleChange);
+        return () => window.removeEventListener(DATA_CHANGED_EVENT, handleChange);
     }, [load]);
 
     // ── Fixed payment CRUD ─────────────────────────────────────────────────────

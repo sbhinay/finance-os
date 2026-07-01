@@ -25,6 +25,7 @@ import { DashboardSection } from "@/modules/business/DashboardProjectionSections
 import { ImportExportSection } from "@/modules/business/ImportExportSection";
 import { CategoriesSection } from "@/modules/business/CategoriesSection";
 import { AssetsLiabilitiesSection } from "@/modules/business/AssetsLiabilitiesSection";
+import { PropertiesSection } from "@/modules/business/PropertiesSection";
 import { HealthReportSection } from "@/modules/business/HealthReportSection";
 import { CRAReviewSection } from "@/modules/business/CRAReviewSection";
 import { syncBalances } from "@/utils/syncBalances";
@@ -32,6 +33,7 @@ import { notifyDataChanged } from "@/utils/events";
 import { fmtCAD } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { theme } from "@/lib/theme";
+import { useProperties } from "@/modules/business/useAssets";
 
 type SectionId =
   | "accounts"
@@ -43,6 +45,7 @@ type SectionId =
   | "transactions"
   | "fixedpayments"
   | "vehicles"
+  | "properties"
   | "houseloans"
   | "hourscontracts"
   | "corpincome"
@@ -65,6 +68,7 @@ const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> 
   { id: "cards", label: "Credit Cards", group: "Personal Finance", icon: "*" },
   { id: "fixedpayments", label: "Recurring Payments", group: "Personal Finance", icon: "*" },
   { id: "vehicles", label: "Vehicles", group: "Personal Finance", icon: "*" },
+  { id: "properties", label: "Properties", group: "Personal Finance", icon: "*" },
   { id: "houseloans", label: "House Loans", group: "Personal Finance", icon: "*" },
   { id: "categories", label: "Categories", group: "Personal Finance", icon: "*" },
   { id: "hourscontracts", label: "Hours & Contracts", group: "Business / CRA", icon: "*" },
@@ -93,6 +97,7 @@ const PRIMARY_SECTION_BY_SECTION: Record<SectionId, SectionId> = {
   transactions: "dailylog",
   fixedpayments: "fixedpayments",
   vehicles: "assetsliabilities",
+  properties: "assetsliabilities",
   houseloans: "assetsliabilities",
   hourscontracts: "hourscontracts",
   corpincome: "hourscontracts",
@@ -130,16 +135,25 @@ const HUB_LINKS: Partial<Record<SectionId, Array<{ id: SectionId; label: string 
   ],
   assetsliabilities: [
     { id: "assetsliabilities", label: "Overview" },
+    { id: "properties", label: "Properties" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
   ],
   vehicles: [
     { id: "assetsliabilities", label: "Overview" },
+    { id: "properties", label: "Properties" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
   ],
   houseloans: [
     { id: "assetsliabilities", label: "Overview" },
+    { id: "properties", label: "Properties" },
+    { id: "vehicles", label: "Vehicles" },
+    { id: "houseloans", label: "House Loans" },
+  ],
+  properties: [
+    { id: "assetsliabilities", label: "Overview" },
+    { id: "properties", label: "Properties" },
     { id: "vehicles", label: "Vehicles" },
     { id: "houseloans", label: "House Loans" },
   ],
@@ -303,6 +317,7 @@ export default function Home() {
 
   const { accounts } = useAccounts();
   const { transactions } = useTransactions();
+  useProperties();
   // Sync balances on startup so all sections read the same source of truth.
   useEffect(() => {
     syncBalances();
@@ -505,6 +520,7 @@ export default function Home() {
             onEditHandled={() => setEditVehicleId(null)}
           />
         )}
+        {section === "properties"     && wrap(<PropertiesSection />)}
         {section === "houseloans"     && wrap(
           <HouseLoansSection
             accounts={accounts}

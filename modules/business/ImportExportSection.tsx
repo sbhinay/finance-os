@@ -1,6 +1,6 @@
 "use client";
 
-import type { HouseLoan, Liability, PropertyTax, FixedPayment, Vehicle } from "@/types/domain";
+import type { HouseLoan, Liability, Property, PropertyTax, FixedPayment, Vehicle } from "@/types/domain";
 import type { Account } from "@/types/account";
 import type { CreditCard } from "@/types/creditCard";
 import type { Transaction } from "@/types/transaction";
@@ -16,10 +16,11 @@ import { categoryRepository } from "@/repositories/categoryRepository";
 import { businessRepository } from "@/repositories/businessRepository";
 import { ImportPayload, validateImportPayload } from "@/utils/referenceIntegrity";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
-import { vehicleRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
+import { vehicleRepository, propertyRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { notifyDataChanged } from "@/utils/events";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { buildCloudExportPayload, loadCloudSnapshot, saveCloudSnapshot } from "@/lib/supabase/cloudSnapshots";
+import { migratePropertyParents } from "@/utils/propertyMigration";
 
 type RawObject = Record<string, unknown>;
 type ImportResult = ImportPayload | MigrationResult;
@@ -87,6 +88,7 @@ function loadExportResult(raw: RawObject): ImportPayload {
     categories: asArray(raw.categories) as Category[],
     business: asObject(raw.business) as unknown as Business,
     vehicles: asArray(raw.vehicles) as Vehicle[],
+    properties: asArray(raw.properties) as Property[],
     houseLoans: asArray(raw.houseLoans) as HouseLoan[],
     propertyTaxes: asArray(raw.propertyTaxes) as PropertyTax[],
     liabilities: asArray(raw.liabilities) as Liability[],
@@ -96,7 +98,12 @@ function loadExportResult(raw: RawObject): ImportPayload {
 
 function normalizeImportResult(result: ImportResult): ImportPayload {
   if ("vehicles" in result && "futurePayments" in result) {
-    return result;
+    return {
+      ...result,
+      properties: "properties" in result && Array.isArray(result.properties)
+        ? result.properties as Property[]
+        : [],
+    };
   }
 
   return {
@@ -106,6 +113,7 @@ function normalizeImportResult(result: ImportResult): ImportPayload {
     categories: result.categories,
     business: result.business,
     vehicles: [],
+    properties: [],
     houseLoans: [],
     propertyTaxes: [],
     liabilities: [],
@@ -160,25 +168,39 @@ export function ImportExportSection() {
   }, [cloudSession]);
 
   function previewImport(result: ImportPayload, source: "file" | "cloud") {
-    const validation = validateImportPayload(result);
+    const propertyMigration = migratePropertyParents(
+      result.properties,
+      result.houseLoans,
+      result.propertyTaxes,
+      result.transactions
+    );
+    const migratedResult: ImportPayload = {
+      ...result,
+      properties: propertyMigration.properties,
+      houseLoans: propertyMigration.houseLoans,
+      propertyTaxes: propertyMigration.propertyTaxes,
+      transactions: propertyMigration.transactions,
+    };
+    const validation = validateImportPayload(migratedResult);
     setImportValidation({ errors: validation.errors, warnings: validation.warnings });
     setPreviewSource(source);
     setPreview({
-      "Bank Accounts": result.accounts.length,
-      "Credit Cards": result.creditCards.length,
-      Transactions: result.transactions.length,
-      Categories: result.categories.length,
-      Invoices: result.business.invoices.length,
-      Contracts: result.business.contracts.length,
-      "HST Remittances": result.business.hstRemittances.length,
-      "Corp Instalments": result.business.corporateInstalments.length,
-      "Payroll Remittances": result.business.payrollRemittances.length,
-      "Arrears Payments": result.business.arrearsPayments.length,
-      Vehicles: result.vehicles.length,
-      "House Loans": result.houseLoans.length,
-      "Property Taxes": result.propertyTaxes.length,
-      Liabilities: result.liabilities.length,
-      "Fixed Payments": result.futurePayments.length,
+      "Bank Accounts": migratedResult.accounts.length,
+      "Credit Cards": migratedResult.creditCards.length,
+      Transactions: migratedResult.transactions.length,
+      Categories: migratedResult.categories.length,
+      Invoices: migratedResult.business.invoices.length,
+      Contracts: migratedResult.business.contracts.length,
+      "HST Remittances": migratedResult.business.hstRemittances.length,
+      "Corp Instalments": migratedResult.business.corporateInstalments.length,
+      "Payroll Remittances": migratedResult.business.payrollRemittances.length,
+      "Arrears Payments": migratedResult.business.arrearsPayments.length,
+      Vehicles: migratedResult.vehicles.length,
+      Properties: migratedResult.properties.length,
+      "House Loans": migratedResult.houseLoans.length,
+      "Property Taxes": migratedResult.propertyTaxes.length,
+      Liabilities: migratedResult.liabilities.length,
+      "Fixed Payments": migratedResult.futurePayments.length,
     });
     setPendingData(validation.normalized);
     setStatus(null);
@@ -218,6 +240,7 @@ export function ImportExportSection() {
       categoryRepository.saveAll(result.categories);
       businessRepository.save(result.business);
       vehicleRepository.saveAll(result.vehicles);
+      propertyRepository.saveAll(result.properties);
       houseLoanRepository.saveAll(result.houseLoans);
       propertyTaxRepository.saveAll(result.propertyTaxes);
       liabilityRepository.saveAll(result.liabilities);
@@ -227,7 +250,7 @@ export function ImportExportSection() {
 
       setStatus({
         type: "success",
-        message: `Import complete. ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices, ${result.vehicles.length} vehicles, ${result.houseLoans.length} house loans, ${result.propertyTaxes.length} property taxes, and ${result.futurePayments.length} fixed payments imported.${importValidation?.warnings.length ? ` ${importValidation.warnings.length} warning(s) were generated.` : ""}`,
+        message: `Import complete. ${result.accounts.length} accounts, ${result.transactions.length} transactions, ${result.business.invoices.length} invoices, ${result.vehicles.length} vehicles, ${result.properties.length} properties, ${result.houseLoans.length} house loans, ${result.propertyTaxes.length} property taxes, and ${result.futurePayments.length} recurring payments imported.${importValidation?.warnings.length ? ` ${importValidation.warnings.length} warning(s) were generated.` : ""}`,
       });
       setPreview(null);
       setPreviewSource(null);

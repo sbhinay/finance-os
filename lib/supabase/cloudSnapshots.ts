@@ -4,7 +4,7 @@ import { categoryRepository } from "@/repositories/categoryRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
 import { transactionRepository } from "@/repositories/transactionRepository";
-import { vehicleRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
+import { vehicleRepository, propertyRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { getSupabaseBrowserClient } from "./client";
 
 export interface CloudExportPayload {
@@ -18,6 +18,7 @@ export interface CloudExportPayload {
   categories: ReturnType<typeof categoryRepository.getAll>;
   business: ReturnType<typeof businessRepository.get>;
   vehicles: ReturnType<typeof vehicleRepository.getAll>;
+  properties: ReturnType<typeof propertyRepository.getAll>;
   houseLoans: ReturnType<typeof houseLoanRepository.getAll>;
   propertyTaxes: ReturnType<typeof propertyTaxRepository.getAll>;
   liabilities: ReturnType<typeof liabilityRepository.getAll>;
@@ -33,6 +34,7 @@ export function buildCloudExportPayload(): CloudExportPayload {
     categories: categoryRepository.getAll(),
     business: businessRepository.get(),
     vehicles: vehicleRepository.getAll(),
+    properties: propertyRepository.getAll(),
     houseLoans: houseLoanRepository.getAll(),
     propertyTaxes: propertyTaxRepository.getAll(),
     liabilities: liabilityRepository.getAll(),

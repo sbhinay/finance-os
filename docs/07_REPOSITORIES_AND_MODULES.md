@@ -24,6 +24,7 @@ export const [domain]Repository = {
 - `finance_os_business`
 - `finance_os_vehicles`
 - `finance_os_house_loans`
+- `finance_os_properties`
 - `finance_os_liabilities`
 - `finance_os_property_taxes`
 - `finance_os_fixed_payments`
@@ -39,6 +40,7 @@ export const [domain]Repository = {
 | `useBusiness` | `modules/business/useBusiness.ts` | Business domain normalization and CRA data |
 | `useVehicles` | `modules/business/useAssets.ts` | Vehicle CRUD, history, and owned insurance recurring sync |
 | `useHouseLoans` | `modules/business/useAssets.ts` | House loan CRUD and owned property-tax recurring sync |
+| `useProperties` | `modules/business/useAssets.ts` | Property CRUD, safe legacy migration, owned insurance/property-tax recurring sync, and relationship maintenance |
 | `useLiabilities` | `modules/business/useLiabilities.ts` | Lender CRUD/archive, snapshots, canonical relinking, summaries, running ledger, and principal-based balances |
 | `usePropertyTax` | `modules/business/useAssets.ts` | Property tax CRUD |
 
@@ -56,6 +58,7 @@ export const [domain]Repository = {
 | Planned Payments | `modules/business/FixedPaymentsSection.tsx` | Planned recurring commitments with record-driven expense/transfer posting |
 | Vehicles | `modules/business/AssetsSections.tsx` | Vehicle assets and linked transaction history |
 | House Loans | `modules/business/AssetsSections.tsx` | Mortgage/loan assets, payment tracking, and property-tax ownership |
+| Properties | `modules/business/PropertiesSection.tsx` | First-class property CRUD, linked mortgages/taxes, equity, carrying costs, recurring setup, and transaction history |
 | Property Tax | `modules/business/AssetsSections.tsx` | Property tax schedules |
 | Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Unified transition page with upcoming obligations and selected direct actions |
 | Import / Export | `modules/business/ImportExportSection.tsx` | Current-app export plus legacy migration support |
@@ -72,7 +75,7 @@ export const [domain]Repository = {
   - `Data & Health`
 - Detail pages like `Transaction History`, `Projection`, `Subscriptions`, `Planned Payments`, `Vehicles`, `House Loans`, `Property Tax`, and `Import / Export` remain active, but they are now intended to be reached from their parent hubs.
 - `Assets & Liabilities` is now the new cross-domain shell for asset and debt workflows.
-- Legacy `Vehicles`, `House Loans`, and `Property Tax` tabs remain active during migration.
+- Legacy `Vehicles`, `House Loans`, and `Property Tax` data remains compatible while Properties is the canonical parent view.
 - New actions must use `services/transactionPipeline.ts`; interactive actions should prefer launching the canonical `TransactionForm`.
 - `utils/transactionSemantics.ts` owns purpose inference, balance effects, report effects, list signs, and semantic duplicate identity.
 - `services/transactionPipeline.ts` provides both single-row and batch canonical persistence; recurring and asset backfills use the batch path.
@@ -83,4 +86,5 @@ export const [domain]Repository = {
 - Parent records now own part of recurring setup directly:
   - accounts and cards own fee records
   - vehicles own insurance recurring items
-  - house loans can own property-tax recurring items
+  - properties own insurance and property-tax recurring items
+- `utils/propertyMigration.ts` safely creates Property parents from house loans and merges standalone property-tax records only on an exact unique property-name match.
