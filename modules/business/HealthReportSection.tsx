@@ -12,6 +12,9 @@ import { TYPE_LABELS, getSubTypeLabel, type Transaction } from "@/types/transact
 import type { Category } from "@/types/category";
 import { deleteCanonicalTransaction } from "@/services/transactionPipeline";
 import { isSemanticDuplicate, transactionFingerprint } from "@/utils/transactionSemantics";
+import { TransactionForm } from "./TransactionForm";
+import { useLiabilities } from "./useLiabilities";
+import { toFixed2 } from "@/utils/finance";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -106,8 +109,10 @@ export function HealthReportSection({
   const { properties } = useProperties();
   const { propertyTaxes } = usePropertyTax();
   const { fixedPayments } = useFixedPayments();
+  const { liabilities } = useLiabilities();
   const [categoryFixes, setCategoryFixes] = useState<Record<string, string>>({});
   const [dismissedHealthIssues, setDismissedHealthIssues] = useState<string[]>(loadDismissedHealthIssues);
+  const [editTransaction, setEditTransaction] = useState<Transaction | undefined>(undefined);
 
   const issues = useMemo<HealthIssue[]>(() => {
     const nextIssues: HealthIssue[] = [];
@@ -121,6 +126,7 @@ export function HealthReportSection({
     const propertyTaxIds = new Set(propertyTaxes.map((p) => p.id));
     const propertyTaxPaymentIds = new Set(propertyTaxes.flatMap((p) => p.payments?.map((payment) => payment.id) ?? []));
     const fixedPaymentIds = new Set(fixedPayments.map((payment) => payment.id));
+    const liabilityIds = new Set(liabilities.map((liability) => liability.id));
     const accountOrCardIds = new Set([...accountIds, ...cardIds]);
 
     transactions.forEach((tx) => {
@@ -143,6 +149,7 @@ export function HealthReportSection({
           title: "Broken source account/card reference",
           detail: `${summarizeTx(tx)} - sourceId=${tx.sourceId}`,
           hint: "This transaction points to an account or card that no longer exists.",
+          transactionId: tx.id,
         });
       }
 
@@ -153,6 +160,7 @@ export function HealthReportSection({
           title: "Broken destination account/card reference",
           detail: `${summarizeTx(tx)} - destinationId=${tx.destinationId}`,
           hint: "Transfers and linked postings should keep a valid destination reference.",
+          transactionId: tx.id,
         });
       }
 
@@ -163,6 +171,7 @@ export function HealthReportSection({
           title: "Broken category reference",
           detail: `${summarizeTx(tx)} - categoryId=${tx.categoryId}`,
           hint: "Replace or restore the missing category so filters and reports stay accurate.",
+          transactionId: tx.id,
         });
       }
 
@@ -173,6 +182,7 @@ export function HealthReportSection({
           title: "Broken linked vehicle reference",
           detail: `${summarizeTx(tx)} - linkedVehicleId=${tx.linkedVehicleId}`,
           hint: "Vehicle-linked transactions should point to a valid vehicle record.",
+          transactionId: tx.id,
         });
       }
 
@@ -183,6 +193,7 @@ export function HealthReportSection({
           title: "Broken linked property reference",
           detail: `${summarizeTx(tx)} - linkedPropertyId=${tx.linkedPropertyId}`,
           hint: "Property-linked transactions should map to a current house/property record.",
+          transactionId: tx.id,
         });
       }
       if (tx.linkedHouseLoanId && !houseLoanIds.has(tx.linkedHouseLoanId)) {
@@ -192,6 +203,44 @@ export function HealthReportSection({
           title: "Broken linked mortgage reference",
           detail: `${summarizeTx(tx)} - linkedHouseLoanId=${tx.linkedHouseLoanId}`,
           hint: "Mortgage payments should point to a current mortgage record.",
+          transactionId: tx.id,
+        });
+      }
+      if (tx.linkedLiabilityId && !liabilityIds.has(tx.linkedLiabilityId)) {
+        nextIssues.push({
+          id: `liability-link-${tx.id}`,
+          severity: "high",
+          title: "Broken linked lender reference",
+          detail: `${summarizeTx(tx)} - linkedLiabilityId=${tx.linkedLiabilityId}`,
+          hint: "Relink this borrowing or repayment to an existing lender, or remove the stale reference.",
+          transactionId: tx.id,
+        });
+      }
+      if (
+        (tx.type === "loan_receipt" || (tx.type === "loan_payment" && tx.subType !== "mortgage" && !tx.linkedVehicleId))
+        && !tx.linkedLiabilityId
+      ) {
+        nextIssues.push({
+          id: `loan-unlinked-${tx.id}`,
+          severity: "medium",
+          title: "Loan transaction has no lender",
+          detail: summarizeTx(tx),
+          hint: "Link the row to its lender so current owing and lender history remain complete.",
+          transactionId: tx.id,
+        });
+      }
+      if (
+        tx.type === "loan_payment"
+        && (tx.principalAmount != null || tx.interestAmount != null)
+        && toFixed2((tx.principalAmount ?? 0) + (tx.interestAmount ?? 0)) !== toFixed2(tx.amount)
+      ) {
+        nextIssues.push({
+          id: `loan-split-invalid-${tx.id}`,
+          severity: "high",
+          title: "Debt payment split does not equal cash payment",
+          detail: summarizeTx(tx),
+          hint: "Correct principal and interest so their sum exactly matches the payment amount.",
+          transactionId: tx.id,
         });
       }
 
@@ -202,6 +251,7 @@ export function HealthReportSection({
           title: "Recurring transaction has incomplete origin metadata",
           detail: summarizeTx(tx),
           hint: "Recurring-origin type and id should always be stored together.",
+          transactionId: tx.id,
         });
       } else if (tx.recurringOriginType && tx.recurringOriginId && tx.recurringOriginType !== "tax_obligation") {
         const originExists = tx.recurringOriginType === "fixed_payment"
@@ -218,6 +268,7 @@ export function HealthReportSection({
             title: "Broken recurring-origin reference",
             detail: `${summarizeTx(tx)} - origin=${tx.recurringOriginType}:${tx.recurringOriginId}`,
             hint: "The posted row points to a recurring parent that no longer exists.",
+            transactionId: tx.id,
           });
         }
       }
@@ -229,6 +280,7 @@ export function HealthReportSection({
           title: "Mortgage payment has no principal or interest split",
           detail: summarizeTx(tx),
           hint: "Regular mode is fine without this, but detailed debt reporting will be less precise.",
+          transactionId: tx.id,
         });
       }
       if (
@@ -244,6 +296,7 @@ export function HealthReportSection({
           title: "Financed-vehicle payment has no principal or interest split",
           detail: summarizeTx(tx),
           hint: "Cash reporting remains correct, but the vehicle liability cannot be reduced until the split is supplied.",
+          transactionId: tx.id,
         });
       }
     });
@@ -416,11 +469,11 @@ export function HealthReportSection({
       }
     });
 
-    return nextIssues.sort((a, b) => {
+    return nextIssues.filter((issue) => !dismissedHealthIssues.includes(issue.id)).sort((a, b) => {
       const rank: Record<HealthSeverity, number> = { high: 0, medium: 1, low: 2 };
       return rank[a.severity] - rank[b.severity] || a.title.localeCompare(b.title);
     });
-  }, [accounts, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, properties, propertyTaxes, transactions, vehicles]);
+  }, [accounts, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, liabilities, properties, propertyTaxes, transactions, vehicles]);
 
   const highCount = issues.filter((issue) => issue.severity === "high").length;
   const uncategorizedCount = issues.filter((issue) => issue.title === "Uncategorized expense or income").length;
@@ -446,6 +499,11 @@ export function HealthReportSection({
     saveDismissedHealthIssues(next);
   }
 
+  function restoreDismissedIssues() {
+    setDismissedHealthIssues([]);
+    saveDismissedHealthIssues([]);
+  }
+
   const statCard = (label: string, value: number, color: string) => (
     <div style={{ flex: 1, minWidth: 160, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
       <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
@@ -463,8 +521,13 @@ export function HealthReportSection({
     <div>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Health Report</div>
       <div style={{ color: "#556070", fontSize: 13, marginBottom: 16 }}>
-        Warning-first data quality scan. This page is read-only and highlights integrity, schedule, and modeling gaps without blocking normal use.
+        Warning-first data quality scan with canonical edit, delete, relink, and dismissal controls.
       </div>
+      {dismissedHealthIssues.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <FixButton onClick={restoreDismissedIssues}>Restore {dismissedHealthIssues.length} Dismissed Warning{dismissedHealthIssues.length === 1 ? "" : "s"}</FixButton>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
         {statCard("Total Issues", issues.length, highCount > 0 ? "#a31515" : "#1a7f3c")}
@@ -545,6 +608,20 @@ export function HealthReportSection({
                   </FixButton>
                 </div>
               )}
+              {issue.transactionId && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                  <FixButton onClick={() => {
+                    const transaction = transactions.find((item) => item.id === issue.transactionId);
+                    if (transaction) setEditTransaction(transaction);
+                  }}>Edit / Relink Transaction</FixButton>
+                  <FixButton onClick={() => deleteTransactionFromHealth(issue.transactionId!)}>Delete Transaction</FixButton>
+                </div>
+              )}
+              {!issue.duplicateTransactions && issue.severity !== "high" && (
+                <div style={{ marginTop: 10 }}>
+                  <FixButton onClick={() => dismissHealthIssue(issue.id)}>Dismiss Warning</FixButton>
+                </div>
+              )}
               {issue.vehicleId && onOpenVehicle && (
                 <div style={{ marginTop: 10 }}>
                   <FixButton onClick={() => onOpenVehicle(issue.vehicleId!)}>Open Vehicle</FixButton>
@@ -559,6 +636,16 @@ export function HealthReportSection({
           ))}
         </div>
       )}
+      <TransactionForm
+        open={Boolean(editTransaction)}
+        initial={editTransaction}
+        title="Correct Transaction"
+        onClose={() => setEditTransaction(undefined)}
+        onSaved={() => {
+          setEditTransaction(undefined);
+          reloadTransactions();
+        }}
+      />
     </div>
   );
 }

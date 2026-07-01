@@ -80,7 +80,14 @@ The following order is authoritative for the next implementation cycle. Each pha
 - Interest enters expense reporting separately; unsplit regular-mode payments remain valid without guessed amortization.
 - Mortgage payments now carry an explicit `linkedHouseLoanId`; historical links migrate only when ownership is unambiguous.
 
-### Phase 5: Findability and Data Health - next
+### Phase 5: Findability and Data Health - landed
+- Transaction History supports Personal/Business tag and exact recurring-origin filters.
+- Data Health checks account/card, category, vehicle, Property, mortgage, lender, recurring-origin, debt-split, schedule, and semantic-duplicate integrity.
+- Transaction-backed findings can open the canonical editor for correction/relinking or be deleted safely.
+- Legitimate non-blocking warnings can be dismissed and restored.
+- Import preview supports source/destination relinking, transaction exclusion, semantic-duplicate review, and explicit acceptance of normalized cleanup before confirmation.
+
+### Phase 6: AI Statement Scanner MVP - next
 
 ### Phase 5: Findability, Data Health, and import review
 - Add tag and recurring-origin filters.

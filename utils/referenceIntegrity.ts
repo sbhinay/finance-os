@@ -5,6 +5,7 @@ import type { Transaction, TransactionType } from "@/types/transaction";
 import type { FixedPayment, HouseLoan, Liability, Property, PropertyTax, Vehicle } from "@/types/domain";
 import type { Business } from "@/types/business";
 import { normalizeTransactionShape } from "@/utils/transactionNormalization";
+import { isSemanticDuplicate } from "@/utils/transactionSemantics";
 
 export interface ReferenceCheckResult {
   errors: string[];
@@ -280,8 +281,25 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
     if (requiresDestination(normalizedTx.type) && !normalizedTx.destinationId) {
       errors.push(`Transaction ${tx.id}: type "${normalizedTx.type}" requires a destination account or card.`);
     }
+    if (
+      normalizedTx.type === "loan_payment"
+      && (normalizedTx.principalAmount != null || normalizedTx.interestAmount != null)
+      && Math.round(((normalizedTx.principalAmount ?? 0) + (normalizedTx.interestAmount ?? 0)) * 100)
+        !== Math.round(normalizedTx.amount * 100)
+    ) {
+      errors.push(`Transaction ${tx.id}: principal and interest do not equal the payment amount.`);
+    }
 
     return normalizedTx;
+  });
+
+  resolvedTransactions.forEach((transaction, index) => {
+    const duplicate = resolvedTransactions
+      .slice(0, index)
+      .find((candidate) => isSemanticDuplicate(transaction, candidate));
+    if (duplicate) {
+      warnings.push(`Transaction ${transaction.id}: possible semantic duplicate of transaction ${duplicate.id}; review or exclude one row before import.`);
+    }
   });
 
   const resolveSource = (source: string | undefined, entityName: string) => {

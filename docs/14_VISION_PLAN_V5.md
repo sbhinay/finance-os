@@ -198,7 +198,7 @@ The ordered path to production completion is now:
 2. Consolidate recurring architecture.
 3. Build the first-class Property parent model. (Landed)
 4. Improve optional detailed mortgage/vehicle debt reporting. (Landed)
-5. Expand findability, Data Health, and import review.
+5. Expand findability, Data Health, and import review. (Landed)
 6. Build the secure AI Statement Scanner MVP.
 7. Add guarded cloud history and conflict protection.
 8. Add tax working papers and Excel/PDF reporting exports.
@@ -235,6 +235,9 @@ As of this version:
 - mortgage and financed-vehicle balances replay explicit principal from their latest snapshots
 - debt details separate cash paid, principal, interest, and unsplit payments without guessing
 - dashboard, Property equity, net worth, and debt detail views share derived secured-debt owing
+- Transaction History supports exact tag and recurring-origin filtering
+- Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
+- import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes
 - the June 29 fixture replays all stored account/card balances without drift
 
-The next major challenge is expanded findability, Data Health, and import review.
+The next major challenge is the secure AI Statement Scanner MVP.

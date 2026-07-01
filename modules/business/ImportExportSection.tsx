@@ -128,6 +128,7 @@ export function ImportExportSection() {
   const [previewSource, setPreviewSource] = useState<"file" | "cloud" | null>(null);
   const [pendingData, setPendingData] = useState<ImportPayload | null>(null);
   const [importValidation, setImportValidation] = useState<{ errors: string[]; warnings: string[] } | null>(null);
+  const [acceptedImportWarnings, setAcceptedImportWarnings] = useState<string[]>([]);
   const [cloudSession, setCloudSession] = useState<Session | null>(null);
   const [cloudEmail, setCloudEmail] = useState("");
   const [cloudPassword, setCloudPassword] = useState("");
@@ -183,6 +184,7 @@ export function ImportExportSection() {
     };
     const validation = validateImportPayload(migratedResult);
     setImportValidation({ errors: validation.errors, warnings: validation.warnings });
+    setAcceptedImportWarnings([]);
     setPreviewSource(source);
     setPreview({
       "Bank Accounts": migratedResult.accounts.length,
@@ -204,6 +206,89 @@ export function ImportExportSection() {
     });
     setPendingData(validation.normalized);
     setStatus(null);
+  }
+
+  function refreshImportReview(next: ImportPayload) {
+    const validation = validateImportPayload(next);
+    setPendingData(validation.normalized);
+    setImportValidation({ errors: validation.errors, warnings: validation.warnings });
+    setPreview((current) => current ? { ...current, Transactions: validation.normalized.transactions.length } : current);
+    setAcceptedImportWarnings([]);
+  }
+
+  function transactionIdFromIssue(message: string): string | undefined {
+    return /^Transaction\s+([^:\s]+)(?::|\s)/.exec(message)?.[1];
+  }
+
+  function updateImportTransaction(transactionId: string, field: "sourceId" | "destinationId", value: string) {
+    if (!pendingData) return;
+    refreshImportReview({
+      ...pendingData,
+      transactions: pendingData.transactions.map((transaction) =>
+        transaction.id === transactionId
+          ? { ...transaction, [field]: value || undefined }
+          : transaction
+      ),
+    });
+  }
+
+  function excludeImportTransaction(transactionId: string) {
+    if (!pendingData) return;
+    refreshImportReview({
+      ...pendingData,
+      transactions: pendingData.transactions.filter((transaction) => transaction.id !== transactionId),
+    });
+  }
+
+  function renderTransactionReview() {
+    if (!pendingData || !importValidation) return null;
+    const issueMessages = [
+      ...importValidation.errors,
+      ...importValidation.warnings.filter((warning) => !acceptedImportWarnings.includes(warning)),
+    ];
+    const transactionIds = [...new Set(issueMessages.map(transactionIdFromIssue).filter(Boolean) as string[])];
+    if (!transactionIds.length) return null;
+    const accountOptions = [...pendingData.accounts, ...pendingData.creditCards];
+
+    return (
+      <div style={{ marginTop: 12, border: "1px solid #cbd5e1", borderRadius: 8, overflow: "hidden", background: "#fff" }}>
+        <div style={{ padding: "9px 12px", background: "#f8fafc", fontWeight: 700, fontSize: 12 }}>Transaction cleanup before import</div>
+        {transactionIds.map((transactionId) => {
+          const transaction = pendingData.transactions.find((item) => item.id === transactionId);
+          if (!transaction) return null;
+          const messages = issueMessages.filter((message) => transactionIdFromIssue(message) === transactionId);
+          return (
+            <div key={transactionId} style={{ padding: 12, borderTop: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 12, fontWeight: 700 }}>{transaction.date} | {transaction.description} | ${transaction.amount.toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>{messages.join(" ")}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                <select
+                  aria-label={`Source for ${transaction.description}`}
+                  value={transaction.sourceId}
+                  onChange={(event) => updateImportTransaction(transaction.id, "sourceId", event.target.value)}
+                  style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12 }}
+                >
+                  <option value="">Select source...</option>
+                  {accountOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                </select>
+                {(transaction.destinationId || transaction.type === "transfer" || transaction.type === "adjustment") && (
+                  <select
+                    aria-label={`Destination for ${transaction.description}`}
+                    value={transaction.destinationId}
+                    onChange={(event) => updateImportTransaction(transaction.id, "destinationId", event.target.value)}
+                    style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12 }}
+                  >
+                    <option value="">Select destination...</option>
+                    {accountOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                )}
+                <Btn variant="danger" onClick={() => excludeImportTransaction(transaction.id)}>Exclude Transaction</Btn>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -256,6 +341,7 @@ export function ImportExportSection() {
       setPreviewSource(null);
       setPendingData(null);
       setImportValidation(null);
+      setAcceptedImportWarnings([]);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       setStatus({ type: "error", message: `Import failed: ${String(err)}` });
@@ -361,6 +447,9 @@ export function ImportExportSection() {
     setCloudBusy(false);
   }
 
+  const visibleImportWarnings = (importValidation?.warnings ?? [])
+    .filter((warning) => !acceptedImportWarnings.includes(warning));
+
   return (
     <div>
       <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Import / Export</div>
@@ -408,14 +497,20 @@ export function ImportExportSection() {
             </div>
           ) : null}
 
-          {importValidation?.warnings.length ? (
+          {visibleImportWarnings.length ? (
             <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fefce8", border: "1px solid #fde68a", color: "#92400e" }}>
               <div style={{ fontWeight: 600, marginBottom: 6 }}>Warnings:</div>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {importValidation.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
+                {visibleImportWarnings.map((warning) => (
+                  <li key={warning} style={{ marginBottom: 6 }}>
+                    {warning}{" "}
+                    <button onClick={() => setAcceptedImportWarnings((current) => [...current, warning])} style={{ border: 0, background: "transparent", color: "#1a5fa8", cursor: "pointer", fontWeight: 700 }}>Accept cleanup</button>
+                  </li>
+                ))}
               </ul>
             </div>
           ) : null}
+          {renderTransactionReview()}
 
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <Btn onClick={confirmImport} disabled={importing || Boolean(importValidation?.errors.length)}>
@@ -428,6 +523,7 @@ export function ImportExportSection() {
                 setPreviewSource(null);
                 setPendingData(null);
                 setImportValidation(null);
+                setAcceptedImportWarnings([]);
               }}
             >
               Cancel
@@ -515,14 +611,20 @@ export function ImportExportSection() {
               </div>
             ) : null}
 
-            {importValidation?.warnings.length ? (
+            {visibleImportWarnings.length ? (
               <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fefce8", border: "1px solid #fde68a", color: "#92400e" }}>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>Warnings:</div>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
-                  {importValidation.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
+                  {visibleImportWarnings.map((warning) => (
+                    <li key={warning} style={{ marginBottom: 6 }}>
+                      {warning}{" "}
+                      <button onClick={() => setAcceptedImportWarnings((current) => [...current, warning])} style={{ border: 0, background: "transparent", color: "#1a5fa8", cursor: "pointer", fontWeight: 700 }}>Accept cleanup</button>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ) : null}
+            {renderTransactionReview()}
 
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
               <Btn onClick={confirmImport} disabled={importing || Boolean(importValidation?.errors.length)}>
@@ -535,6 +637,7 @@ export function ImportExportSection() {
                   setPreviewSource(null);
                   setPendingData(null);
                   setImportValidation(null);
+                  setAcceptedImportWarnings([]);
                   if (fileRef.current) fileRef.current.value = "";
                 }}
               >

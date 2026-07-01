@@ -81,6 +81,10 @@
 - Mortgage and financed-vehicle owing is derived from the latest balance snapshot plus later explicit principal reductions.
 - Unsplit secured-debt payments remain full cash outflows but do not reduce derived owing.
 - Explicit interest is included in expense reporting; principal is excluded from expense totals.
+- Transaction History tag and recurring-origin filters operate on stored metadata, not description text.
+- Data Health may dismiss legitimate non-blocking warnings, but dismissals are reversible and never mutate ledger rows.
+- Import review must keep all changes in preview state until confirmation; relinking and row exclusion cannot write to the active ledger early.
+- Import duplicate review uses semantic identity rather than matching descriptions.
 - `transfer + loc_draw` is the canonical way to represent borrowed cash moving from a line of credit into a receiving account.
 - Personal, bank, and shareholder lenders are represented by `Liability` records.
 - Multiple receipts may link to one lender liability and increase its amount owed.

@@ -49,6 +49,9 @@ This resolution is applied to vehicles, properties, house loans, and fixed payme
 
 ### Validation and Integrity
 - Import preview now surfaces warnings and blocking errors before commit.
+- Transaction-level preview controls can relink invalid source/destination references, exclude suspect rows, and accept safe normalization warnings.
+- Semantic duplicates inside the incoming snapshot are flagged before confirmation.
+- Preview cleanup changes only the pending payload; active repositories are untouched until `Confirm Import`.
 - Broken transaction source/destination references block import.
 - Clearly ambiguous legacy category values fall back to `Other` if that category exists; otherwise they remain unresolved with a warning.
 - Import should prefer canonical modern shapes rather than preserving stale legacy transaction structures unchanged.

@@ -52,7 +52,7 @@ export const [domain]Repository = {
 | Credit Cards | `modules/business/CoreSections.tsx` | Includes card/LOC payment, snapshot, and ledger explanation flows |
 | Assets & Liabilities | `modules/business/AssetsLiabilitiesSection.tsx` | Lender detail/edit, Borrow/Repay, snapshots, archive/restore, safe deletion, transaction attachment/relinking, and running debt ledger |
 | Dashboard / Projection | `modules/business/DashboardProjectionSections.tsx` | Monthly actuals, projections, top categories |
-| Health Report | `modules/business/HealthReportSection.tsx` | Warning-first integrity scan with inline repair/open actions |
+| Health Report | `modules/business/HealthReportSection.tsx` | Warning-first integrity scan with canonical edit/relink, delete, category correction, dismissal, and restore actions |
 | Recurring Payments | `modules/business/FixedPaymentsSection.tsx` | Shared recurring engine, filtered recurring views, pending alerts |
 | Subscriptions | `modules/business/FixedPaymentsSection.tsx` | Dedicated subscription view backed by the recurring engine |
 | Planned Payments | `modules/business/FixedPaymentsSection.tsx` | Planned recurring commitments with record-driven expense/transfer posting |
@@ -88,3 +88,5 @@ export const [domain]Repository = {
   - vehicles own insurance recurring items
   - properties own insurance and property-tax recurring items
 - `utils/propertyMigration.ts` safely creates Property parents from house loans and merges standalone property-tax records only on an exact unique property-name match.
+- Transaction History supports exact tag and recurring-origin filters in addition to account/card, category, subtype, and linked-item filters.
+- Import preview exposes transaction-level source/destination relinking, exclusion, and explicit acceptance of normalized cleanup before any local write.

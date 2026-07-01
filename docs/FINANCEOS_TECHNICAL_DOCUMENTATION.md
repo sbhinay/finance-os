@@ -74,10 +74,13 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Mortgage and financed-vehicle snapshots now use the same conservative principal-only replay contract.
 - Debt details separate cash paid, principal, interest, unallocated payments, and current owing; dashboard, Property equity, and net-worth views consume the same calculation.
 - `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
+- Transaction History now filters by tag and exact recurring origin.
+- Data Health can open the canonical transaction editor for correction/relinking, delete rows safely, and reversibly dismiss legitimate warnings.
+- Import preview supports source/destination relinking, row exclusion, semantic-duplicate review, and explicit normalization acceptance without touching active data before confirmation.
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Production Phases 1 through 4 are landed. The active roadmap now proceeds through Data Health/import review, AI scanning, guarded cloud persistence, and tax/report exports.
+- Production Phases 1 through 5 are landed. The active roadmap now proceeds through AI scanning, guarded cloud persistence, and tax/report exports.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:

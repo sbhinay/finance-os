@@ -891,6 +891,7 @@ export function TransactionHistorySection() {
   const { vehicles } = useVehicles();
   const { properties } = useProperties();
   const { liabilities } = useLiabilities();
+  const { fixedPayments } = useFixedPayments();
 
   useAutoReload(reloadTransactions as () => void);
   useAutoReload(reloadAccounts);
@@ -905,6 +906,8 @@ export function TransactionHistorySection() {
   const [catFilter, setCatFilter] = useState("");
   const [subTypeFilter, setSubTypeFilter] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [recurringFilter, setRecurringFilter] = useState("");
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(1);
   const [editTx, setEditTx] = useState<TransactionFormInitial>(undefined);
@@ -934,6 +937,27 @@ export function TransactionHistorySection() {
     return [...vehicleItems, ...propertyItems, ...liabilityItems];
   }, [vehicles, properties, liabilities]);
 
+  const availableRecurringOrigins = useMemo(() => {
+    const labels = new Map<string, string>();
+    transactions.forEach((transaction) => {
+      if (!transaction.recurringOriginType || !transaction.recurringOriginId) return;
+      const value = `${transaction.recurringOriginType}:${transaction.recurringOriginId}`;
+      if (labels.has(value)) return;
+      const label = transaction.recurringOriginType === "fixed_payment"
+        ? fixedPayments.find((payment) => payment.id === transaction.recurringOriginId)?.name
+        : transaction.recurringOriginType === "vehicle"
+          ? vehicles.find((vehicle) => vehicle.id === transaction.recurringOriginId)?.name
+          : transaction.recurringOriginType === "house_loan"
+            ? "Mortgage schedule"
+            : transaction.recurringOriginType === "property_tax"
+              ? "Property tax"
+              : "Tax obligation";
+      labels.set(value, `${label ?? transaction.recurringOriginId} (${transaction.recurringOriginType.replaceAll("_", " ")})`);
+    });
+    return Array.from(labels, ([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [fixedPayments, transactions, vehicles]);
+
   const accountOptions = useMemo(() => [
     ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
     ...cards.map((c) => ({ value: c.id, label: `${c.name} (${c.type === "loc" ? "LOC" : "Credit"})` })),
@@ -954,6 +978,11 @@ export function TransactionHistorySection() {
       if (accountFilter && t.sourceId !== accountFilter && t.destinationId !== accountFilter) return false;
       if (catFilter && t.categoryId !== catFilter) return false;
       if (subTypeFilter && t.subType !== subTypeFilter) return false;
+      if (tagFilter && (t.tag ?? "") !== tagFilter) return false;
+      if (
+        recurringFilter
+        && `${t.recurringOriginType ?? ""}:${t.recurringOriginId ?? ""}` !== recurringFilter
+      ) return false;
       if (linkedFilter) {
         if (linkedFilter.startsWith("vehicle:") && t.linkedVehicleId !== linkedFilter.slice("vehicle:".length)) return false;
         if (linkedFilter.startsWith("property:") && t.linkedPropertyId !== linkedFilter.slice("property:".length)) return false;
@@ -980,7 +1009,7 @@ export function TransactionHistorySection() {
       const db = (b.date ?? b.createdAt ?? "");
       return db > da ? 1 : -1;
     });
-  }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, search, acctName, catName, linkedLabel]);
+  }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, tagFilter, recurringFilter, search, acctName, catName, linkedLabel]);
 
   const activityEffects = filtered
     .map(getTransactionListEffect)
@@ -1014,6 +1043,8 @@ export function TransactionHistorySection() {
     setCatFilter("");
     setSubTypeFilter("");
     setLinkedFilter("");
+    setTagFilter("");
+    setRecurringFilter("");
     setSearch("");
     setPage(1);
   }
@@ -1072,10 +1103,21 @@ export function TransactionHistorySection() {
             <option value="">All Linked Items</option>
             {availableLinks.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
+          <select value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setPage(1); }}
+            style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
+            <option value="">All Tags</option>
+            <option value="Personal">Personal</option>
+            <option value="Business">Business</option>
+          </select>
+          <select value={recurringFilter} onChange={(e) => { setRecurringFilter(e.target.value); setPage(1); }}
+            style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff", maxWidth: 220 }}>
+            <option value="">All Recurring Origins</option>
+            {availableRecurringOrigins.map((origin) => <option key={origin.value} value={origin.value}>{origin.label}</option>)}
+          </select>
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search..."
             style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }} />
           <Btn variant="secondary" small onClick={exportCSV}>Export CSV</Btn>
-          {(filter !== "all" || !!accountFilter || !!catFilter || !!subTypeFilter || !!linkedFilter || !!search) && (
+          {(filter !== "all" || !!accountFilter || !!catFilter || !!subTypeFilter || !!linkedFilter || !!tagFilter || !!recurringFilter || !!search) && (
             <Btn variant="secondary" small onClick={clearFilters}>Clear Filters</Btn>
           )}
         </div>
