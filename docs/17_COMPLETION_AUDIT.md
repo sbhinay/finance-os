@@ -58,8 +58,12 @@ Scanner parsing, normalization, invalid-row rejection, privacy controls, and ser
 
 ### Supabase
 
-Schema, guarded RPC, revision checks, history, and client access restrictions are validated statically. A read-only check against the configured project confirmed that the legacy `app_snapshots` table is deployed but `app_snapshot_history` is not. The guarded Phase 7 migration therefore remains unapplied. Applying `supabase/02_guarded_snapshots.sql` requires explicit deployment approval.
+Schema, guarded RPC, revision checks, history, and client access restrictions are validated statically. After explicit user approval, `supabase/02_guarded_snapshots.sql` was applied through the Supabase SQL Editor. Read-only deployment checks confirmed:
+
+- upgraded `app_snapshots` columns are available
+- `app_snapshot_history` is available
+- `save_app_snapshot_guarded` exists and rejects unauthenticated calls with `authentication_required`
 
 ## Result
 
-All eight phases are implemented and locally verified, including browser acceptance. No known local code or data blocker remains. Production deployment readiness still depends on live AI provider verification and the explicitly approved Supabase migration.
+All eight phases are implemented and locally verified, including browser acceptance. Guarded cloud persistence is deployed and its security boundary is verified. No known local code or data blocker remains. Live AI provider verification still requires a server-side provider credential.

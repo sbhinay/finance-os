@@ -51,9 +51,10 @@ This file records work that remains after the eight-phase production-completion 
 These are environment or external-service checks, not missing local implementations:
 
 - Run one live AI extraction after a server-side provider credential is supplied.
-- Apply and verify `supabase/02_guarded_snapshots.sql` only with explicit deployment approval.
 
 Browser acceptance is complete at desktop and mobile breakpoints for lender, Property, recurring, Data Health, scanner, cloud, and tax/report surfaces. No browser console errors were observed.
+
+The guarded Supabase migration is deployed. Read-only verification confirmed the upgraded `app_snapshots` table, append-only `app_snapshot_history` table, and an authentication-protected `save_app_snapshot_guarded` RPC.
 
 ## Deferred Product Enhancements
 
