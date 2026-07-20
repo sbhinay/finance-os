@@ -32,6 +32,15 @@ ANTHROPIC_API_KEY=server-secret
 
 The provider factory is in `lib/statementScanner/index.ts`. A replacement provider implements the `StatementScannerProvider` interface without changing scanner UI or ledger persistence.
 
+For local acceptance testing without sending images to an external provider, use:
+
+```text
+AI_SCANNER_PROVIDER=local_fixture
+AI_SCANNER_FIXTURE_JSON={"accountHint":"Local fixture","transactions":[{"date":"2026-06-29","description":"Fixture Row","amount":12.34,"purpose":"general_expense","confidence":"high"}]}
+```
+
+`local_fixture` is server-only and deterministic. It validates the same JSON response shape and exercises the API, editable preview, duplicate review, and canonical confirmation path, but it is not OCR and must not be treated as a live extraction provider.
+
 ## Review Rules
 
 - Exact semantic duplicates default to skipped.

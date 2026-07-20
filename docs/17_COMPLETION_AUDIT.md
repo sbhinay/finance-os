@@ -48,6 +48,7 @@ The supported in-app browser acceptance pass completed after the browser runtime
 - desktop navigation and rendering passed for lender details and running ledger, Properties, recurring ownership, Data Health, scanner, guarded cloud controls, and CRA working papers/exports
 - the June 29 fixture imported through the normal Import / Export preview, then rendered realistic dashboard, account/card, transaction history, scanner, recurring, business, Data Health, property, and liability surfaces
 - projection showed card/LOC repayment gaps as unplanned exposure instead of hiding owed balances from cash-flow planning
+- scanner local-fixture acceptance ran through a temporary production server, selected a real account, uploaded an image, returned an editable candidate from `/api/statement-scanner`, and confirmed it through the canonical import path with `Added 1, skipped 0`
 - the mobile navigation drawer and responsive Daily Log and Data Health layouts passed at a 390 by 844 viewport
 - no browser console errors were observed
 
@@ -57,7 +58,7 @@ The browser session used isolated local browser data and did not mutate the user
 
 ### AI provider
 
-Scanner parsing, normalization, invalid-row rejection, privacy controls, and server boundaries are tested locally. A live extraction requires a server-side provider credential and remains pending.
+Scanner parsing, normalization, invalid-row rejection, privacy controls, server boundaries, editable preview, duplicate-review entry point, and canonical confirmation are tested locally. The `local_fixture` provider supports deterministic server/API/browser acceptance without sending images to an external provider. A live OCR extraction still requires a real server-side provider credential and remains pending.
 
 ### Supabase
 

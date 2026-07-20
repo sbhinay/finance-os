@@ -1,5 +1,5 @@
-import type { StatementScannerProvider, StatementExtractionInput } from "./provider";
-import { parseExtractionJson } from "./provider";
+import type { StatementScannerProvider, StatementExtractionInput } from "./provider.ts";
+import { parseExtractionJson } from "./provider.ts";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
