@@ -27,7 +27,7 @@ export interface AppProfile {
   email: string;
 }
 
-/** Root data shape — mirrors FinanceOS localStorage JSON */
+/** Root data shape - mirrors FinanceOS localStorage JSON */
 export interface AppData {
   meta: AppMeta;
   profile: AppProfile;

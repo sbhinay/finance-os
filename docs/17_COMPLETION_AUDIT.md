@@ -29,6 +29,7 @@ npm run validate:properties
 npm run validate:fixture
 npm run lint
 npm run build
+npm audit
 npm audit --omit=dev
 ```
 
@@ -37,14 +38,16 @@ At completion:
 - all account and card balances in the June 29 fixture matched snapshot-based replay with zero difference
 - Property migration, principal-only debt replay, scanner parsing, cloud guards, and binary report exports passed
 - lint and the production build passed
-- the production dependency audit reported zero vulnerabilities
-- touched source files were scanned for mojibake before commit
+- the full and production dependency audits reported zero vulnerabilities
+- touched source files were scanned for mojibake before commit, including comments and compatibility normalization helpers
 
 ## Browser Acceptance
 
 The supported in-app browser acceptance pass completed after the browser runtime became available:
 
 - desktop navigation and rendering passed for lender details and running ledger, Properties, recurring ownership, Data Health, scanner, guarded cloud controls, and CRA working papers/exports
+- the June 29 fixture imported through the normal Import / Export preview, then rendered realistic dashboard, account/card, transaction history, scanner, recurring, business, Data Health, property, and liability surfaces
+- projection showed card/LOC repayment gaps as unplanned exposure instead of hiding owed balances from cash-flow planning
 - the mobile navigation drawer and responsive Daily Log and Data Health layouts passed at a 390 by 844 viewport
 - no browser console errors were observed
 
