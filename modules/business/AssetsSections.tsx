@@ -12,7 +12,7 @@ import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useF
 import { theme } from "@/lib/theme";
 import { buildCanonicalTransaction, persistCanonicalTransactions } from "@/services/transactionPipeline";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
-import { estimateHouseLoanSplit, estimateMissingHouseLoanSplits } from "@/utils/debtAllocation";
+import { estimateMissingHouseLoanSplits } from "@/utils/debtAllocation";
 import {
   calculateDebtSummary,
   matchesMortgagePayment,
@@ -108,7 +108,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
   return <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: c.bg, color: c.fg }}>{children}</span>;
 }
 
-function DebtSummaryView({ summary, onEstimateMissing }: { summary: DebtSummary; onEstimateMissing?: () => void }) {
+function DebtSummaryView({ summary }: { summary: DebtSummary }) {
   return (
     <>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -118,11 +118,8 @@ function DebtSummaryView({ summary, onEstimateMissing }: { summary: DebtSummary;
         <StatBox label="Interest" value={fmtCAD(summary.interestPaid)} color="#a05c00" />
       </div>
       {summary.unallocatedPaid > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "9px 12px", borderRadius: 8, background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: 12 }}>
-          <span>{fmtCAD(summary.unallocatedPaid)} of linked payments has no principal/interest split. Cash is tracked; mortgage owing only reduces when principal is known or estimated.</span>
-          {onEstimateMissing && (
-            <Btn variant="secondary" small onClick={onEstimateMissing}>Estimate Missing Splits</Btn>
-          )}
+        <div style={{ padding: "9px 12px", borderRadius: 8, background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: 12 }}>
+          {fmtCAD(summary.unallocatedPaid)} of linked payments cannot be estimated yet. Set a mortgage snapshot, date, rate, and schedule to show calculated principal and interest without changing transactions.
         </div>
       )}
       <div style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 8, overflow: "hidden" }}>
@@ -133,7 +130,9 @@ function DebtSummaryView({ summary, onEstimateMissing }: { summary: DebtSummary;
             <span style={{ fontWeight: 600 }}>{row.transaction.description}</span>
             <span>{fmtCAD(row.transaction.amount)}</span>
             <span style={{ color: "#1a7f3c" }}>P {fmtCAD(row.principal)}</span>
-            <span style={{ color: row.unallocated ? "#a05c00" : theme.colors.textMuted }}>{row.unallocated ? "Unsplit" : `I ${fmtCAD(row.interest)}`}</span>
+            <span style={{ color: row.unallocated ? "#a05c00" : theme.colors.textMuted }}>
+              {row.unallocated ? "Unsplit" : `I ${fmtCAD(row.interest)} (${row.splitSource === "manual" ? "Manual" : "Estimated"})`}
+            </span>
           </div>
         ))}
       </div>
@@ -728,17 +727,25 @@ export function HouseLoansSection({
   }
 
   const acctOpts = [{ value: "", label: "-- Select account --" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))];
-  const getMortgageSummary = (loan: HouseLoan) => calculateDebtSummary({
-    transactions,
-    matches: matchesMortgagePayment(
+  const getMortgageSummary = (loan: HouseLoan) => {
+    const matches = matchesMortgagePayment(
       loan.id,
       loan.propertyId,
       houseLoans.filter((candidate) => candidate.propertyId === loan.propertyId).length === 1
-    ),
-    balanceSnapshotAmount: loan.balanceSnapshotAmount,
-    balanceSnapshotDate: loan.balanceSnapshotDate,
-    fallbackBalance: loan.remaining,
-  });
+    );
+    const loanTransactions = transactions.filter((transaction) =>
+      transaction.status !== "pending"
+      && transaction.type === "loan_payment"
+      && matches(transaction)
+    );
+    return calculateDebtSummary({
+      transactions: estimateMissingHouseLoanSplits(loan, loanTransactions),
+      matches,
+      balanceSnapshotAmount: loan.balanceSnapshotAmount,
+      balanceSnapshotDate: loan.balanceSnapshotDate,
+      fallbackBalance: loan.remaining,
+    });
+  };
   const totalRemaining = houseLoans.reduce((sum, loan) => sum + getMortgageSummary(loan).currentOwing, 0);
   const totalMonthly = houseLoans.reduce((s, l) => s + toMonthly(l.payment, l.schedule), 0);
 
@@ -770,7 +777,6 @@ export function HouseLoansSection({
       ? (getNextOccurrence(loan.nextPaymentDate, loan.schedule) ?? loan.nextPaymentDate)
       : new Date().toISOString().split("T")[0];
 
-    const split = estimateHouseLoanSplit(loan, loan.payment, getMortgageSummary(loan).currentOwing);
     setTxFormInitial({
       purpose: "mortgage_payment",
       type: "loan_payment",
@@ -785,8 +791,6 @@ export function HouseLoansSection({
       recurringOriginId: loan.id,
       mode: "Debit",
       tag: "Personal",
-      principalAmount: split?.principalAmount,
-      interestAmount: split?.interestAmount,
     });
     setTxScheduledAmount(loan.payment);
     setTxFormOpen(true);
@@ -820,13 +824,8 @@ export function HouseLoansSection({
   function backfillLoanPayments(loan: HouseLoan, dates: string[], accountId: string): number {
     if (!dates.length || !accountId) return 0;
 
-    let runningOwing = loan.balanceSnapshotAmount ?? loan.remaining;
-    const candidates = dates.map((date) => {
-      const split = estimateHouseLoanSplit(loan, loan.payment, runningOwing);
-      if (split) {
-        runningOwing = toFixed2(Math.max(0, runningOwing - split.principalAmount));
-      }
-      return buildCanonicalTransaction({
+    const candidates = dates.map((date) =>
+      buildCanonicalTransaction({
         purpose: "mortgage_payment",
         amount: toFixed2(loan.payment),
         sourceId: accountId,
@@ -839,10 +838,8 @@ export function HouseLoansSection({
         linkedName: loan.name,
         recurringOriginType: "house_loan",
         recurringOriginId: loan.id,
-        principalAmount: split?.principalAmount,
-        interestAmount: split?.interestAmount,
-      });
-    });
+      })
+    );
     const count = persistCanonicalTransactions(candidates, { skipSemanticDuplicates: true }).length;
 
     if (count > 0) {
@@ -943,29 +940,7 @@ export function HouseLoansSection({
 
       {detailLoan && (
         <Modal title={`${detailLoan.name} - Debt Details`} onClose={() => setDetailLoan(null)} wide>
-          <DebtSummaryView
-            summary={getMortgageSummary(detailLoan)}
-            onEstimateMissing={() => {
-              const summary = getMortgageSummary(detailLoan);
-              const allRows = summary.rows.map((row) => row.transaction);
-              const missingIds = new Set(summary.rows
-                .filter((row) => row.unallocated > 0)
-                .map((row) => row.transaction.id));
-              const missingRows = allRows.filter((transaction) => missingIds.has(transaction.id));
-              if (!missingRows.length) return;
-              const estimated = estimateMissingHouseLoanSplits(detailLoan, allRows);
-              const changed = estimated.filter((transaction) =>
-                missingIds.has(transaction.id)
-                && (transaction.principalAmount != null || transaction.interestAmount != null)
-              );
-              if (!changed.length) {
-                alert("Set an interest rate and balance first, then FinanceOS can estimate the split.");
-                return;
-              }
-              if (!confirm(`Estimate principal and interest for ${changed.length} mortgage payment(s) using ${detailLoan.interestRate}% and the current mortgage balance?`)) return;
-              persistCanonicalTransactions(changed);
-            }}
-          />
+          <DebtSummaryView summary={getMortgageSummary(detailLoan)} />
         </Modal>
       )}
 

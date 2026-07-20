@@ -71,10 +71,12 @@ Transactions may carry a stable `purpose` such as `vehicle_lease_payment`, `mort
 
 ### Secured debt balances
 - Mortgages and financed vehicles use their own `balanceSnapshotAmount` and `balanceSnapshotDate` as the latest known owing anchor.
-- Only later `loan_payment` rows with an explicit `principalAmount` reduce derived owing.
+- Detailed mortgage views estimate principal and interest dynamically from the debt snapshot, date, rate, schedule, and linked payment history.
+- Stored `principalAmount` / `interestAmount` fields are backward-compatible manual overrides or imported statement details, not normal app-generated ledger data.
+- Later `loan_payment` rows reduce derived owing by manual principal when supplied, or by a clearly labeled dynamic estimate when the loan has enough rate/snapshot data.
 - The full transaction `amount` always remains the cash-flow effect.
 - `interestAmount` is reported as financing expense.
-- Rows without a split remain valid regular-mode cash transactions and are shown as unallocated; FinanceOS does not guess their principal.
+- Rows without enough information for a split remain valid regular-mode cash transactions and are shown as unallocated.
 
 `transactionFingerprint()` combines purpose, transaction date, amount, accounts, and linked entities. It is used by backfills and Data Health instead of description matching.
 

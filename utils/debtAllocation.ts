@@ -1,6 +1,8 @@
 import type { HouseLoan, PaymentSchedule } from "../types/domain.ts";
 import type { Transaction } from "../types/transaction.ts";
 
+export const FINANCEOS_ESTIMATED_SPLIT_NOTE = "Estimated principal/interest split from the mortgage rate.";
+
 function toFixed2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -54,9 +56,22 @@ function paymentPeriodRate(annualRatePercent?: number, schedule?: PaymentSchedul
 }
 
 function existingPrincipal(transaction: Transaction): number {
+  if (isFinanceOsEstimatedSplit(transaction)) return 0;
   if (transaction.principalAmount != null) return toFixed2(transaction.principalAmount);
   if (transaction.interestAmount != null) return toFixed2(transaction.amount - transaction.interestAmount);
   return 0;
+}
+
+export function hasStoredDebtSplit(transaction: Transaction): boolean {
+  return transaction.principalAmount != null || transaction.interestAmount != null;
+}
+
+export function isFinanceOsEstimatedSplit(transaction: Transaction): boolean {
+  return hasStoredDebtSplit(transaction) && Boolean(transaction.notes?.includes(FINANCEOS_ESTIMATED_SPLIT_NOTE));
+}
+
+export function hasManualDebtSplit(transaction: Transaction): boolean {
+  return hasStoredDebtSplit(transaction) && !isFinanceOsEstimatedSplit(transaction);
 }
 
 function estimateSplitBeforeKnownEnding({
@@ -109,8 +124,7 @@ export function estimateMissingHouseLoanSplits(
   if (!anchorDate) {
     let runningOwing = loan.principal || anchorAmount;
     sorted.forEach((transaction) => {
-      const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
-      const split = hasSplit
+      const split = hasManualDebtSplit(transaction)
         ? undefined
         : estimateHouseLoanSplit(loan, transaction.amount, runningOwing);
       const principal = split?.principalAmount ?? existingPrincipal(transaction);
@@ -124,8 +138,7 @@ export function estimateMissingHouseLoanSplits(
   sorted
     .filter((transaction) => transaction.date > anchorDate)
     .forEach((transaction) => {
-      const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
-      const split = hasSplit
+      const split = hasManualDebtSplit(transaction)
         ? undefined
         : estimateHouseLoanSplit(loan, transaction.amount, forwardOwing);
       const principal = split?.principalAmount ?? existingPrincipal(transaction);
@@ -138,8 +151,7 @@ export function estimateMissingHouseLoanSplits(
     .filter((transaction) => transaction.date <= anchorDate)
     .reverse()
     .forEach((transaction) => {
-      const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
-      const split = hasSplit
+      const split = hasManualDebtSplit(transaction)
         ? undefined
         : estimateSplitBeforeKnownEnding({
             amount: transaction.amount,
@@ -163,10 +175,10 @@ function withEstimatedSplit(
     ...transaction,
     principalAmount: split.principalAmount,
     interestAmount: split.interestAmount,
-    notes: transaction.notes?.includes("Estimated principal/interest split from the mortgage rate.")
+    notes: transaction.notes?.includes(FINANCEOS_ESTIMATED_SPLIT_NOTE)
       ? transaction.notes
       : transaction.notes
-        ? `${transaction.notes}\nEstimated principal/interest split from the mortgage rate.`
-        : "Estimated principal/interest split from the mortgage rate.",
+        ? `${transaction.notes}\n${FINANCEOS_ESTIMATED_SPLIT_NOTE}`
+        : FINANCEOS_ESTIMATED_SPLIT_NOTE,
   };
 }

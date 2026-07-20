@@ -10,6 +10,7 @@ import { detectCategory, learnedRulesRepository, uncategorizedRepository } from 
 import { buildSourceOptions, fmtCAD, toFixed2, uid } from "@/utils/finance";
 import { deleteCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
 import { inferTransactionPurpose } from "@/utils/transactionSemantics";
+import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
 import {
   Transaction, TransactionType, TransactionSubType, TransactionMode,
   TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES, getSubTypeLabel,
@@ -342,7 +343,15 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const isPropertyCat = selectedCat?.propertyLinked;
   const showCategory = isExpenseReportable(txType) || isIncomeReportable(txType);
   const showDestination = txType === "transfer" || txType === "adjustment";
-  const showLoanSplit = txType === "loan_payment";
+  const isMortgagePayment = txType === "loan_payment" && form.subType === "mortgage";
+  const isManualSplitEdit = Boolean(
+    initial
+    && initial.type === "loan_payment"
+    && initial.subType === "mortgage"
+    && (initial.principalAmount != null || initial.interestAmount != null)
+    && !isFinanceOsEstimatedSplit(initial as Transaction)
+  );
+  const showLoanSplit = txType === "loan_payment" && !isMortgagePayment;
   const showMortgageLink = txType === "loan_payment" && form.subType === "mortgage";
   const showLiability = txType === "loan_receipt" || (txType === "loan_payment" && form.subType !== "mortgage");
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
@@ -461,8 +470,16 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       subType:         form.subType ? (form.subType as TransactionSubType) : undefined,
       purpose:         finalPurpose,
       amount,
-      interestAmount:  showLoanSplit && Number(form.interestAmount) > 0 ? toFixed2(Number(form.interestAmount)) : undefined,
-      principalAmount: showLoanSplit && Number(form.principalAmount) > 0 ? toFixed2(Number(form.principalAmount)) : undefined,
+      interestAmount:  showLoanSplit && Number(form.interestAmount) > 0
+        ? toFixed2(Number(form.interestAmount))
+        : isManualSplitEdit
+          ? initial?.interestAmount
+          : undefined,
+      principalAmount: showLoanSplit && Number(form.principalAmount) > 0
+        ? toFixed2(Number(form.principalAmount))
+        : isManualSplitEdit
+          ? initial?.principalAmount
+          : undefined,
       date:            form.date.slice(0, 10),
       createdAt:       initial?.createdAt ?? new Date().toISOString(),
       description:     finalDescription,
@@ -709,7 +726,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           {showVehicleLink && (
             <Grid2>
               <Sel label="Vehicle (optional)" value={form.linkedVehicleId} onChange={f("linkedVehicleId")}
-                options={[{ value: "", label: "— Select vehicle —" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} />
+                options={[{ value: "", label: "-- Select vehicle --" }, ...vehicles.map((v) => ({ value: v.id, label: v.name }))]} />
               <Inp label="Odometer (km)" type="number" value={form.odometer} onChange={f("odometer")} placeholder="e.g. 42500" />
             </Grid2>
           )}

@@ -1,5 +1,5 @@
 import { calculateDebtSummary, matchesMortgagePayment } from "../utils/debtReporting.ts";
-import { estimateDebtPaymentSplit, estimateMissingHouseLoanSplits } from "../utils/debtAllocation.ts";
+import { FINANCEOS_ESTIMATED_SPLIT_NOTE, estimateDebtPaymentSplit, estimateMissingHouseLoanSplits } from "../utils/debtAllocation.ts";
 
 const base = {
   type: "loan_payment",
@@ -97,6 +97,74 @@ const estimatedRows = estimateMissingHouseLoanSplits(
 );
 if (estimatedRows[0].principalAmount !== 500 || estimatedRows[0].interestAmount !== 500) {
   throw new Error("Missing mortgage splits should be estimable from rate, payment, and owing.");
+}
+
+const dynamicSummary = calculateDebtSummary({
+  transactions: estimateMissingHouseLoanSplits(
+    {
+      id: "loan-a",
+      propertyId: "property-a",
+      name: "Primary",
+      principal: 100000,
+      remaining: 100000,
+      balanceSnapshotAmount: 100000,
+      balanceSnapshotDate: "2026-06-01",
+      payment: 1000,
+      schedule: "Monthly",
+      source: "bank",
+      startDate: "2026-01-01",
+      endDate: "2050-01-01",
+      nextPaymentDate: "2026-06-15",
+      interestRate: 6,
+    },
+    transactions
+  ),
+  matches: matchesMortgagePayment("loan-a", "property-a", true),
+  balanceSnapshotAmount: 100000,
+  balanceSnapshotDate: "2026-06-01",
+  fallbackBalance: 99999,
+});
+if (dynamicSummary.currentOwing !== 98846.75 || dynamicSummary.unallocatedPaid !== 0) {
+  throw new Error(`Dynamic mortgage details should estimate unsplit rows without leaving them unallocated; received owing=${dynamicSummary.currentOwing}, unallocated=${dynamicSummary.unallocatedPaid}.`);
+}
+if (dynamicSummary.rows.find((row) => row.transaction.id === "split")?.splitSource !== "manual") {
+  throw new Error("Stored user split rows must remain labeled as manual.");
+}
+if (dynamicSummary.rows.find((row) => row.transaction.id === "unsplit")?.splitSource !== "estimated") {
+  throw new Error("Unsplit mortgage rows should be labeled as estimated in debt details.");
+}
+
+const correctedGeneratedRow = estimateMissingHouseLoanSplits(
+  {
+    id: "loan-a",
+    propertyId: "property-a",
+    name: "Primary",
+    principal: 100000,
+    remaining: 100000,
+    balanceSnapshotAmount: 100000,
+    balanceSnapshotDate: "2026-06-01",
+    payment: 1000,
+    schedule: "Monthly",
+    source: "bank",
+    startDate: "2026-01-01",
+    endDate: "2050-01-01",
+    nextPaymentDate: "2026-06-15",
+    interestRate: 6,
+  },
+  [{
+    ...base,
+    id: "legacy-estimate",
+    amount: 1000,
+    principalAmount: 999,
+    interestAmount: 1,
+    date: "2026-06-15",
+    createdAt: "2026-06-15T12:00:00.000Z",
+    description: "Mortgage Payment - Legacy Estimate",
+    notes: FINANCEOS_ESTIMATED_SPLIT_NOTE,
+  }]
+)[0];
+if (correctedGeneratedRow.principalAmount !== 500 || correctedGeneratedRow.interestAmount !== 500) {
+  throw new Error("Legacy FinanceOS-generated split rows should be recalculated instead of treated as manual truth.");
 }
 
 const historicalRows = estimateMissingHouseLoanSplits(

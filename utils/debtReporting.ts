@@ -1,4 +1,5 @@
 import type { Transaction } from "../types/transaction.ts";
+import { isFinanceOsEstimatedSplit } from "./debtAllocation.ts";
 
 function toFixed2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -10,6 +11,7 @@ export interface DebtPaymentRow {
   interest: number;
   unallocated: number;
   affectsBalance: boolean;
+  splitSource: "manual" | "estimated" | "unallocated";
 }
 
 export interface DebtSummary {
@@ -26,12 +28,13 @@ export interface DebtSummary {
 function splitPayment(transaction: Transaction) {
   const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
   if (!hasSplit) {
-    return { principal: 0, interest: 0, unallocated: transaction.amount };
+    return { principal: 0, interest: 0, unallocated: transaction.amount, splitSource: "unallocated" as const };
   }
   return {
     principal: toFixed2(transaction.principalAmount ?? 0),
     interest: toFixed2(transaction.interestAmount ?? 0),
     unallocated: 0,
+    splitSource: isFinanceOsEstimatedSplit(transaction) ? "estimated" as const : "manual" as const,
   };
 }
 

@@ -76,10 +76,13 @@
 - Mortgage payments, financed vehicle payments, and other debt payments should use the full cash payment amount for readiness and projection.
 - Only the interest portion of a mortgage or financed debt payment is expense-like; principal reduces liability and is not generic spending.
 - Lease payments are closer to ordinary recurring outflows and may remain expense-like unless a more specialized model is added.
-- `loan_payment` rows should support optional `principalAmount` and `interestAmount`, but regular mode must still work if the split is unknown.
+- `loan_payment` rows keep optional `principalAmount` and `interestAmount` for backward-compatible manual overrides, statement-confirmed rows, and imports.
+- Normal mortgage logging and backfill must not store app-generated estimated split fields.
+- Mortgage/Debt Details may dynamically estimate principal and interest from snapshot, rate, schedule, and payment history; calculated values must be labeled as Estimated.
+- Stored non-generated split rows must be labeled as Manual in detailed views.
 - Mortgage rows use `linkedHouseLoanId` for exact debt ownership; legacy rows migrate only from a valid house-loan origin or a Property with exactly one mortgage.
-- Mortgage and financed-vehicle owing is derived from the latest balance snapshot plus later explicit principal reductions.
-- Unsplit secured-debt payments remain full cash outflows but do not reduce derived owing.
+- Mortgage and financed-vehicle owing is derived from the latest balance snapshot plus later manual or dynamically estimated principal reductions when enough loan data exists.
+- Unsplit secured-debt payments remain full cash outflows; they reduce derived owing only when a manual split or dynamic estimate is available.
 - Explicit interest is included in expense reporting; principal is excluded from expense totals.
 - Transaction History tag and recurring-origin filters operate on stored metadata, not description text.
 - Data Health may dismiss legitimate non-blocking warnings, but dismissals are reversible and never mutate ledger rows.

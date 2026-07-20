@@ -19,8 +19,10 @@ This file records work that remains after the eight-phase production-completion 
 - Only unambiguous legacy relationships migrate automatically.
 
 ### Phase 4: Detailed debt reporting
-- Mortgage and financed-vehicle details separate cash paid, principal, interest, and unallocated payments.
-- Full payments remain in cash planning; only explicit principal reduces liability.
+- Mortgage details separate cash paid, principal, interest, and unallocated payments.
+- Mortgage principal/interest is calculated dynamically when rate/snapshot data is available, with rows labeled Estimated versus Manual.
+- Stored split fields remain only for backward-compatible manual overrides, imports, or statement-confirmed exception rows.
+- Full payments remain in cash planning; manual or dynamically estimated principal reduces derived mortgage liability.
 - Regular mode remains valid when a split is unavailable.
 
 ### Phase 5: Findability and Data Health

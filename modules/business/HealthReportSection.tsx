@@ -15,6 +15,7 @@ import { isSemanticDuplicate, transactionFingerprint } from "@/utils/transaction
 import { TransactionForm } from "./TransactionForm";
 import { useLiabilities } from "./useLiabilities";
 import { toFixed2 } from "@/utils/finance";
+import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -308,13 +309,13 @@ export function HealthReportSection({
         }
       }
 
-      if (tx.type === "loan_payment" && tx.subType === "mortgage" && tx.principalAmount == null && tx.interestAmount == null) {
+      if (tx.type === "loan_payment" && tx.subType === "mortgage" && isFinanceOsEstimatedSplit(tx)) {
         nextIssues.push({
-          id: `mort-split-${tx.id}`,
+          id: `mort-generated-split-${tx.id}`,
           severity: "low",
-          title: "Mortgage payment has no principal or interest split",
+          title: "Mortgage payment has a stored generated split",
           detail: summarizeTx(tx),
-          hint: "Regular mode is fine without this, but detailed debt reporting will be less precise.",
+          hint: "Debt Details now recalculates estimated splits dynamically. Edit and save this row to remove the legacy generated override if it was not statement-confirmed.",
           transactionId: tx.id,
         });
       }
