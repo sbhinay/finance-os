@@ -59,26 +59,26 @@ type SectionId =
   | "assetsliabilities";
 
 const NAV: Array<{ id: SectionId; label: string; group: string; icon: string }> = [
-  { id: "dailylog", label: "Daily Log", group: "Daily Activity", icon: "*" },
-  { id: "healthreport", label: "Health Report", group: "Daily Activity", icon: "*" },
-  { id: "transactions", label: "Transaction History", group: "Daily Activity", icon: "*" },
-  { id: "scanner", label: "Scan Statement", group: "Daily Activity", icon: "*" },
-  { id: "dashboard", label: "Dashboard", group: "Daily Activity", icon: "*" },
-  { id: "importexport", label: "Import / Export", group: "Daily Activity", icon: "*" },
-  { id: "accountscards", label: "Accounts & Cards", group: "Personal Finance", icon: "*" },
-  { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "*" },
-  { id: "accounts", label: "Bank Accounts", group: "Personal Finance", icon: "*" },
-  { id: "cards", label: "Credit Cards", group: "Personal Finance", icon: "*" },
-  { id: "fixedpayments", label: "Recurring Payments", group: "Personal Finance", icon: "*" },
-  { id: "vehicles", label: "Vehicles", group: "Personal Finance", icon: "*" },
-  { id: "properties", label: "Properties", group: "Personal Finance", icon: "*" },
-  { id: "houseloans", label: "House Loans", group: "Personal Finance", icon: "*" },
-  { id: "categories", label: "Categories", group: "Personal Finance", icon: "*" },
-  { id: "hourscontracts", label: "Hours & Contracts", group: "Business / CRA", icon: "*" },
-  { id: "corpincome", label: "Corp Income", group: "Business / CRA", icon: "*" },
-  { id: "crareview", label: "CRA Review", group: "Business / CRA", icon: "*" },
-  { id: "cra", label: "Tax Obligations", group: "Business / CRA", icon: "*" },
-  { id: "ratesettings", label: "Tax & Rate Settings", group: "Business / CRA", icon: "*" },
+  { id: "dailylog", label: "Daily Log", group: "Daily Activity", icon: "DL" },
+  { id: "healthreport", label: "Health Report", group: "Daily Activity", icon: "DH" },
+  { id: "transactions", label: "Transaction History", group: "Daily Activity", icon: "TX" },
+  { id: "scanner", label: "Scan Statement", group: "Daily Activity", icon: "AI" },
+  { id: "dashboard", label: "Dashboard", group: "Daily Activity", icon: "DB" },
+  { id: "importexport", label: "Import / Export", group: "Daily Activity", icon: "IO" },
+  { id: "accountscards", label: "Accounts & Cards", group: "Personal Finance", icon: "AC" },
+  { id: "assetsliabilities", label: "Assets & Liabilities", group: "Personal Finance", icon: "AL" },
+  { id: "accounts", label: "Bank Accounts", group: "Personal Finance", icon: "BA" },
+  { id: "cards", label: "Credit Cards", group: "Personal Finance", icon: "CC" },
+  { id: "fixedpayments", label: "Recurring Payments", group: "Personal Finance", icon: "RP" },
+  { id: "vehicles", label: "Vehicles", group: "Personal Finance", icon: "VH" },
+  { id: "properties", label: "Properties", group: "Personal Finance", icon: "PR" },
+  { id: "houseloans", label: "House Loans", group: "Personal Finance", icon: "HL" },
+  { id: "categories", label: "Categories", group: "Personal Finance", icon: "CT" },
+  { id: "hourscontracts", label: "Hours & Contracts", group: "Business / CRA", icon: "BZ" },
+  { id: "corpincome", label: "Corp Income", group: "Business / CRA", icon: "CI" },
+  { id: "crareview", label: "CRA Review", group: "Business / CRA", icon: "CR" },
+  { id: "cra", label: "Tax Obligations", group: "Business / CRA", icon: "TO" },
+  { id: "ratesettings", label: "Tax & Rate Settings", group: "Business / CRA", icon: "RS" },
 ];
 const PRIMARY_NAV_IDS = new Set<SectionId>([
   "dailylog",
@@ -374,7 +374,7 @@ export default function Home() {
   const currentHubLinks = PRIMARY_SECTION_BY_SECTION[section] === "fixedpayments" ? [] : (HUB_LINKS[section] ?? []);
 
   const wrap = (children: React.ReactNode) => (
-    <div style={{ ...theme.cardStyle(), padding: 24, background: theme.colors.surface }}>{children}</div>
+    <div style={{ ...theme.cardStyle(), padding: 24, background: theme.colors.surface, animation: "financeFadeUp 180ms ease both" }}>{children}</div>
   );
 
   return (
@@ -397,7 +397,7 @@ export default function Home() {
       <aside style={{
         width: isMobileNav ? 276 : 244,
         flexShrink: 0,
-        background: theme.colors.sidebar,
+        background: `linear-gradient(180deg, ${theme.colors.sidebar} 0%, ${theme.colors.sidebarAlt} 100%)`,
         minHeight: "100vh",
         padding: "0 0 24px 0",
         display: "flex", flexDirection: "column",
@@ -426,15 +426,27 @@ export default function Home() {
                   <button key={item.id} onClick={() => { setSection(item.id); if (isMobileNav) setSidebarOpen(false); }} style={{
                     width: "100%", textAlign: "left",
                     padding: "10px 18px", display: "flex", alignItems: "center", gap: 10,
-                    background: active ? "linear-gradient(90deg, rgba(31,94,255,0.22), rgba(255,255,255,0.04))" : "transparent",
+                    background: active ? "linear-gradient(90deg, rgba(37,99,235,0.24), rgba(255,255,255,0.06))" : "transparent",
                     border: "none",
                     borderLeft: active ? `3px solid ${theme.colors.primary}` : "3px solid transparent",
                     cursor: "pointer",
                     color: active ? "#fff" : theme.colors.sidebarText,
                     fontSize: 13, fontWeight: active ? 600 : 400,
-                    transition: "all .15s",
+                    transition: "background-color .15s ease, color .15s ease, border-color .15s ease",
                   }}>
-                    <span style={{ fontSize: 14, width: 18, textAlign: "center" }}>{item.icon}</span>
+                    <span style={{
+                      fontSize: 10,
+                      width: 26,
+                      height: 22,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 8,
+                      background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)",
+                      color: active ? "#fff" : theme.colors.sidebarText,
+                      fontWeight: 800,
+                      letterSpacing: ".04em",
+                    }}>{item.icon}</span>
                     <span>{item.label}</span>
                   </button>
                 );
@@ -465,7 +477,7 @@ export default function Home() {
                 boxShadow: theme.shadow.soft,
               }}
             >
-              <span style={{ fontSize: 16, lineHeight: 1 }}>≡</span>
+              <span style={{ fontSize: 16, lineHeight: 1 }}>=</span>
               <span>Menu</span>
             </button>
             <div style={{ fontSize: 12, color: theme.colors.textSoft, fontWeight: 600 }}>

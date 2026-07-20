@@ -37,6 +37,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Current-app JSON export/import with asset restoration.
 - Balance snapshots on accounts and credit cards.
 - Optional card/LOC repayment projection settings for planning-only debt pressure.
+- Shared theme tokens and global focus/motion rules give the local app a more modern fintech baseline without changing financial logic.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
 - New `CRA Review` business subview that combines current ledger and business data with saved tax questionnaire inputs to produce warning-first CRA working-paper guidance.
 - Initial unified `Assets & Liabilities` page with upcoming-obligation actions.
