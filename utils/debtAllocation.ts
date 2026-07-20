@@ -48,6 +48,42 @@ export function estimateDebtPaymentSplit({
   };
 }
 
+function paymentPeriodRate(annualRatePercent?: number, schedule?: PaymentSchedule): number | undefined {
+  if (!(annualRatePercent && annualRatePercent > 0) || !schedule) return undefined;
+  return annualRatePercent / 100 / paymentsPerYear(schedule);
+}
+
+function existingPrincipal(transaction: Transaction): number {
+  if (transaction.principalAmount != null) return toFixed2(transaction.principalAmount);
+  if (transaction.interestAmount != null) return toFixed2(transaction.amount - transaction.interestAmount);
+  return 0;
+}
+
+function estimateSplitBeforeKnownEnding({
+  amount,
+  annualRatePercent,
+  endingOwing,
+  schedule,
+}: {
+  amount: number;
+  annualRatePercent?: number;
+  endingOwing?: number;
+  schedule: PaymentSchedule;
+}): { principalAmount: number; interestAmount: number; openingOwing: number } | undefined {
+  const rate = paymentPeriodRate(annualRatePercent, schedule);
+  if (!(amount > 0) || !(endingOwing && endingOwing > 0) || !rate) {
+    return undefined;
+  }
+
+  const openingOwing = toFixed2((endingOwing + amount) / (1 + rate));
+  const interestAmount = toFixed2(Math.min(amount, openingOwing * rate));
+  return {
+    openingOwing,
+    interestAmount,
+    principalAmount: toFixed2(Math.max(0, amount - interestAmount)),
+  };
+}
+
 export function estimateHouseLoanSplit(
   loan: HouseLoan,
   amount = loan.payment,
@@ -65,34 +101,72 @@ export function estimateMissingHouseLoanSplits(
   loan: HouseLoan,
   transactions: Transaction[]
 ): Transaction[] {
-  let replayOwing = loan.balanceSnapshotAmount ?? loan.remaining;
-  let historicalOwing = loan.principal || replayOwing;
   const anchorDate = loan.balanceSnapshotDate;
+  const anchorAmount = loan.balanceSnapshotAmount ?? loan.remaining;
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+  const prepared = new Map<string, Transaction>();
 
-  return [...transactions]
-    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
-    .map((transaction) => {
+  if (!anchorDate) {
+    let runningOwing = loan.principal || anchorAmount;
+    sorted.forEach((transaction) => {
       const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
-      const openingOwing = anchorDate && transaction.date > anchorDate ? replayOwing : historicalOwing;
       const split = hasSplit
         ? undefined
-        : estimateHouseLoanSplit(loan, transaction.amount, openingOwing);
-      const principal = split?.principalAmount ?? transaction.principalAmount ?? 0;
-
-      if (anchorDate && transaction.date > anchorDate) {
-        replayOwing = toFixed2(Math.max(0, replayOwing - principal));
-      } else {
-        historicalOwing = toFixed2(Math.max(0, historicalOwing - principal));
-      }
-
-      if (!split) return transaction;
-      return {
-        ...transaction,
-        principalAmount: split.principalAmount,
-        interestAmount: split.interestAmount,
-        notes: transaction.notes
-          ? `${transaction.notes}\nEstimated principal/interest split from the mortgage rate.`
-          : "Estimated principal/interest split from the mortgage rate.",
-      };
+        : estimateHouseLoanSplit(loan, transaction.amount, runningOwing);
+      const principal = split?.principalAmount ?? existingPrincipal(transaction);
+      runningOwing = toFixed2(Math.max(0, runningOwing - principal));
+      prepared.set(transaction.id, split ? withEstimatedSplit(transaction, split) : transaction);
     });
+    return sorted.map((transaction) => prepared.get(transaction.id) ?? transaction);
+  }
+
+  let forwardOwing = anchorAmount;
+  sorted
+    .filter((transaction) => transaction.date > anchorDate)
+    .forEach((transaction) => {
+      const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
+      const split = hasSplit
+        ? undefined
+        : estimateHouseLoanSplit(loan, transaction.amount, forwardOwing);
+      const principal = split?.principalAmount ?? existingPrincipal(transaction);
+      forwardOwing = toFixed2(Math.max(0, forwardOwing - principal));
+      prepared.set(transaction.id, split ? withEstimatedSplit(transaction, split) : transaction);
+    });
+
+  let endingOwing = anchorAmount;
+  [...sorted]
+    .filter((transaction) => transaction.date <= anchorDate)
+    .reverse()
+    .forEach((transaction) => {
+      const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
+      const split = hasSplit
+        ? undefined
+        : estimateSplitBeforeKnownEnding({
+            amount: transaction.amount,
+            annualRatePercent: loan.interestRate,
+            endingOwing,
+            schedule: loan.schedule,
+          });
+      const principal = split?.principalAmount ?? existingPrincipal(transaction);
+      endingOwing = split?.openingOwing ?? toFixed2(endingOwing + principal);
+      prepared.set(transaction.id, split ? withEstimatedSplit(transaction, split) : transaction);
+    });
+
+  return sorted.map((transaction) => prepared.get(transaction.id) ?? transaction);
+}
+
+function withEstimatedSplit(
+  transaction: Transaction,
+  split: { principalAmount: number; interestAmount: number }
+): Transaction {
+  return {
+    ...transaction,
+    principalAmount: split.principalAmount,
+    interestAmount: split.interestAmount,
+    notes: transaction.notes?.includes("Estimated principal/interest split from the mortgage rate.")
+      ? transaction.notes
+      : transaction.notes
+        ? `${transaction.notes}\nEstimated principal/interest split from the mortgage rate.`
+        : "Estimated principal/interest split from the mortgage rate.",
+  };
 }

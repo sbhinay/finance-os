@@ -947,13 +947,16 @@ export function HouseLoansSection({
             summary={getMortgageSummary(detailLoan)}
             onEstimateMissing={() => {
               const summary = getMortgageSummary(detailLoan);
-              const missingRows = summary.rows
+              const allRows = summary.rows.map((row) => row.transaction);
+              const missingIds = new Set(summary.rows
                 .filter((row) => row.unallocated > 0)
-                .map((row) => row.transaction);
+                .map((row) => row.transaction.id));
+              const missingRows = allRows.filter((transaction) => missingIds.has(transaction.id));
               if (!missingRows.length) return;
-              const estimated = estimateMissingHouseLoanSplits(detailLoan, missingRows);
+              const estimated = estimateMissingHouseLoanSplits(detailLoan, allRows);
               const changed = estimated.filter((transaction) =>
-                transaction.principalAmount != null || transaction.interestAmount != null
+                missingIds.has(transaction.id)
+                && (transaction.principalAmount != null || transaction.interestAmount != null)
               );
               if (!changed.length) {
                 alert("Set an interest rate and balance first, then FinanceOS can estimate the split.");

@@ -99,4 +99,52 @@ if (estimatedRows[0].principalAmount !== 500 || estimatedRows[0].interestAmount 
   throw new Error("Missing mortgage splits should be estimable from rate, payment, and owing.");
 }
 
-console.log("Debt reporting validated: principal-only replay, interest reporting, unsplit cash preservation, and estimated mortgage splits.");
+const historicalRows = estimateMissingHouseLoanSplits(
+  {
+    id: "loan-a",
+    propertyId: "property-a",
+    name: "Primary",
+    principal: 125000,
+    remaining: 100000,
+    balanceSnapshotAmount: 100000,
+    balanceSnapshotDate: "2026-06-01",
+    payment: 1000,
+    schedule: "Monthly",
+    source: "bank",
+    startDate: "2026-01-01",
+    endDate: "2050-01-01",
+    nextPaymentDate: "2026-06-15",
+    interestRate: 6,
+  },
+  [
+    {
+      ...base,
+      id: "historical-older",
+      amount: 1000,
+      date: "2026-04-01",
+      createdAt: "2026-04-01T12:00:00.000Z",
+      description: "Mortgage Payment - Older Historical",
+    },
+    {
+      ...base,
+      id: "historical-newer",
+      amount: 1000,
+      date: "2026-05-01",
+      createdAt: "2026-05-01T12:00:00.000Z",
+      description: "Mortgage Payment - Newer Historical",
+    },
+  ]
+);
+const olderHistorical = historicalRows.find((row) => row.id === "historical-older");
+const newerHistorical = historicalRows.find((row) => row.id === "historical-newer");
+if (!olderHistorical?.interestAmount || !newerHistorical?.interestAmount) {
+  throw new Error("Historical mortgage rows should receive estimated interest.");
+}
+if (olderHistorical.interestAmount <= newerHistorical.interestAmount) {
+  throw new Error("Older pre-snapshot mortgage rows should have higher interest because owing was higher before later principal reductions.");
+}
+if (olderHistorical.principalAmount >= newerHistorical.principalAmount) {
+  throw new Error("Older pre-snapshot mortgage rows should have lower principal than newer rows.");
+}
+
+console.log("Debt reporting validated: principal-only replay, interest reporting, unsplit cash preservation, and forward/backward estimated mortgage splits.");
