@@ -204,8 +204,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     }
 
     if (txType === "loan_payment") {
-      if (selectedLiability?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedLiability.name}`;
       if (selectedHouseLoan?.name) return `Mortgage Payment - ${selectedHouseLoan.name}`;
+      if (selectedLiability?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedLiability.name}`;
       if (selectedProperty?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedProperty.name}`;
       if (selectedVehicle?.name) return `${selectedSubTypeLabel || "Loan Payment"} - ${selectedVehicle.name}`;
       return selectedSubTypeLabel || "Loan Payment";
@@ -344,7 +344,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   const showDestination = txType === "transfer" || txType === "adjustment";
   const showLoanSplit = txType === "loan_payment";
   const showMortgageLink = txType === "loan_payment" && form.subType === "mortgage";
-  const showLiability = txType === "loan_receipt" || txType === "loan_payment";
+  const showLiability = txType === "loan_receipt" || (txType === "loan_payment" && form.subType !== "mortgage");
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
   const subTypeOptions = SUB_TYPE_OPTIONS[txType] ?? [];
   const showVehicleLink = txType === "expense" && isVehicleCat;
@@ -459,7 +459,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       linkedVehicleId:  form.linkedVehicleId || undefined,
       linkedPropertyId: form.linkedPropertyId || undefined,
       linkedHouseLoanId: form.linkedHouseLoanId || undefined,
-      linkedLiabilityId: form.linkedLiabilityId || undefined,
+      linkedLiabilityId: txType === "loan_payment" && form.subType === "mortgage"
+        ? undefined
+        : form.linkedLiabilityId || undefined,
       recurringOriginType: initial?.recurringOriginType,
       recurringOriginId: initial?.recurringOriginId,
       odometer:         form.odometer || undefined,
@@ -530,6 +532,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                   ...p,
                   subType: nextSubType,
                   mode: txType === "transfer" && nextSubType === "cc_payment" ? "Bank Transfer" : p.mode,
+                  linkedLiabilityId: txType === "loan_payment" && nextSubType === "mortgage" ? "" : p.linkedLiabilityId,
                   ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", odometer: "" } : {}),
                 }));
               }}

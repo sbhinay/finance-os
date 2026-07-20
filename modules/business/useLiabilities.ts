@@ -63,6 +63,15 @@ function migrateNumberedPersonalLenders(): Liability[] {
   return liabilities;
 }
 
+export function isLenderLiabilityTransaction(transaction: Transaction): boolean {
+  return (
+    (transaction.type === "loan_receipt" || transaction.type === "loan_payment")
+    && transaction.subType !== "mortgage"
+    && transaction.purpose !== "mortgage_payment"
+    && !transaction.linkedHouseLoanId
+  );
+}
+
 export function calculateLiabilityBalance(
   liability: Liability,
   transactions = transactionRepository.getAll()
@@ -75,6 +84,7 @@ export function calculateLiabilityBalance(
     .filter((transaction) =>
       transaction.status !== "pending"
       && transaction.linkedLiabilityId === liability.id
+      && isLenderLiabilityTransaction(transaction)
       && (!snapshotDate || transaction.date > snapshotDate)
     )
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
@@ -117,8 +127,8 @@ export function getLiabilityLedger(
     .filter((transaction) =>
       transaction.status !== "pending"
       && transaction.linkedLiabilityId === liability.id
+      && isLenderLiabilityTransaction(transaction)
       && (!snapshotDate || transaction.date > snapshotDate)
-      && (transaction.type === "loan_receipt" || transaction.type === "loan_payment")
     )
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
     .map((transaction) => {
@@ -141,6 +151,7 @@ export function getLiabilitySummary(
   const linked = transactions.filter((transaction) =>
     transaction.status !== "pending"
     && transaction.linkedLiabilityId === liability.id
+    && isLenderLiabilityTransaction(transaction)
   );
   return {
     borrowed: toFixed2(linked

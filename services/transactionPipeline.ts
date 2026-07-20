@@ -203,12 +203,18 @@ export function findSemanticDuplicate(
 function prepareCanonicalTransaction(transaction: Transaction): Transaction {
   const purpose = inferTransactionPurpose(transaction);
   const rule = purpose ? PURPOSE_RULES[purpose] : undefined;
+  const isMortgagePayment = purpose === "mortgage_payment"
+    || (
+      (rule?.type ?? transaction.type) === "loan_payment"
+      && (rule?.subType ?? transaction.subType) === "mortgage"
+    );
   return {
     ...transaction,
     purpose,
     type: rule?.type ?? transaction.type,
     subType: rule?.subType ?? transaction.subType,
     mode: transaction.mode ?? rule?.defaultMode,
+    linkedLiabilityId: isMortgagePayment ? undefined : transaction.linkedLiabilityId,
   };
 }
 

@@ -1,4 +1,5 @@
 import { calculateDebtSummary, matchesMortgagePayment } from "../utils/debtReporting.ts";
+import { estimateDebtPaymentSplit, estimateMissingHouseLoanSplits } from "../utils/debtAllocation.ts";
 
 const base = {
   type: "loan_payment",
@@ -65,4 +66,37 @@ if (summary.rows.filter((row) => row.affectsBalance).length !== 2) {
   throw new Error("Only transactions after the snapshot date should participate in replay.");
 }
 
-console.log("Debt reporting validated: principal-only replay, interest reporting, and unsplit cash preservation.");
+const estimatedSplit = estimateDebtPaymentSplit({
+  amount: 1000,
+  annualRatePercent: 6,
+  openingOwing: 100000,
+  schedule: "Monthly",
+});
+if (!estimatedSplit || estimatedSplit.interestAmount !== 500 || estimatedSplit.principalAmount !== 500) {
+  throw new Error(`Expected a 500/500 estimated monthly split; received ${JSON.stringify(estimatedSplit)}.`);
+}
+
+const estimatedRows = estimateMissingHouseLoanSplits(
+  {
+    id: "loan-a",
+    propertyId: "property-a",
+    name: "Primary",
+    principal: 100000,
+    remaining: 100000,
+    balanceSnapshotAmount: 100000,
+    balanceSnapshotDate: "2026-06-01",
+    payment: 1000,
+    schedule: "Monthly",
+    source: "bank",
+    startDate: "2026-01-01",
+    endDate: "2050-01-01",
+    nextPaymentDate: "2026-06-15",
+    interestRate: 6,
+  },
+  [transactions[2]]
+);
+if (estimatedRows[0].principalAmount !== 500 || estimatedRows[0].interestAmount !== 500) {
+  throw new Error("Missing mortgage splits should be estimable from rate, payment, and owing.");
+}
+
+console.log("Debt reporting validated: principal-only replay, interest reporting, unsplit cash preservation, and estimated mortgage splits.");

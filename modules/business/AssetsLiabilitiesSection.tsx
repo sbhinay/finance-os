@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
@@ -10,7 +10,7 @@ import { PaymentSchedule, type PropertyTaxPayment, type Vehicle, type HouseLoan,
 import { theme } from "@/lib/theme";
 import { useLiabilities } from "./useLiabilities";
 import type { Liability } from "@/types/domain";
-import { getLiabilityLedger, getLiabilitySummary } from "./useLiabilities";
+import { getLiabilityLedger, getLiabilitySummary, isLenderLiabilityTransaction } from "./useLiabilities";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { calculateDebtSummary, matchesMortgagePayment } from "@/utils/debtReporting";
 
@@ -61,10 +61,12 @@ function ActionBtn({
   children,
   onClick,
   variant = "secondary",
+  style,
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: "primary" | "secondary" | "green" | "danger";
+  style?: CSSProperties;
 }) {
   const styles = {
     primary: { background: "#1a5fa8", color: "#fff", border: "1px solid #1a5fa8" },
@@ -83,6 +85,7 @@ function ActionBtn({
         borderRadius: 8,
         cursor: "pointer",
         ...styles,
+        ...style,
       }}
     >
       {children}
@@ -209,7 +212,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
     () => transactions
       .filter((transaction) =>
         !transaction.linkedLiabilityId
-        && (transaction.type === "loan_receipt" || transaction.type === "loan_payment")
+        && isLenderLiabilityTransaction(transaction)
       )
       .sort((a, b) => b.date.localeCompare(a.date)),
     [transactions]
@@ -619,7 +622,15 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ fontSize: 13, color: "#6b7280" }}>Credit cards owing: {fmtCAD(cardLiabilities)}</div>
-              <div style={{ fontSize: 13, color: "#6b7280" }}>House loans remaining: {fmtCAD(houseLoanLiabilities)}</div>
+              <div style={{ fontSize: 13, color: "#6b7280" }}>
+                House loans / mortgages remaining: {fmtCAD(houseLoanLiabilities)}
+                <ActionBtn onClick={() => onNavigate("houseloans")} style={{ marginLeft: 8 }}>Open Mortgages</ActionBtn>
+              </div>
+              {visibleLiabilities.length > 0 && (
+                <div style={{ fontSize: 11, color: "#64748b" }}>
+                  Lender rows below are for personal, bank, and shareholder loans. Mortgages stay in House Loans and Properties so they do not double-count as generic lender debt.
+                </div>
+              )}
               {visibleLiabilities.map((liability) => (
                 <div key={liability.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", paddingTop: 8, borderTop: "1px solid #f3f4f6", opacity: liability.archived ? 0.68 : 1 }}>
                   <div>
