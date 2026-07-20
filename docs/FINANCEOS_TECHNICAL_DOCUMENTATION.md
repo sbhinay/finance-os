@@ -36,6 +36,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Full support for bank accounts, credit cards, first-class Properties, assets, liabilities, and recurring payments.
 - Current-app JSON export/import with asset restoration.
 - Balance snapshots on accounts and credit cards.
+- Optional card/LOC repayment projection settings for planning-only debt pressure.
 - Business and CRA support for HST, corporate tax, and payroll remittance tracking.
 - New `CRA Review` business subview that combines current ledger and business data with saved tax questionnaire inputs to produce warning-first CRA working-paper guidance.
 - Initial unified `Assets & Liabilities` page with upcoming-obligation actions.
@@ -76,6 +77,8 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Lender snapshots use a known owing amount/date as the replay anchor; later repayments reduce owing only by principal while interest remains separately reported.
 - Mortgage and financed-vehicle snapshots now use the same conservative principal-only replay contract.
 - Debt details separate cash paid, principal, interest, unallocated payments, and current owing; dashboard, Property equity, and net-worth views consume the same calculation.
+- Mortgage details calculate estimated principal/interest dynamically when possible; stored split fields remain manual/import overrides.
+- Projection views include card/LOC repayment pressure or unplanned exposure without changing ledger balances.
 - `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
 - Transaction History now filters by tag and exact recurring origin.
 - Data Health can open the canonical transaction editor for correction/relinking, delete rows safely, and reversibly dismiss legitimate warnings.

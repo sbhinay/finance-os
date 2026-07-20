@@ -525,6 +525,13 @@ export function CreditCardsSection() {
     linkedAccountId: "",
     annualFeeAmount: 0,
     annualFeeDate: todayLocal,
+    repaymentProjectionEnabled: false,
+    repaymentStrategy: "minimum" as NonNullable<CreditCard["repaymentStrategy"]>,
+    repaymentDueDate: todayLocal,
+    repaymentFixedAmount: 0,
+    repaymentMinimumAmount: 10,
+    repaymentMinimumPercent: 3,
+    repaymentInterestRate: 0,
   };
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -551,6 +558,7 @@ export function CreditCardsSection() {
       const existing = cards.find((c) => c.id === form.id);
       const nextOpening = toFixed2(Number(form.openingBalance));
       const balanceChanged = existing ? nextOpening !== toFixed2(existing.openingBalance) : true;
+      const projectionEnabled = Boolean(form.repaymentProjectionEnabled);
       updateCard({
         ...(existing ?? {}),
         id: form.id!,
@@ -564,10 +572,18 @@ export function CreditCardsSection() {
         linkedAccountId: form.linkedAccountId,
         annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
         annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
+        repaymentProjectionEnabled: projectionEnabled,
+        repaymentStrategy: projectionEnabled ? form.repaymentStrategy : undefined,
+        repaymentDueDate: projectionEnabled ? form.repaymentDueDate : undefined,
+        repaymentFixedAmount: projectionEnabled && Number(form.repaymentFixedAmount) > 0 ? toFixed2(Number(form.repaymentFixedAmount)) : undefined,
+        repaymentMinimumAmount: projectionEnabled && Number(form.repaymentMinimumAmount) > 0 ? toFixed2(Number(form.repaymentMinimumAmount)) : undefined,
+        repaymentMinimumPercent: projectionEnabled && Number(form.repaymentMinimumPercent) > 0 ? Number(form.repaymentMinimumPercent) : undefined,
+        repaymentInterestRate: projectionEnabled && Number(form.repaymentInterestRate) > 0 ? Number(form.repaymentInterestRate) : undefined,
         active: existing?.active ?? true,
         createdAt: existing?.createdAt ?? new Date().toISOString(),
       });
     } else {
+      const projectionEnabled = Boolean(form.repaymentProjectionEnabled);
       addCard(
         form.name,
         form.issuer,
@@ -580,6 +596,13 @@ export function CreditCardsSection() {
           balanceSnapshotDate: todayLocal,
           annualFeeAmount: Number(form.annualFeeAmount) > 0 ? toFixed2(Number(form.annualFeeAmount)) : undefined,
           annualFeeDate: Number(form.annualFeeAmount) > 0 ? form.annualFeeDate : undefined,
+          repaymentProjectionEnabled: projectionEnabled,
+          repaymentStrategy: projectionEnabled ? form.repaymentStrategy : undefined,
+          repaymentDueDate: projectionEnabled ? form.repaymentDueDate : undefined,
+          repaymentFixedAmount: projectionEnabled && Number(form.repaymentFixedAmount) > 0 ? toFixed2(Number(form.repaymentFixedAmount)) : undefined,
+          repaymentMinimumAmount: projectionEnabled && Number(form.repaymentMinimumAmount) > 0 ? toFixed2(Number(form.repaymentMinimumAmount)) : undefined,
+          repaymentMinimumPercent: projectionEnabled && Number(form.repaymentMinimumPercent) > 0 ? Number(form.repaymentMinimumPercent) : undefined,
+          repaymentInterestRate: projectionEnabled && Number(form.repaymentInterestRate) > 0 ? Number(form.repaymentInterestRate) : undefined,
         }
       );
     }
@@ -868,6 +891,42 @@ export function CreditCardsSection() {
               <Inp label="Fee Amount ($)" type="number" value={form.annualFeeAmount} onChange={f("annualFeeAmount")} />
               <Inp label="Next Charge Date" type="date" value={form.annualFeeDate} onChange={f("annualFeeDate")} />
             </Grid2>
+          </div>
+          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 12px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "#9a3412", marginBottom: 8 }}>
+              <input
+                type="checkbox"
+                checked={Boolean(form.repaymentProjectionEnabled)}
+                onChange={(event) => setForm((current) => ({ ...current, repaymentProjectionEnabled: event.target.checked }))}
+              />
+              Include this card/LOC in cash-flow projection repayment pressure
+            </label>
+            {form.repaymentProjectionEnabled && (
+              <>
+                <Grid2>
+                  <Sel
+                    label="Repayment Strategy"
+                    value={form.repaymentStrategy}
+                    onChange={f("repaymentStrategy")}
+                    options={[
+                      { value: "minimum", label: "Minimum estimate" },
+                      { value: "statement_balance", label: "Statement balance" },
+                      { value: "full_current_balance", label: "Full current balance" },
+                      { value: "fixed_amount", label: "Fixed amount" },
+                    ]}
+                  />
+                  <Inp label="Next Payment Date" type="date" value={form.repaymentDueDate} onChange={f("repaymentDueDate")} />
+                </Grid2>
+                <Grid2>
+                  <Inp label="Fixed Amount ($)" type="number" value={form.repaymentFixedAmount} onChange={f("repaymentFixedAmount")} />
+                  <Inp label="Minimum Amount ($)" type="number" value={form.repaymentMinimumAmount} onChange={f("repaymentMinimumAmount")} />
+                </Grid2>
+                <Grid2>
+                  <Inp label="Minimum Percent (%)" type="number" value={form.repaymentMinimumPercent} onChange={f("repaymentMinimumPercent")} />
+                  <Inp label="Interest Rate (%)" type="number" value={form.repaymentInterestRate} onChange={f("repaymentInterestRate")} />
+                </Grid2>
+              </>
+            )}
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Btn variant="secondary" onClick={() => setShowForm(false)}>Cancel</Btn>

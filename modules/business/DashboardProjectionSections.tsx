@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { theme } from "@/lib/theme";
 import { getExpenseReportEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
 import { calculateDebtSummary, matchesMortgagePayment, matchesVehicleFinancePayment } from "@/utils/debtReporting";
+import { buildDebtRepaymentProjection } from "@/utils/debtProjection";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ interface ProjectionEvent {
   date: Date;
   label: string;
   amount: number; // positive = income, negative = expense
-  type: "vehicle" | "loan" | "fixed" | "cra" | "income" | "invoice";
+  type: "vehicle" | "loan" | "fixed" | "cra" | "income" | "invoice" | "debt";
   account?: string;
 }
 
@@ -66,6 +67,7 @@ function buildEvents(
   days: number,
   vehicles: ReturnType<typeof useVehicles>["vehicles"],
   houseLoans: ReturnType<typeof useHouseLoans>["houseLoans"],
+  cards: ReturnType<typeof useCreditCards>["cards"],
   fixedPayments: ReturnType<typeof useFixedPayments>["fixedPayments"],
   business: ReturnType<typeof useBusiness>["business"],
   incomes: Array<{ id: string; source: string; amount: number; schedule: string; date: string; type: string }>,
@@ -86,6 +88,7 @@ function buildEvents(
   const corporateInstalments = business.corporateInstalments ?? [];
   const hstRemittances = business.hstRemittances ?? [];
   const invoices = business.invoices ?? [];
+  const debtProjection = buildDebtRepaymentProjection({ cards, fixedPayments, today, days });
 
   // Vehicles
   vehicles.forEach((v) => {
@@ -163,6 +166,16 @@ function buildEvents(
       }
       d = new Date(d.getTime() + interval * 86400000);
     }
+  });
+
+  debtProjection.events.forEach((event) => {
+    events.push({
+      date: event.date,
+      label: event.label,
+      amount: event.amount,
+      type: "debt",
+      account: event.account,
+    });
   });
 
   // CRA payroll
@@ -271,6 +284,7 @@ function buildEvents(
 const TYPE_COLORS: Record<string, string> = {
   vehicle: "#a05c00", loan: "#a31515", fixed: "#6b7280",
   cra: "#4a3ab5", income: "#1a7f3c", invoice: "#1a7f3c",
+  debt: "#b91c1c",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -534,7 +548,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
 
   // 30-day events
   const events30 = useMemo(() => {
-    let evts = buildEvents(30, vehicles, houseLoans, fixedPayments, business, incomes, today);
+    let evts = buildEvents(30, vehicles, houseLoans, cards, fixedPayments, business, incomes, today);
     if (whatIf && wiAmount > 0) {
       evts = [...evts, {
         date: new Date(wiDate + "T12:00:00"),
@@ -544,7 +558,11 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       }].sort((a, b) => a.date.getTime() - b.date.getTime());
     }
     return evts;
-  }, [vehicles, houseLoans, fixedPayments, business, incomes, today, whatIf, wiAmount, wiDate, wiType]);
+  }, [vehicles, houseLoans, cards, fixedPayments, business, incomes, today, whatIf, wiAmount, wiDate, wiType]);
+  const debtProjection30 = useMemo(
+    () => buildDebtRepaymentProjection({ cards, fixedPayments, today, days: 30 }),
+    [cards, fixedPayments, today]
+  );
 
   // Build 30-day with running balance
   const days30 = useMemo(() => {
@@ -604,7 +622,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
 
     // Future/current: projected events
     const projEvents = isFuture || !isPast
-      ? buildEvents(365, vehicles, houseLoans, fixedPayments, business, incomes, today)
+      ? buildEvents(365, vehicles, houseLoans, cards, fixedPayments, business, incomes, today)
           .filter((e) => {
             const d = e.date.toISOString().slice(0, 7);
             return d === selectedMonth;
@@ -649,13 +667,13 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
     // Running balance for future months
     let runBal = totalBankNow;
     if (isFuture) {
-      const eventsBeforeMonth = buildEvents(365, vehicles, houseLoans, fixedPayments, business, incomes, today)
+      const eventsBeforeMonth = buildEvents(365, vehicles, houseLoans, cards, fixedPayments, business, incomes, today)
         .filter((e) => e.date < monthStart);
       runBal = toFixed2(totalBankNow + eventsBeforeMonth.reduce((s, e) => s + e.amount, 0));
     }
 
     return { isPast, isFuture, totalIn, totalOut, projIn, projOut, craTx, topCats, allDays, runBal };
-  }, [selectedMonth, transactions, vehicles, houseLoans, fixedPayments, business, incomes, today, totalBankNow]);
+  }, [selectedMonth, transactions, vehicles, houseLoans, cards, fixedPayments, business, incomes, today, totalBankNow]);
 
   const catName = (id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "";
 
@@ -675,7 +693,21 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
         <StatBox label="Current Balance" value={fmtCAD(totalBankNow)} color="#1a7f3c" />
         <StatBox label="30-Day Projected" value={fmtCAD(projected30)} color={projected30 >= threshold ? "#1a7f3c" : "#a31515"} />
         <StatBox label="Low Balance Days" value={String(lowDays)} color={lowDays > 0 ? "#a31515" : "#1a7f3c"} sub="next 30 days" />
+        <StatBox label="Debt Pressure" value={fmtCAD(debtProjection30.repaymentPressure)} color={debtProjection30.repaymentPressure > 0 ? "#a31515" : "#1a7f3c"} sub="planned-only card/LOC event" />
+        <StatBox label="Unplanned Exposure" value={fmtCAD(debtProjection30.unplannedExposure)} color={debtProjection30.unplannedExposure > 0 ? "#a05c00" : "#1a7f3c"} sub="owing without strategy" />
       </div>
+
+      {debtProjection30.warnings.length > 0 && (
+        <Card accent="#a05c00">
+          <div style={{ fontWeight: 800, fontSize: 14, color: "#a05c00", marginBottom: 8 }}>Card / LOC repayment planning gaps</div>
+          {debtProjection30.warnings.map((warning) => (
+            <div key={`${warning.cardId}-${warning.reason}`} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontSize: 12, padding: "5px 0", borderBottom: "1px solid #fed7aa" }}>
+              <span>{warning.name}: {warning.reason === "missing_pay_from" ? "projection enabled but no linked pay-from account" : "owing balance has no repayment strategy"}</span>
+              <strong style={{ color: "#a05c00" }}>{fmtCAD(warning.unplannedAmount)}</strong>
+            </div>
+          ))}
+        </Card>
+      )}
 
       {/* Threshold + What-if */}
       <Card>

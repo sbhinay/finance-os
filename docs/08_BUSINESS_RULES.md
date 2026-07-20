@@ -89,6 +89,10 @@
 - Import review must keep all changes in preview state until confirmation; relinking and row exclusion cannot write to the active ledger early.
 - Import duplicate review uses semantic identity rather than matching descriptions.
 - `transfer + loc_draw` is the canonical way to represent borrowed cash moving from a line of credit into a receiving account.
+- Credit cards and LOCs may carry optional repayment projection settings on the card record.
+- Repayment projection settings create planning-only pressure events; they do not change card/account balances until a real `transfer + cc_payment` or `transfer + loc_payment` is posted.
+- Existing planned card/LOC payment transfers reduce projected repayment pressure so projections do not double count the same obligation.
+- Cards/LOCs with balances owing but no repayment strategy should appear as unplanned exposure in projection views.
 - Personal, bank, and shareholder lenders are represented by `Liability` records.
 - Multiple receipts may link to one lender liability and increase its amount owed.
 - Repayments decrease liability by `principalAmount`, or by the full amount when no split is supplied.
@@ -112,6 +116,7 @@
 - `transfer` rows, including `cc_payment`, are excluded from standard income/expense summaries unless explicitly included.
 - `tax_payment`, `adjustment`, `loan_payment`, and `withdrawal` are also excluded from standard income/expense summaries unless explicitly included.
 - Regular projections must include full scheduled outflows for mortgages, vehicle payments, fixed payments, and CRA obligations even when those rows are not standard expense types.
+- Regular projections must also show credit-card and LOC repayment pressure or unplanned exposure so cash-flow views do not ignore existing revolving debt.
 - Detailed financing reports may later use `principalAmount`, `interestAmount`, rate, amortization, and term data when available, but regular projections must not depend on them.
 - Subscription rows should default to `Subscriptions` category when that category exists in the dedicated subscription workflow.
 - Transaction History is explicitly paginated for usability; exports still operate on the full filtered result set rather than only the visible page.

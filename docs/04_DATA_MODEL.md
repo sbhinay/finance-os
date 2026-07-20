@@ -100,6 +100,13 @@ interface CreditCard {
   balanceSnapshotAmount?: number;
   balanceSnapshotDate?: string;
   linkedAccountId?: string;
+  repaymentProjectionEnabled?: boolean;
+  repaymentStrategy?: "minimum" | "statement_balance" | "full_current_balance" | "fixed_amount";
+  repaymentDueDate?: string;
+  repaymentFixedAmount?: number;
+  repaymentMinimumAmount?: number;
+  repaymentMinimumPercent?: number;
+  repaymentInterestRate?: number;
   active: boolean;
   createdAt: string;
   primary?: boolean;
@@ -251,10 +258,11 @@ interface Property {
 - Regular mode only needs enough data to plan cash: payment amount, schedule, pay-from account, and next payment date.
 - Detailed mode can add balance-sheet and financing fields like original principal, remaining balance, interest rate, term dates, and principal/interest split support.
 - Missing detailed fields must not block normal cash projection or upcoming-obligation views.
+- Credit-card and LOC repayment projection fields are optional planning metadata; older JSON exports can omit them safely.
 - Legacy standalone property-tax and house-loan records remain readable, while unambiguous records migrate to a first-class Property parent.
 - Vehicle, account, card, and house-loan records can carry balance snapshot fields. These snapshots are the user-entered real-world anchor for replay and ledger explanation views.
-- Secured-debt replay starts from the latest balance snapshot and reduces owing only by explicit principal on later accounting dates.
-- An unsplit payment remains a full cash outflow but does not reduce derived owing; the detail view reports it as awaiting allocation.
+- Secured-debt replay starts from the latest balance snapshot and reduces owing by manual or dynamically estimated principal on later accounting dates when enough data exists.
+- An unallocated payment remains a full cash outflow; the detail view reports it as awaiting allocation only when no manual or dynamic split can be derived.
 - Explicit interest contributes to expense reporting while principal remains a balance-sheet reduction.
 
 ### PropertyTax
