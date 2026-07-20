@@ -413,11 +413,40 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     const finalDescription = effectiveDescription;
     const desc = finalDescription.toLowerCase().trim();
     const categoryId = showCategory ? (form.categoryId || autoDetectedCat) : undefined;
+    const finalCategory = categories.find((category) => category.id === categoryId);
     const unchangedClassification = initial?.type === txType
       && (initial?.subType ?? "") === (form.subType ?? "");
     const purpose = unchangedClassification
       ? initial?.purpose
       : undefined;
+    const finalPurpose = purpose
+      ?? (
+        txType === "expense"
+        && finalCategory?.name.trim().toLowerCase() === "vehicle lease"
+        && form.linkedVehicleId
+          ? "vehicle_lease_payment"
+          : inferTransactionPurpose({
+              type: txType,
+              subType: form.subType ? (form.subType as TransactionSubType) : undefined,
+            })
+      );
+    const allowVehicleLink = Boolean(
+      form.linkedVehicleId
+      && (
+        finalCategory?.vehicleLinked
+        || finalPurpose === "vehicle_lease_payment"
+        || finalPurpose === "vehicle_finance_payment"
+      )
+    );
+    const allowMortgageLink = txType === "loan_payment" && form.subType === "mortgage";
+    const allowPropertyLink = Boolean(
+      form.linkedPropertyId
+      && (
+        finalCategory?.propertyLinked
+        || allowMortgageLink
+      )
+    );
+    const allowLiabilityLink = txType === "loan_receipt" || (txType === "loan_payment" && form.subType !== "mortgage");
 
     if (categoryId && finalDescription) {
       learnedRulesRepository.add({ id: uid(), description: desc, categoryId });
@@ -430,17 +459,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       id:              form.id ?? uid(),
       type:            txType,
       subType:         form.subType ? (form.subType as TransactionSubType) : undefined,
-      purpose:         purpose
-        ?? (
-          txType === "expense"
-          && selectedCatById?.name.trim().toLowerCase() === "vehicle lease"
-          && form.linkedVehicleId
-            ? "vehicle_lease_payment"
-            : inferTransactionPurpose({
-                type: txType,
-                subType: form.subType ? (form.subType as TransactionSubType) : undefined,
-              })
-        ),
+      purpose:         finalPurpose,
       amount,
       interestAmount:  showLoanSplit && Number(form.interestAmount) > 0 ? toFixed2(Number(form.interestAmount)) : undefined,
       principalAmount: showLoanSplit && Number(form.principalAmount) > 0 ? toFixed2(Number(form.principalAmount)) : undefined,
@@ -456,15 +475,13 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       currency:        "CAD",
       status:          "cleared",
       taxYear:         deriveTaxYear(form.date.slice(0, 10)),
-      linkedVehicleId:  form.linkedVehicleId || undefined,
-      linkedPropertyId: form.linkedPropertyId || undefined,
-      linkedHouseLoanId: form.linkedHouseLoanId || undefined,
-      linkedLiabilityId: txType === "loan_payment" && form.subType === "mortgage"
-        ? undefined
-        : form.linkedLiabilityId || undefined,
+      linkedVehicleId:  allowVehicleLink ? form.linkedVehicleId : undefined,
+      linkedPropertyId: allowPropertyLink ? form.linkedPropertyId : undefined,
+      linkedHouseLoanId: allowMortgageLink ? form.linkedHouseLoanId || undefined : undefined,
+      linkedLiabilityId: allowLiabilityLink ? form.linkedLiabilityId || undefined : undefined,
       recurringOriginType: initial?.recurringOriginType,
       recurringOriginId: initial?.recurringOriginId,
-      odometer:         form.odometer || undefined,
+      odometer:         allowVehicleLink ? form.odometer || undefined : undefined,
     };
 
     const saved = persistCanonicalTransaction(txn);
@@ -519,7 +536,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 sourceId: "",
                 destinationId: "",
                 mode: newType === "transfer" ? "Bank Transfer" : p.mode,
-                ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", odometer: "" }),
+                ...(keepCategory ? {} : { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", linkedLiabilityId: "", odometer: "" }),
               }));
             }}
               disabled={!!lockType}
@@ -533,7 +550,9 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                   subType: nextSubType,
                   mode: txType === "transfer" && nextSubType === "cc_payment" ? "Bank Transfer" : p.mode,
                   linkedLiabilityId: txType === "loan_payment" && nextSubType === "mortgage" ? "" : p.linkedLiabilityId,
-                  ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", odometer: "" } : {}),
+                  linkedHouseLoanId: txType === "loan_payment" && nextSubType !== "mortgage" ? "" : p.linkedHouseLoanId,
+                  linkedPropertyId: txType === "loan_payment" && nextSubType !== "mortgage" ? "" : p.linkedPropertyId,
+                  ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", linkedLiabilityId: "", odometer: "" } : {}),
                 }));
               }}
                 options={[{ value: "", label: "— Select sub-type —" }, ...subTypeOptions]}
@@ -610,7 +629,16 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             {showCategory ? (
               <div>
                 <Label>Category</Label>
-                <select value={form.categoryId} onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}
+                <select value={form.categoryId} onChange={(e) => {
+                  const nextCategory = categories.find((category) => category.id === e.target.value);
+                  setForm((p) => ({
+                    ...p,
+                    categoryId: e.target.value,
+                    linkedVehicleId: nextCategory?.vehicleLinked ? p.linkedVehicleId : "",
+                    odometer: nextCategory?.vehicleLinked ? p.odometer : "",
+                    linkedPropertyId: nextCategory?.propertyLinked ? p.linkedPropertyId : "",
+                  }));
+                }}
                  
                   style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}>
                   <option value="">— Select category —</option>

@@ -120,6 +120,7 @@ export function HealthReportSection({
     const accountIds = new Set(accounts.map((a) => a.id));
     const cardIds = new Set(cards.map((c) => c.id));
     const categoryIds = new Set(categories.map((c) => c.id));
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
     const vehicleIds = new Set(vehicles.map((v) => v.id));
     const houseLoanIds = new Set(houseLoans.map((h) => h.id));
     const propertyIds = new Set(properties.map((property) => property.id));
@@ -185,6 +186,23 @@ export function HealthReportSection({
           transactionId: tx.id,
         });
       }
+      if (
+        tx.linkedVehicleId
+        && vehicleIds.has(tx.linkedVehicleId)
+        && tx.purpose !== "vehicle_lease_payment"
+        && tx.purpose !== "vehicle_finance_payment"
+        && tx.subType !== "bank_loan"
+        && !categoryById.get(tx.categoryId ?? "")?.vehicleLinked
+      ) {
+        nextIssues.push({
+          id: `vehicle-link-suspicious-${tx.id}`,
+          severity: "medium",
+          title: "Vehicle link looks unrelated to final category",
+          detail: summarizeTx(tx),
+          hint: "This row is linked to a vehicle, but its current category does not ask for vehicle details. Edit it and clear the vehicle if this was left over from a previous category choice.",
+          transactionId: tx.id,
+        });
+      }
 
       if (tx.linkedPropertyId && !propertyIds.has(tx.linkedPropertyId)) {
         nextIssues.push({
@@ -193,6 +211,23 @@ export function HealthReportSection({
           title: "Broken linked property reference",
           detail: `${summarizeTx(tx)} - linkedPropertyId=${tx.linkedPropertyId}`,
           hint: "Property-linked transactions should map to a current house/property record.",
+          transactionId: tx.id,
+        });
+      }
+      if (
+        tx.linkedPropertyId
+        && propertyIds.has(tx.linkedPropertyId)
+        && tx.purpose !== "mortgage_payment"
+        && tx.subType !== "mortgage"
+        && !tx.linkedHouseLoanId
+        && !categoryById.get(tx.categoryId ?? "")?.propertyLinked
+      ) {
+        nextIssues.push({
+          id: `property-link-suspicious-${tx.id}`,
+          severity: "medium",
+          title: "Property link looks unrelated to final category",
+          detail: summarizeTx(tx),
+          hint: "This row is linked to a property, but its current category does not ask for property details. Edit it and clear the property if this was left over from a previous category choice.",
           transactionId: tx.id,
         });
       }
