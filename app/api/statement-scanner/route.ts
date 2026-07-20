@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStatementScannerProvider } from "@/lib/statementScanner";
+import { getStatementScannerProvider, getStatementScannerStatus } from "@/lib/statementScanner";
 import type { ScannerAccountHint, ScannerImage } from "@/lib/statementScanner/provider";
 import type { Category } from "@/types/category";
 
@@ -21,8 +21,20 @@ function parseMetadata<T>(formData: FormData, key: string): T {
   return JSON.parse(value) as T;
 }
 
+export async function GET() {
+  return NextResponse.json(getStatementScannerStatus(), {
+    headers: {
+      "cache-control": "no-store",
+    },
+  });
+}
+
 export async function POST(request: Request) {
   try {
+    const scannerStatus = getStatementScannerStatus();
+    if (!scannerStatus.configured) {
+      return NextResponse.json({ error: scannerStatus.message }, { status: 503 });
+    }
     const formData = await request.formData();
     const files = formData.getAll("images").filter((value): value is File => value instanceof File);
     if (files.length < 1 || files.length > MAX_IMAGES) {

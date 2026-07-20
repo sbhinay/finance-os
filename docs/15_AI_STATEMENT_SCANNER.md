@@ -6,12 +6,13 @@ The scanner is an input path into the canonical ledger, not a second transaction
 
 1. The user explicitly selects the statement account/card and one to five images.
 2. `StatementScannerSection.tsx` sends multipart form data to `/api/statement-scanner`.
-3. The server route validates image count, MIME type, and size.
-4. A replaceable provider adapter extracts structured candidates.
-5. The browser validates provider category suggestions against current categories and displays an editable preview.
-6. Semantic, same-day, and nearby-amount duplicate checks run before confirmation.
-7. Only enabled, valid rows are built through `buildCanonicalTransaction()` and persisted in one canonical batch.
-8. No transaction is written before explicit confirmation.
+3. `GET /api/statement-scanner` exposes safe provider readiness metadata before extraction.
+4. The server route validates provider configuration, image count, MIME type, and size.
+5. A replaceable provider adapter extracts structured candidates.
+6. The browser validates provider category suggestions against current categories and displays an editable preview.
+7. Semantic, same-day, and nearby-amount duplicate checks run before confirmation.
+8. Only enabled, valid rows are built through `buildCanonicalTransaction()` and persisted in one canonical batch.
+9. No transaction is written before explicit confirmation.
 
 ## Security And Privacy
 
@@ -19,6 +20,7 @@ The scanner is an input path into the canonical ledger, not a second transaction
 - Images are converted in request memory and are not persisted by FinanceOS.
 - Responses use `cache-control: no-store`.
 - The UI requires explicit consent for each extraction session.
+- The UI shows provider readiness before upload/extraction and disables extraction when the server provider is not configured.
 - Provider-side image handling and retention remain governed by the configured provider account and API terms.
 - Requests are limited to five supported images of at most 8 MB each.
 

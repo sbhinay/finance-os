@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAccounts } from "@/modules/accounts/useAccounts";
 import { useCreditCards } from "@/modules/creditCards/useCreditCards";
 import { useCategories } from "@/modules/categories/useCategories";
@@ -20,6 +20,13 @@ const PURPOSE_OPTIONS: Array<{ value: StatementScannerCandidate["purpose"]; labe
   { value: "credit_card_payment", label: "Credit Card Payment" },
   { value: "loc_draw", label: "LOC Draw" },
 ];
+
+interface ScannerStatus {
+  provider: string;
+  configured: boolean;
+  mode: "external" | "local_fixture";
+  message: string;
+}
 
 const inputStyle = {
   width: "100%",
@@ -79,12 +86,37 @@ export function StatementScannerSection() {
   const [error, setError] = useState("");
   const [candidates, setCandidates] = useState<StatementScannerCandidate[]>([]);
   const [providerInfo, setProviderInfo] = useState("");
+  const [scannerStatus, setScannerStatus] = useState<ScannerStatus | null>(null);
   const [summary, setSummary] = useState<{ added: number; skipped: number; attention: number } | null>(null);
 
   const sources = useMemo(() => [
     ...accounts.filter((account) => account.active !== false).map((account) => ({ id: account.id, name: account.name, kind: "account" as const })),
     ...cards.filter((card) => card.active !== false).map((card) => ({ id: card.id, name: card.name, kind: "card" as const })),
   ], [accounts, cards]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadScannerStatus() {
+      try {
+        const response = await fetch("/api/statement-scanner", { method: "GET", cache: "no-store" });
+        const payload = await response.json() as ScannerStatus;
+        if (!cancelled) setScannerStatus(payload);
+      } catch {
+        if (!cancelled) {
+          setScannerStatus({
+            provider: "unknown",
+            configured: false,
+            mode: "external",
+            message: "Scanner provider status is unavailable.",
+          });
+        }
+      }
+    }
+    void loadScannerStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function classify(candidate: StatementScannerCandidate) {
     return { ...candidate, ...classifyScannerDuplicate(candidate, transactions) };
@@ -98,7 +130,7 @@ export function StatementScannerSection() {
   }
 
   async function scan() {
-    if (!statementAccountId || !files.length || !privacyAccepted) return;
+    if (!statementAccountId || !files.length || !privacyAccepted || scannerStatus?.configured === false) return;
     setLoading(true);
     setError("");
     setSummary(null);
@@ -185,6 +217,22 @@ export function StatementScannerSection() {
       <div style={{ padding: 12, border: "1px solid #bae6fd", background: "#f0f9ff", borderRadius: 8, fontSize: 12, color: "#0c4a6e", lineHeight: 1.5, marginBottom: 14 }}>
         Selected images are sent to the configured external AI provider for extraction. FinanceOS does not save the images, and candidate transactions remain temporary until you confirm import. Provider-side handling and retention follow your provider account and API terms.
       </div>
+      {scannerStatus && (
+        <div style={{
+          padding: 10,
+          border: `1px solid ${scannerStatus.configured ? "#bbf7d0" : "#fecaca"}`,
+          background: scannerStatus.configured ? "#f0fdf4" : "#fef2f2",
+          color: scannerStatus.configured ? "#166534" : "#991b1b",
+          borderRadius: 8,
+          fontSize: 12,
+          lineHeight: 1.45,
+          marginBottom: 14,
+        }}>
+          <strong>Provider:</strong> {scannerStatus.provider} ({scannerStatus.mode === "local_fixture" ? "local fixture" : "external"})
+          {" - "}
+          {scannerStatus.message}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 12 }}>
         <label style={{ fontSize: 12, fontWeight: 700 }}>
@@ -209,7 +257,7 @@ export function StatementScannerSection() {
         <input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} />
         I consent to sending these images to the configured AI provider for this extraction request.
       </label>
-      <Button onClick={scan} disabled={loading || !statementAccountId || !files.length || !privacyAccepted}>
+      <Button onClick={scan} disabled={loading || !statementAccountId || !files.length || !privacyAccepted || scannerStatus?.configured === false}>
         {loading ? "Extracting..." : `Extract ${files.length || ""} Image${files.length === 1 ? "" : "s"}`}
       </Button>
 
