@@ -242,6 +242,7 @@ As of this version:
 - Modern UI Pass 4 standardizes typography weight, removes negative letter spacing from application UI, prefers a native Windows-friendly font stack, and aligns shared/local button, panel, metric, and modal primitives across the major finance pages.
 - Modern UI Pass 5 extends that shared treatment across Business tax surfaces: Tax Obligations, Corporation Income, and Tax & Rate Settings now use common headers, metric cards, action buttons, status chips, modal chrome, and display-cleaned rate notes.
 - Modern UI Pass 6 extends that treatment to Import / Export and guarded cloud snapshot surfaces without changing import, export, cloud, or destructive-clear behavior.
+- Modern UI Pass 7 extends that treatment to Categories, including linked-category chips, archive-safe deletion messaging, category edit modal cleanup, and shared metrics/filters without changing category semantics.
 - Transaction History supports exact tag and recurring-origin filtering
 - Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
 - import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes
