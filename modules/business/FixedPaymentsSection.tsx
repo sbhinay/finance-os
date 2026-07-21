@@ -12,6 +12,7 @@ import { useCategories } from "@/modules/categories/useCategories";
 import { fmtCAD, fmtDate, getNextOccurrence, toFixed2 } from "@/utils/finance";
 import { SUB_TYPE_OPTIONS, type TransactionSubType, type TransactionType } from "@/types/transaction";
 import { theme } from "@/lib/theme";
+import { MetricCard, MetricGrid, PageHeader, StatusChip } from "@/components/ui";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -64,11 +65,11 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
 }
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
-        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" }}>Close</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.42)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+      <div className="finance-drawer" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, width: "100%", maxWidth: 580, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: `linear-gradient(180deg, ${theme.colors.surfaceAlt}, rgba(255,255,255,0.94))`, zIndex: 1 }}>
+          <div style={{ fontWeight: 760, fontSize: 16, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} className="finance-button" style={{ background: "rgba(255,255,255,0.92)", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.pill, padding: "6px 10px", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" }}>Close</button>
         </div>
         <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
       </div>
@@ -415,28 +416,19 @@ export function FixedPaymentsSection({
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 6 }}>{title}</div>
+      <PageHeader title={title} subtitle={introText} />
 
       {pending.length > 0 && (
         <PendingBanner pending={pending} accounts={accounts} cards={cards} hooks={hooks} />
       )}
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 18 }}>
-        <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-          <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>Monthly Commitments</div>
-          <div style={{ fontWeight: 750, fontSize: 21, color: theme.colors.danger }}>{fmtCAD(toFixed2(totalMonthly))}</div>
-        </div>
-        <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-          <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>Active Payments</div>
-          <div style={{ fontWeight: 750, fontSize: 21 }}>
-            {fixedPayments.filter((p) => !p.archived && (!p.endDate || new Date(p.endDate + "T12:00:00") >= new Date())).length}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 14, background: "#f0f9ff", padding: "10px 14px", borderRadius: 12, border: `1px solid ${theme.colors.border}` }}>
-        {introText}
-      </div>
+      <MetricGrid>
+        <MetricCard label="Monthly Commitments" value={fmtCAD(toFixed2(totalMonthly))} tone="danger" />
+        <MetricCard
+          label="Active Payments"
+          value={String(fixedPayments.filter((p) => !p.archived && (!p.endDate || new Date(p.endDate + "T12:00:00") >= new Date())).length)}
+        />
+      </MetricGrid>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -468,13 +460,9 @@ export function FixedPaymentsSection({
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                  <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#4b5563" }}>
-                    {KIND_LABELS[recurringKind]}
-                  </span>
+                  <StatusChip>{KIND_LABELS[recurringKind]}</StatusChip>
                   {p.ownerType && (
-                    <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#e0f2fe", color: "#075985" }}>
-                      Parent managed
-                    </span>
+                    <StatusChip tone="primary">Parent managed</StatusChip>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>
@@ -482,7 +470,7 @@ export function FixedPaymentsSection({
                   {p.endDate ? ` - Ends: ${fmtDate(p.endDate)}` : ""}
                   {linkedAcct ? ` - From: ${linkedAcct.name}` : ""}
                 </div>
-                {isEnded && <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>{p.archived ? "Archived" : "Ended"}</span>}
+                {isEnded && <StatusChip>{p.archived ? "Archived" : "Ended"}</StatusChip>}
                 {!isEnded && linkedAcct && (
                   <div style={{ fontSize: 12, color: linkedAcct.openingBalance >= p.amount ? "#1a7f3c" : "#a31515", marginTop: 6 }}>
                     Account balance: {fmtCAD(linkedAcct.openingBalance)}
