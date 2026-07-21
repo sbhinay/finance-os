@@ -459,7 +459,7 @@ export default function Home() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, minWidth: 0, padding: "28px clamp(16px, 3vw, 34px)" }}>
+      <main style={{ flex: 1, minWidth: 0, padding: "30px clamp(18px, 3vw, 38px)" }}>
         {isMobileNav && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
             <button

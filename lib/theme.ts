@@ -2,14 +2,14 @@ import type { CSSProperties } from "react";
 
 export const theme = {
   colors: {
-    pageBg: "#f3f6fb",
-    pageGlow: "radial-gradient(circle at 12% 0%, rgba(15, 118, 110, 0.12), transparent 30rem), radial-gradient(circle at 88% 12%, rgba(245, 158, 11, 0.10), transparent 26rem), linear-gradient(135deg, #f8fafc 0%, #eef4f8 48%, #f6f3fb 100%)",
+    pageBg: "#f4f7fb",
+    pageGlow: "linear-gradient(115deg, rgba(15, 118, 110, 0.12), transparent 34rem), radial-gradient(circle at 86% 8%, rgba(245, 158, 11, 0.09), transparent 28rem), linear-gradient(135deg, #fbfdff 0%, #f4f7fb 52%, #f6f8fb 100%)",
     surface: "#ffffff",
     surfaceAlt: "#f7fafc",
     surfaceMuted: "#edf4f7",
-    border: "#d7e4ed",
+    border: "#d5e2ec",
     borderStrong: "#a9bdcb",
-    text: "#111827",
+    text: "#172033",
     textSoft: "#475569",
     textMuted: "#8a98aa",
     sidebar: "#ffffff",
@@ -33,7 +33,7 @@ export const theme = {
     pill: 999,
   },
   shadow: {
-    card: "0 12px 28px rgba(15, 23, 42, 0.07)",
+    card: "0 12px 30px rgba(15, 23, 42, 0.07)",
     shell: "0 24px 64px rgba(15, 23, 42, 0.18)",
     soft: "0 8px 20px rgba(15, 23, 42, 0.08)",
   },

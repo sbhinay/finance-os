@@ -71,7 +71,7 @@ export function PageHeader({
         <div
           style={{
             fontWeight: 800,
-            fontSize: 25,
+            fontSize: 26,
             color: theme.colors.text,
             marginBottom: subtitle ? 5 : 0,
             letterSpacing: 0,
@@ -80,7 +80,7 @@ export function PageHeader({
           {title}
         </div>
         {subtitle && (
-          <div style={{ fontSize: 13, color: theme.colors.textSoft, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: theme.colors.textSoft, lineHeight: 1.55 }}>
             {subtitle}
           </div>
         )}
@@ -124,8 +124,8 @@ export function MetricCard({
   return (
     <SurfaceCard
       style={{
-        padding: "16px 18px",
-        background: `linear-gradient(180deg, ${theme.colors.surface}, ${theme.colors.surfaceAlt})`,
+        padding: "17px 18px",
+        background: `linear-gradient(180deg, rgba(255,255,255,0.98), ${theme.colors.surfaceAlt})`,
         ...style,
       }}
     >
@@ -133,7 +133,7 @@ export function MetricCard({
         style={{
           fontSize: 11,
           color: theme.colors.textSoft,
-          fontWeight: 700,
+          fontWeight: 750,
           textTransform: "uppercase",
           marginBottom: 7,
           letterSpacing: 0,
@@ -141,7 +141,7 @@ export function MetricCard({
       >
         {label}
       </div>
-      <div style={{ fontWeight: 750, fontSize: 21, color: color ?? toneStyle.color }}>{value}</div>
+      <div style={{ fontWeight: 760, fontSize: 22, color: color ?? toneStyle.color }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </SurfaceCard>
   );
@@ -169,9 +169,9 @@ export function DataPanel({
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
-            padding: "14px 16px",
+            padding: "15px 16px",
             borderBottom: `1px solid ${theme.colors.border}`,
-            background: theme.colors.surfaceAlt,
+            background: `linear-gradient(180deg, ${theme.colors.surfaceAlt}, rgba(255,255,255,0.88))`,
           }}
         >
           {title && <div style={{ fontSize: 14, fontWeight: 750, color: theme.colors.text }}>{title}</div>}
@@ -194,7 +194,7 @@ export function Toolbar({ children, style }: { children: ReactNode; style?: CSSP
         padding: 12,
         border: `1px solid ${theme.colors.border}`,
         borderRadius: theme.radius.md,
-        background: "rgba(255,255,255,0.84)",
+        background: "rgba(255,255,255,0.9)",
         boxShadow: theme.shadow.soft,
         ...style,
       }}
