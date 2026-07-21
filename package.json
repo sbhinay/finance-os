@@ -16,6 +16,7 @@
     "validate:cloud": "node scripts/validate-cloud-guards.mjs",
     "validate:reports": "node --no-warnings --experimental-strip-types scripts/validate-report-exports.mjs",
     "validate:architecture": "node scripts/validate-canonical-architecture.mjs",
+    "validate:mojibake": "node scripts/validate-no-mojibake.mjs",
     "validate:production": "node scripts/validate-production.mjs"
   },
   "dependencies": {

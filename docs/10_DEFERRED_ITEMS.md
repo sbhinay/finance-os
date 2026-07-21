@@ -63,6 +63,7 @@ This file records work that remains after the eight-phase production-completion 
 These are environment or external-service checks, not missing local implementations:
 
 - Run `npm run validate:production` for the full repeatable local production gate.
+- `npm run validate:production` includes `npm run validate:mojibake`, so encoding regressions fail the local gate.
 - Run one live AI extraction with `npm run validate:scanner:live -- --image C:\path\to\approved-statement-image.png` after a server-side provider credential and explicitly approved statement image are supplied.
 
 Browser acceptance is complete at desktop and mobile breakpoints for lender, Property, recurring, Data Health, scanner, cloud, and tax/report surfaces. No browser console errors were observed.

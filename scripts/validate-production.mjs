@@ -9,6 +9,7 @@ const npmCommand = npmCli ? process.execPath : process.platform === "win32" ? "n
 const npmArgs = (scriptName) => npmCli ? [npmCli, "run", scriptName] : ["run", scriptName];
 
 const steps = [
+  ["Mojibake", process.execPath, ["scripts/validate-no-mojibake.mjs"]],
   ["Architecture", process.execPath, ["scripts/validate-canonical-architecture.mjs"]],
   ["Reports", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-report-exports.mjs"]],
   ["Cloud", process.execPath, ["scripts/validate-cloud-guards.mjs"]],

@@ -26,6 +26,7 @@ npm run validate:production
 The production gate expands to:
 
 ```text
+npm run validate:mojibake
 npm run validate:architecture
 npm run validate:reports
 npm run validate:cloud
@@ -46,7 +47,7 @@ At completion:
 - Property migration, principal-only debt replay, card/LOC debt projection pressure, scanner parsing, cloud guards, and binary report exports passed
 - lint and the production build passed
 - the full and production dependency audits reported zero vulnerabilities
-- touched source files were scanned for mojibake before commit, including comments and compatibility normalization helpers
+- source, script, and documentation files are scanned for mojibake by `npm run validate:mojibake`
 
 ## Browser Acceptance
 
