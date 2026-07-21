@@ -11,6 +11,7 @@ import type { TransactionPurpose } from "@/types/transaction";
 import { fmtCAD, uid } from "@/utils/finance";
 import { classifyScannerDuplicate, scannerCandidateToTransaction } from "@/utils/statementScanner";
 import { theme } from "@/lib/theme";
+import { ActionButton, PageHeader, StatusChip, SurfaceCard, Toolbar } from "@/components/ui";
 
 const PURPOSE_OPTIONS: Array<{ value: StatementScannerCandidate["purpose"]; label: string }> = [
   { value: "general_expense", label: "Expense" },
@@ -31,10 +32,11 @@ interface ScannerStatus {
 const inputStyle = {
   width: "100%",
   boxSizing: "border-box" as const,
-  padding: "7px 8px",
+  padding: "8px 10px",
   border: `1px solid ${theme.colors.border}`,
-  borderRadius: 6,
-  background: "#fff",
+  borderRadius: theme.radius.sm,
+  background: theme.colors.surface,
+  color: theme.colors.text,
   fontSize: 12,
 };
 
@@ -49,25 +51,7 @@ function Button({
   disabled?: boolean;
   variant?: "primary" | "secondary";
 }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        border: `1px solid ${variant === "primary" ? theme.colors.primary : theme.colors.border}`,
-        borderRadius: 6,
-        padding: "8px 13px",
-        background: variant === "primary" ? theme.colors.primary : "#fff",
-        color: variant === "primary" ? "#fff" : theme.colors.text,
-        fontWeight: 700,
-        fontSize: 12,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      {children}
-    </button>
-  );
+  return <ActionButton tone={variant === "primary" ? "primary" : "secondary"} onClick={onClick} disabled={disabled}>{children}</ActionButton>;
 }
 
 function requiresDestination(purpose: TransactionPurpose) {
@@ -213,12 +197,15 @@ export function StatementScannerSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 14 }}>Scan Statement</div>
-      <div style={{ padding: 12, border: "1px solid #bae6fd", background: "#f0f9ff", borderRadius: 8, fontSize: 12, color: "#0c4a6e", lineHeight: 1.5, marginBottom: 14 }}>
+      <PageHeader
+        title="Scan Statement"
+        subtitle="Extract statement images into editable transaction candidates before anything is written."
+      />
+      <SurfaceCard style={{ padding: 12, background: "#f0f9ff", fontSize: 12, color: "#0c4a6e", lineHeight: 1.5, marginBottom: 14 }}>
         Selected images are sent to the configured external AI provider for extraction. FinanceOS does not save the images, and candidate transactions remain temporary until you confirm import. Provider-side handling and retention follow your provider account and API terms.
-      </div>
+      </SurfaceCard>
       {scannerStatus && (
-        <div style={{
+        <SurfaceCard style={{
           padding: 10,
           border: `1px solid ${scannerStatus.configured ? "#bbf7d0" : "#fecaca"}`,
           background: scannerStatus.configured ? "#f0fdf4" : "#fef2f2",
@@ -231,9 +218,10 @@ export function StatementScannerSection() {
           <strong>Provider:</strong> {scannerStatus.provider} ({scannerStatus.mode === "local_fixture" ? "local fixture" : "external"})
           {" - "}
           {scannerStatus.message}
-        </div>
+        </SurfaceCard>
       )}
 
+      <SurfaceCard accent={theme.colors.primary} style={{ padding: 14, marginBottom: 12 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 12 }}>
         <label style={{ fontSize: 12, fontWeight: 700 }}>
           Statement account/card
@@ -260,23 +248,24 @@ export function StatementScannerSection() {
       <Button onClick={scan} disabled={loading || !statementAccountId || !files.length || !privacyAccepted || scannerStatus?.configured === false}>
         {loading ? "Extracting..." : `Extract ${files.length || ""} Image${files.length === 1 ? "" : "s"}`}
       </Button>
+      </SurfaceCard>
 
-      {error && <div style={{ marginTop: 12, padding: 10, border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", background: "#fef2f2", fontSize: 12 }}>{error}</div>}
+      {error && <SurfaceCard style={{ marginTop: 12, padding: 10, border: "1px solid #fecaca", color: "#991b1b", background: "#fef2f2", fontSize: 12 }}>{error}</SurfaceCard>}
       {summary && (
-        <div style={{ marginTop: 12, padding: 12, border: "1px solid #bbf7d0", borderRadius: 8, background: "#f0fdf4", color: "#166534", fontSize: 13 }}>
+        <SurfaceCard style={{ marginTop: 12, padding: 12, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#166534", fontSize: 13 }}>
           Added {summary.added}, skipped {summary.skipped}, attention recommended for {summary.attention}.
-        </div>
+        </SurfaceCard>
       )}
 
       {candidates.length > 0 && (
-        <div style={{ marginTop: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <SurfaceCard style={{ marginTop: 18, padding: 14 }}>
+          <Toolbar style={{ justifyContent: "space-between", marginBottom: 10 }}>
             <strong>{candidates.length} candidate transaction{candidates.length === 1 ? "" : "s"}</strong>
             <span style={{ fontSize: 11, color: theme.colors.textMuted }}>{providerInfo}</span>
-          </div>
-          <div style={{ overflowX: "auto", border: `1px solid ${theme.colors.border}`, borderRadius: 8 }}>
+          </Toolbar>
+          <div className="finance-table" style={{ overflowX: "auto", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm }}>
             {candidates.map((candidate) => (
-              <div key={candidate.id} style={{ display: "grid", gridTemplateColumns: "34px 115px minmax(180px, 1fr) 105px 150px 160px 160px 145px 100px", gap: 7, padding: 9, borderBottom: `1px solid ${theme.colors.border}`, minWidth: 1180, alignItems: "center", background: candidate.enabled ? "#fff" : "#f8fafc" }}>
+              <div key={candidate.id} style={{ display: "grid", gridTemplateColumns: "34px 115px minmax(180px, 1fr) 105px 150px 160px 160px 145px 115px", gap: 7, padding: 9, borderBottom: `1px solid ${theme.colors.border}`, minWidth: 1180, alignItems: "center", background: candidate.enabled ? theme.colors.surface : theme.colors.surfaceAlt }}>
                 <input type="checkbox" checked={candidate.enabled} onChange={(event) => updateCandidate(candidate.id, { enabled: event.target.checked })} />
                 <input type="date" value={candidate.date} onChange={(event) => updateCandidate(candidate.id, { date: event.target.value })} style={inputStyle} />
                 <input value={candidate.description} onChange={(event) => updateCandidate(candidate.id, { description: event.target.value })} style={inputStyle} />
@@ -296,8 +285,10 @@ export function StatementScannerSection() {
                   <option value="">Category...</option>
                   {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
-                <div style={{ fontSize: 11, color: candidate.duplicateLevel ? "#a05c00" : theme.colors.textMuted }}>
-                  {candidate.duplicateLevel ? `${candidate.duplicateLevel} duplicate` : candidate.confidence}
+                <div>
+                  <StatusChip tone={candidate.duplicateLevel ? "warning" : candidate.confidence === "high" ? "success" : "secondary"}>
+                    {candidate.duplicateLevel ? `${candidate.duplicateLevel} duplicate` : candidate.confidence}
+                  </StatusChip>
                 </div>
               </div>
             ))}
@@ -311,7 +302,7 @@ export function StatementScannerSection() {
               <Button onClick={confirmImport} disabled={!candidates.some((candidate) => candidate.enabled)}>Import Selected</Button>
             </div>
           </div>
-        </div>
+        </SurfaceCard>
       )}
     </div>
   );
