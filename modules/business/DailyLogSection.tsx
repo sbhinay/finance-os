@@ -33,10 +33,10 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
   style?: React.CSSProperties;
 }) {
   const colors = {
-    primary: { bg: "#1a5fa8", color: "#fff" },
-    secondary: { bg: "#f3f4f6", color: "#374151" },
-    danger: { bg: "#fef2f2", color: "#a31515" },
-    ghost: { bg: "transparent", color: "#1a5fa8" },
+    primary: { bg: theme.colors.primary, color: "#fff" },
+    secondary: { bg: theme.colors.surfaceAlt, color: theme.colors.text },
+    danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger },
+    ghost: { bg: "transparent", color: theme.colors.primary },
   }[variant];
 
   return (
@@ -194,9 +194,16 @@ export function DailyLogSection() {
     <div>
       <PageHeader
         title="Daily Log"
-        subtitle="Capture today, confirm scheduled items, and review recent cash movement from one place."
+        subtitle="Confirm due items, review cash movement, and log the next transaction."
         actions={<ActionButton onClick={openNewEntry}>New Transaction</ActionButton>}
       />
+
+      <MetricGrid>
+        <MetricCard label="Today In" value={fmtCAD(tIn)} tone="success" />
+        <MetricCard label="Today Out" value={fmtCAD(tOut)} tone="danger" />
+        <MetricCard label="Month In" value={fmtCAD(mIn)} tone="success" />
+        <MetricCard label="Month Out" value={fmtCAD(mOut)} tone="danger" />
+      </MetricGrid>
 
       {fixedHooks.pending.length > 0 && (
         <PendingBanner
@@ -207,53 +214,46 @@ export function DailyLogSection() {
         />
       )}
 
-      <MetricGrid>
-        <MetricCard label="Today In" value={fmtCAD(tIn)} tone="success" />
-        <MetricCard label="Today Out" value={fmtCAD(tOut)} tone="danger" />
-        <MetricCard label="Month In" value={fmtCAD(mIn)} tone="success" />
-        <MetricCard label="Month Out" value={fmtCAD(mOut)} tone="danger" />
-      </MetricGrid>
-
       <DataPanel
-        title="New Entry"
-        accent={theme.colors.primary}
-        actions={<ActionButton compact onClick={openNewEntry}>Open Form</ActionButton>}
-        style={{ marginBottom: 18 }}
+        title="Activity"
+        actions={
+          <div style={{ fontSize: 12, color: theme.colors.textSoft, fontWeight: 800 }}>
+            {showAll || search ? `${filtered.length} matching rows` : fmtDate(viewDate)}
+          </div>
+        }
+        style={{ overflow: "hidden" }}
       >
-        <div style={{ padding: "14px 16px", fontSize: 13, color: theme.colors.textSoft, lineHeight: 1.5 }}>
-          The shared transaction form keeps labels, validation, balances, and linked records consistent across FinanceOS.
-        </div>
-      </DataPanel>
-
-      <Toolbar style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft, letterSpacing: ".05em", textTransform: "uppercase" }}>Viewing</div>
-        <input
-          type="date"
-          value={viewDate}
-          onChange={(e) => { setViewDate(e.target.value); setShowAll(false); }}
-          style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}
-        />
-        <Btn variant={showAll ? "primary" : "secondary"} small onClick={() => setShowAll((p) => !p)}>
-          {showAll ? "Showing All" : "Show All"}
-        </Btn>
-        <Btn variant="secondary" small onClick={() => { setViewDate(todayStr); setShowAll(false); }}>Today</Btn>
-      </Toolbar>
-
-      <Toolbar style={{ marginBottom: 12 }}>
-        {(["all", "income", "expense", "transfer"] as const).map((v) => (
-          <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
-            {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
+        <Toolbar
+          style={{
+            margin: 12,
+            boxShadow: "none",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,250,252,0.94))",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 900, color: theme.colors.textSoft, letterSpacing: ".05em", textTransform: "uppercase" }}>View</div>
+          <input
+            type="date"
+            value={viewDate}
+            onChange={(e) => { setViewDate(e.target.value); setShowAll(false); }}
+            style={{ padding: "7px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.pill, fontSize: 12, background: theme.colors.surface }}
+          />
+          <Btn variant={showAll ? "primary" : "secondary"} small onClick={() => setShowAll((p) => !p)}>
+            {showAll ? "All Dates" : "Show All"}
           </Btn>
-        ))}
-        <input
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); if (e.target.value) setShowAll(true); }}
-          placeholder="Search..."
-          style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }}
-        />
-      </Toolbar>
-
-      <DataPanel title="Entries" style={{ overflow: "hidden" }}>
+          <Btn variant="secondary" small onClick={() => { setViewDate(todayStr); setShowAll(false); }}>Today</Btn>
+          <div style={{ width: 1, alignSelf: "stretch", background: theme.colors.border, margin: "0 2px" }} />
+          {(["all", "income", "expense", "transfer"] as const).map((v) => (
+            <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
+              {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
+            </Btn>
+          ))}
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); if (e.target.value) setShowAll(true); }}
+            placeholder="Search entries"
+            style={{ padding: "7px 12px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.pill, background: theme.colors.surface, fontSize: 12, flex: 1, minWidth: 160 }}
+          />
+        </Toolbar>
         {filtered.slice(0, 60).map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? properties.find((property) => property.id === t.linkedPropertyId) : null;

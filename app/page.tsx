@@ -366,7 +366,15 @@ export default function Home() {
   const currentHubLinks = PRIMARY_SECTION_BY_SECTION[section] === "fixedpayments" ? [] : (HUB_LINKS[section] ?? []);
 
   const wrap = (children: React.ReactNode) => (
-    <SurfaceCard style={{ padding: 24, background: "rgba(255,255,255,0.94)", animation: "financeFadeUp 180ms ease both" }}>{children}</SurfaceCard>
+    <SurfaceCard
+      style={{
+        padding: "clamp(18px, 2vw, 26px)",
+        background: "rgba(255,255,255,0.88)",
+        animation: "financeFadeUp 180ms ease both",
+      }}
+    >
+      {children}
+    </SurfaceCard>
   );
 
   return (
@@ -393,7 +401,8 @@ export default function Home() {
         minHeight: "100vh",
         padding: "0 0 24px 0",
         display: "flex", flexDirection: "column",
-        boxShadow: theme.shadow.shell,
+        boxShadow: "12px 0 40px rgba(15, 23, 42, 0.07)",
+        borderRight: `1px solid ${theme.colors.border}`,
         position: isMobileNav ? "fixed" : "sticky",
         top: 0,
         left: 0,
@@ -401,15 +410,15 @@ export default function Home() {
         transform: isMobileNav ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none",
         transition: "transform .22s ease",
       }}>
-        <div style={{ padding: "24px 18px 18px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 22, letterSpacing: "-.03em" }}>Finance OS</div>
-          <div style={{ color: theme.colors.sidebarMuted, fontSize: 12, marginTop: 4 }}>Personal workspace</div>
+        <div style={{ padding: "24px 18px 18px", borderBottom: `1px solid ${theme.colors.border}` }}>
+          <div style={{ color: theme.colors.text, fontWeight: 950, fontSize: 22, letterSpacing: "-.03em" }}>FinanceOS</div>
+          <div style={{ color: theme.colors.sidebarMuted, fontSize: 12, marginTop: 4 }}>Personal command center</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
           {groupOrder.map((group) => (
             <div key={group} style={{ marginBottom: 4 }}>
-              <div style={{ padding: "14px 18px 6px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: theme.colors.sidebarMuted }}>
+              <div style={{ padding: "14px 18px 6px", fontSize: 10, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: theme.colors.sidebarMuted }}>
                 {group}
               </div>
               {(navGroups[group] ?? []).map((item) => {
@@ -417,13 +426,14 @@ export default function Home() {
                 return (
                   <button key={item.id} onClick={() => { setSection(item.id); if (isMobileNav) setSidebarOpen(false); }} style={{
                     width: "100%", textAlign: "left",
-                    padding: "10px 18px", display: "flex", alignItems: "center", gap: 10,
-                    background: active ? "linear-gradient(90deg, rgba(37,99,235,0.24), rgba(255,255,255,0.06))" : "transparent",
+                    padding: "10px 16px", margin: "0 10px 4px", display: "flex", alignItems: "center", gap: 10,
+                    background: active ? "linear-gradient(90deg, rgba(15,118,110,0.16), rgba(245,158,11,0.08))" : "transparent",
                     border: "none",
                     borderLeft: active ? `3px solid ${theme.colors.primary}` : "3px solid transparent",
+                    borderRadius: 14,
                     cursor: "pointer",
-                    color: active ? "#fff" : theme.colors.sidebarText,
-                    fontSize: 13, fontWeight: active ? 600 : 400,
+                    color: active ? theme.colors.primary : theme.colors.sidebarText,
+                    fontSize: 13, fontWeight: active ? 900 : 700,
                     transition: "background-color .15s ease, color .15s ease, border-color .15s ease",
                   }}>
                     <span style={{
@@ -434,7 +444,7 @@ export default function Home() {
                       alignItems: "center",
                       justifyContent: "center",
                       borderRadius: 8,
-                      background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)",
+                      background: active ? theme.colors.primary : theme.colors.surfaceMuted,
                       color: active ? "#fff" : theme.colors.sidebarText,
                       fontWeight: 800,
                       letterSpacing: ".04em",
@@ -449,7 +459,7 @@ export default function Home() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, minWidth: 0, padding: "28px clamp(16px, 3vw, 32px)" }}>
+      <main style={{ flex: 1, minWidth: 0, padding: "28px clamp(16px, 3vw, 34px)" }}>
         {isMobileNav && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
             <button
@@ -493,10 +503,10 @@ export default function Home() {
                     padding: "10px 16px",
                     borderRadius: 999,
                     border: active ? `1px solid ${theme.colors.primary}` : `1px solid ${theme.colors.border}`,
-                    background: active ? theme.colors.primary : "rgba(255,255,255,0.82)",
+                    background: active ? theme.colors.primary : "rgba(255,255,255,0.78)",
                     color: active ? "#fff" : theme.colors.text,
                     fontSize: 13,
-                    fontWeight: 700,
+                    fontWeight: 850,
                     cursor: "pointer",
                     boxShadow: active ? theme.shadow.soft : "none",
                   }}
