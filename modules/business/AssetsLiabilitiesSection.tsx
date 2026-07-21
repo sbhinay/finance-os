@@ -27,7 +27,7 @@ function StatBox({ label, value, sub, color }: { label: string; value: string; s
   return (
     <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
       <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 22, color: color ?? theme.colors.text }}>{value}</div>
+      <div style={{ fontWeight: 750, fontSize: 22, color: color ?? theme.colors.text }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -48,7 +48,7 @@ function SectionCard({
     <div style={{ ...theme.cardStyle(accent), borderTop: `3px solid ${accent}`, overflow: "hidden", background: theme.colors.surface }}>
       <div style={{ padding: "16px 18px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>{title}</div>
+          <div style={{ fontWeight: 750, fontSize: 16 }}>{title}</div>
           {actions}
         </div>
         {children}
@@ -98,7 +98,7 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.38)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "4vh 16px", overflowY: "auto" }}>
       <div style={{ width: "min(920px, 100%)", background: "#fff", borderRadius: 8, border: "1px solid #d1d5db", boxShadow: "0 20px 50px rgba(15,23,42,.24)", overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 18px", borderBottom: "1px solid #e5e7eb" }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>{title}</div>
+          <div style={{ fontWeight: 750, fontSize: 16 }}>{title}</div>
           <button onClick={onClose} aria-label="Close lender details" style={{ border: "none", background: "transparent", color: "#475569", fontSize: 18, cursor: "pointer" }}>x</button>
         </div>
         <div style={{ padding: 18 }}>{children}</div>
@@ -423,7 +423,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", marginBottom: 8, color: theme.colors.text }}>Assets & Liabilities</div>
+          <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, marginBottom: 8, color: theme.colors.text }}>Assets & Liabilities</div>
           <div style={{ fontSize: 13, color: theme.colors.textSoft, maxWidth: 760, lineHeight: 1.5 }}>
             This is the unified command area for asset, debt, and net worth tracking. Detail views remain available while we fold more of the workflow into this hub.
           </div>
@@ -471,7 +471,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <div style={{ fontWeight: 800, color: "#111827", minWidth: 88, textAlign: "right" }}>{fmtCAD(item.amount)}</div>
+                    <div style={{ fontWeight: 750, color: "#111827", minWidth: 88, textAlign: "right" }}>{fmtCAD(item.amount)}</div>
                     {item.kind === "vehicle" && <ActionBtn variant="green" onClick={() => openVehiclePayment(item.vehicle)}>Log Payment</ActionBtn>}
                     {item.kind === "propertyTax" && <ActionBtn variant="green" onClick={() => openPropertyTaxPayment(item.property, item.payment)}>Mark Paid</ActionBtn>}
                     {(item.kind === "house" || item.kind === "housePropertyTax") && null}
@@ -674,7 +674,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           </div>
 
           <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginBottom: 18 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 10 }}>Lender Details</div>
+            <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 10 }}>Lender Details</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
               <label style={{ fontSize: 12, color: "#475569" }}>
                 Name
@@ -705,7 +705,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
               <textarea value={liabilityDraft.notes ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, notes: event.target.value })} rows={2} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box", resize: "vertical" }} />
             </label>
 
-            <div style={{ fontWeight: 800, fontSize: 14, marginTop: 16, marginBottom: 8 }}>Balance Snapshot</div>
+            <div style={{ fontWeight: 750, fontSize: 14, marginTop: 16, marginBottom: 8 }}>Balance Snapshot</div>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Use a known lender statement balance and date. Only later principal activity is replayed.</div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(160px, 1fr) minmax(160px, 1fr) auto", gap: 10, alignItems: "end" }}>
               <label style={{ fontSize: 12, color: "#475569" }}>
@@ -724,7 +724,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           </div>
 
           <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginBottom: 18 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>Attach Existing Loan Transaction</div>
+            <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8 }}>Attach Existing Loan Transaction</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <select value={attachTransactionId} onChange={(event) => setAttachTransactionId(event.target.value)} style={{ flex: 1, minWidth: 240, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
                 <option value="">-- Select unlinked loan transaction --</option>
@@ -740,7 +740,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
 
           <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontWeight: 800, fontSize: 14 }}>Running Ledger</div>
+              <div style={{ fontWeight: 750, fontSize: 14 }}>Running Ledger</div>
               <div style={{ fontSize: 11, color: "#64748b" }}>
                 {selectedLiability.balanceSnapshotDate ? `After snapshot ${selectedLiability.balanceSnapshotDate}` : "From starting balance"}
               </div>

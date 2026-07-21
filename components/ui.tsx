@@ -70,10 +70,11 @@ export function PageHeader({
       <div>
         <div
           style={{
-            fontWeight: 900,
-            fontSize: 26,
+            fontWeight: 800,
+            fontSize: 25,
             color: theme.colors.text,
             marginBottom: subtitle ? 5 : 0,
+            letterSpacing: 0,
           }}
         >
           {title}
@@ -132,15 +133,15 @@ export function MetricCard({
         style={{
           fontSize: 11,
           color: theme.colors.textSoft,
-          fontWeight: 800,
+          fontWeight: 700,
           textTransform: "uppercase",
           marginBottom: 7,
-          letterSpacing: ".06em",
+          letterSpacing: 0,
         }}
       >
         {label}
       </div>
-      <div style={{ fontWeight: 900, fontSize: 22, color: color ?? toneStyle.color }}>{value}</div>
+      <div style={{ fontWeight: 750, fontSize: 21, color: color ?? toneStyle.color }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </SurfaceCard>
   );
@@ -173,7 +174,7 @@ export function DataPanel({
             background: theme.colors.surfaceAlt,
           }}
         >
-          {title && <div style={{ fontSize: 14, fontWeight: 900, color: theme.colors.text }}>{title}</div>}
+          {title && <div style={{ fontSize: 14, fontWeight: 750, color: theme.colors.text }}>{title}</div>}
           {actions}
         </div>
       )}
@@ -212,7 +213,7 @@ export function EmptyState({
 }) {
   return (
     <div style={{ textAlign: "center", color: theme.colors.textSoft, padding: "28px 18px", fontSize: 13 }}>
-      <div style={{ fontWeight: 900, color: theme.colors.text, marginBottom: detail ? 4 : 0 }}>{title}</div>
+      <div style={{ fontWeight: 750, color: theme.colors.text, marginBottom: detail ? 4 : 0 }}>{title}</div>
       {detail && <div>{detail}</div>}
     </div>
   );
@@ -246,7 +247,7 @@ export function ActionButton({
         background: toneStyle.background,
         color: toneStyle.color,
         fontSize: compact ? 12 : 13,
-        fontWeight: 800,
+        fontWeight: 700,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.55 : 1,
         ...style,
@@ -277,7 +278,7 @@ export function StatusChip({
         background: toneStyle.background,
         color: toneStyle.color,
         fontSize: 11,
-        fontWeight: 800,
+        fontWeight: 700,
       }}
     >
       {children}

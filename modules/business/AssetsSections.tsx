@@ -74,7 +74,7 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: wide ? 720 : 520, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
         <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text }}>{title}</div>
+          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>{title}</div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Close</button>
         </div>
         <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
@@ -92,7 +92,7 @@ function StatBox({ label, value, sub, color }: { label: string; value: string; s
   return (
     <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 150, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
       <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
+      <div style={{ fontWeight: 750, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -376,7 +376,7 @@ export function VehiclesSection({
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Vehicles</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 16 }}>Vehicles</div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 18 }}>
         <StatBox label="Total Vehicles" value={String(vehicles.length)} />
         <StatBox label="Active Leases" value={String(vehicles.filter((v) => v.vtype === "Lease" && getVehicleStatus(v) !== "Ended").length)} />
@@ -858,7 +858,7 @@ export function HouseLoansSection({
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>House Loans / Mortgages</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 16 }}>House Loans / Mortgages</div>
       <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 14, background: "#f0f9ff", padding: "10px 14px", borderRadius: 12, border: `1px solid ${theme.colors.border}` }}>
         Define your mortgage/loan details here. Do not duplicate them in Recurring Payments.
       </div>

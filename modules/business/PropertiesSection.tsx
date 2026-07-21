@@ -215,7 +215,7 @@ export function PropertiesSection() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>Properties</div>
+          <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 0 }}>Properties</div>
           <div style={{ marginTop: 4, fontSize: 13, color: theme.colors.textSoft }}>Property records own real-estate identity; mortgages, taxes, insurance, and expenses link back here.</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -234,7 +234,7 @@ export function PropertiesSection() {
               <div key={property.id} style={{ ...theme.cardStyle("#b45309"), padding: 16, opacity: property.archived ? 0.65 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                   <div>
-                    <div style={{ fontWeight: 800 }}>{property.name}</div>
+                    <div style={{ fontWeight: 700 }}>{property.name}</div>
                     <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 3 }}>{property.type}{property.archived ? " | Archived" : ""}</div>
                     {property.address && <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 3 }}>{property.address}</div>}
                   </div>
@@ -264,7 +264,7 @@ export function PropertiesSection() {
               ].map(([label, value]) => (
                 <div key={label} style={{ padding: 12, background: theme.colors.surfaceAlt, border: `1px solid ${theme.colors.border}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 10, color: theme.colors.textSoft }}>{label.toUpperCase()}</div>
-                  <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>{value}</div>
+                  <div style={{ fontSize: 17, fontWeight: 750, marginTop: 4 }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -283,7 +283,7 @@ export function PropertiesSection() {
             <Field label="Estimated Value ($)"><input type="number" style={inputStyle} value={draft.estimatedValue ?? ""} onChange={(event) => setDraft({ ...draft, estimatedValue: event.target.value === "" ? undefined : Number(event.target.value) })} /></Field>
           </div>
 
-          <div style={{ fontWeight: 800, marginTop: 18, marginBottom: 8 }}>Insurance</div>
+          <div style={{ fontWeight: 750, marginTop: 18, marginBottom: 8 }}>Insurance</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
             <Field label="Amount ($)"><input type="number" style={inputStyle} value={draft.insuranceAmount ?? ""} onChange={(event) => setDraft({ ...draft, insuranceAmount: event.target.value === "" ? undefined : Number(event.target.value) })} /></Field>
             <Field label="Schedule">
@@ -300,7 +300,7 @@ export function PropertiesSection() {
             </Field>
           </div>
 
-          <div style={{ fontWeight: 800, marginTop: 18, marginBottom: 8 }}>Property Tax Schedule</div>
+          <div style={{ fontWeight: 750, marginTop: 18, marginBottom: 8 }}>Property Tax Schedule</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
             <Field label="Amount ($)"><input type="number" style={inputStyle} value={draft.propertyTaxAmount ?? ""} onChange={(event) => setDraft({ ...draft, propertyTaxAmount: event.target.value === "" ? undefined : Number(event.target.value) })} /></Field>
             <Field label="Schedule">
@@ -343,7 +343,7 @@ export function PropertiesSection() {
 
           {selected && selectedMetrics && (
             <>
-              <div style={{ fontWeight: 800, marginTop: 22, marginBottom: 8 }}>Mortgages</div>
+              <div style={{ fontWeight: 750, marginTop: 22, marginBottom: 8 }}>Mortgages</div>
               {selectedMetrics.mortgages.length === 0 ? (
                 <div style={{ fontSize: 12, color: theme.colors.textSoft }}>No mortgage linked to this property.</div>
               ) : selectedMetrics.mortgages.map((loan) => (
@@ -363,7 +363,7 @@ export function PropertiesSection() {
                 </div>
               ))}
 
-              <div style={{ fontWeight: 800, marginTop: 18, marginBottom: 8 }}>Property Tax</div>
+              <div style={{ fontWeight: 750, marginTop: 18, marginBottom: 8 }}>Property Tax</div>
               {selectedTaxRecords.length === 0 ? (
                 <div style={{ fontSize: 12, color: theme.colors.textSoft }}>No property-tax record linked.</div>
               ) : selectedTaxRecords.map((record) => (
@@ -373,7 +373,7 @@ export function PropertiesSection() {
                 </div>
               ))}
 
-              <div style={{ fontWeight: 800, marginTop: 18, marginBottom: 8 }}>Transaction History</div>
+              <div style={{ fontWeight: 750, marginTop: 18, marginBottom: 8 }}>Transaction History</div>
               {selectedMetrics.linkedTransactions.length === 0 ? (
                 <div style={{ fontSize: 12, color: theme.colors.textSoft }}>No linked transactions.</div>
               ) : (

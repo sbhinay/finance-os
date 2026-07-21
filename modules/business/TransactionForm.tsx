@@ -62,7 +62,7 @@ interface Props {
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 5 }}>
+    <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 5 }}>
       {children}{required && <span style={{ color: theme.colors.danger, marginLeft: 2 }}>*</span>}
     </label>
   );
@@ -105,7 +105,7 @@ function Btn({ children, onClick, variant = "primary", disabled }: {
     secondary: { bg: theme.colors.surfaceAlt, color: theme.colors.text, border: theme.colors.border },
     danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger, border: theme.colors.dangerSoft },
   }[variant];
-  return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: "9px 16px", fontSize: 13, fontWeight: 800, borderRadius: theme.radius.pill, border: `1px solid ${c.border}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color }}>{children}</button>;
+  return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: "9px 16px", fontSize: 13, fontWeight: 700, borderRadius: theme.radius.pill, border: `1px solid ${c.border}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color }}>{children}</button>;
 }
 function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
 function Alert({ type, children }: { type: "warning" | "error" | "info"; children: React.ReactNode }) {
@@ -530,10 +530,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surfaceAlt, borderTop: `3px solid ${typeColor}`, zIndex: 1 }}>
-          <div style={{ fontWeight: 900, fontSize: 16, color: typeColor }}>
+          <div style={{ fontWeight: 750, fontSize: 16, color: typeColor }}>
             {title ?? (form.id ? "Edit Transaction" : "New Transaction")}
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
         </div>
 
         <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 13 }}>
@@ -642,7 +642,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 <button
                   type="button"
                   onClick={() => setShowNotes(true)}
-                  style={{ border: "none", background: "none", color: theme.colors.primary, fontSize: 12, cursor: "pointer", padding: 0, fontWeight: 800 }}
+                  style={{ border: "none", background: "none", color: theme.colors.primary, fontSize: 12, cursor: "pointer", padding: 0, fontWeight: 700 }}
                 >
                   + Add note
                 </button>

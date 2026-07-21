@@ -213,7 +213,7 @@ export function StatementScannerSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, color: theme.colors.text, marginBottom: 14 }}>Scan Statement</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 14 }}>Scan Statement</div>
       <div style={{ padding: 12, border: "1px solid #bae6fd", background: "#f0f9ff", borderRadius: 8, fontSize: 12, color: "#0c4a6e", lineHeight: 1.5, marginBottom: 14 }}>
         Selected images are sent to the configured external AI provider for extraction. FinanceOS does not save the images, and candidate transactions remain temporary until you confirm import. Provider-side handling and retention follow your provider account and API terms.
       </div>

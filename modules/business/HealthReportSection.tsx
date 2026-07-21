@@ -17,6 +17,7 @@ import { useLiabilities } from "./useLiabilities";
 import { toFixed2 } from "@/utils/finance";
 import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
 import { ActionButton, PageHeader } from "@/components/ui";
+import { theme } from "@/lib/theme";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -526,9 +527,9 @@ export function HealthReportSection({
   }
 
   const statCard = (label: string, value: number, color: string) => (
-    <div style={{ flex: 1, minWidth: 160, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 18, color }}>{value}</div>
+    <div style={{ flex: 1, minWidth: 160, padding: "14px 16px", background: `linear-gradient(180deg, ${theme.colors.surface}, ${theme.colors.surfaceAlt})`, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md }}>
+      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 5, letterSpacing: 0 }}>{label}</div>
+      <div style={{ fontWeight: 750, fontSize: 19, color }}>{value}</div>
     </div>
   );
 
@@ -566,16 +567,16 @@ export function HealthReportSection({
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {issues.map((issue) => (
-            <div key={issue.id} style={{ border: "1px solid #e2e4e8", background: "#fff", borderRadius: 10, padding: 14 }}>
+            <div key={issue.id} style={{ border: `1px solid ${theme.colors.border}`, background: theme.colors.surface, borderRadius: theme.radius.md, padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{issue.title}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: theme.colors.text }}>{issue.title}</div>
                 <span
                   style={{
                     fontSize: 11,
                     fontWeight: 700,
                     textTransform: "uppercase",
                     padding: "2px 8px",
-                    borderRadius: 999,
+                    borderRadius: theme.radius.pill,
                     background: severityColor[issue.severity].bg,
                     color: severityColor[issue.severity].fg,
                   }}

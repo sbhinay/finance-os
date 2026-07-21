@@ -389,7 +389,7 @@ function DashboardOverviewPanel({ hideHeader = false }: { hideHeader?: boolean }
 
   return (
     <div>
-      {!hideHeader && <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Financial Dashboard</div>}
+      {!hideHeader && <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 16 }}>Financial Dashboard</div>}
 
       {/* Net Worth */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
@@ -696,7 +696,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
 
       {debtProjection30.warnings.length > 0 && (
         <Card accent="#a05c00">
-          <div style={{ fontWeight: 800, fontSize: 14, color: "#a05c00", marginBottom: 8 }}>Card / LOC repayment planning gaps</div>
+          <div style={{ fontWeight: 750, fontSize: 14, color: theme.colors.warning, marginBottom: 8 }}>Card / LOC repayment planning gaps</div>
           {debtProjection30.warnings.map((warning) => (
             <div key={`${warning.cardId}-${warning.reason}`} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontSize: 12, padding: "5px 0", borderBottom: "1px solid #fed7aa" }}>
               <span>{warning.name}: {warning.reason === "missing_pay_from" ? "projection enabled but no linked pay-from account" : "owing balance has no repayment strategy"}</span>

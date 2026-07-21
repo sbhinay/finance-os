@@ -156,7 +156,7 @@ function StatBox({
   return (
     <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 180, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
       <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
+      <div style={{ fontWeight: 750, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -586,7 +586,7 @@ export function CRAReviewSection({
     <div>
       <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 6 }}>CRA Review</div>
+          <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 6 }}>CRA Review</div>
           <div style={{ fontSize: 14, lineHeight: 1.6, color: theme.colors.textSoft, maxWidth: 860 }}>
             Warning-first tax review using the transactions, invoices, obligations, and business settings FinanceOS already knows.
             This page proposes likely CRA working-paper mappings and highlights the missing inputs that still block stronger advice.
@@ -614,7 +614,7 @@ export function CRAReviewSection({
         <div style={{ ...theme.cardStyle(theme.colors.primary), padding: 20, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text }}>Missing Inputs</div>
+              <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>Missing Inputs</div>
               <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>Answer these once and the review becomes more reliable.</div>
             </div>
             <Pill color={missingInputs.length === 0 ? "green" : missingInputs.length <= 3 ? "amber" : "red"}>
@@ -697,7 +697,7 @@ export function CRAReviewSection({
         </div>
 
         <div style={{ ...theme.cardStyle(theme.colors.warning), padding: 20 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text, marginBottom: 12 }}>Likely CRA Mapping</div>
+          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text, marginBottom: 12 }}>Likely CRA Mapping</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {mappingRows.map((row) => {
               const treatment = draft.taxTreatments[row.id] ?? { status: "proposed" as TaxTreatmentStatus };
@@ -710,7 +710,7 @@ export function CRAReviewSection({
                   </Pill>
                 </div>
                 <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 6 }}>{row.target}</div>
-                <div style={{ fontWeight: 800, fontSize: 18, color: theme.colors.text }}>{fmtCAD(row.amount)}</div>
+                <div style={{ fontWeight: 750, fontSize: 18, color: theme.colors.text }}>{fmtCAD(row.amount)}</div>
                 <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 6, lineHeight: 1.55 }}>{row.note}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, .7fr) minmax(140px, .6fr) minmax(180px, 1fr)", gap: 8, marginTop: 10 }}>
                   <Sel
@@ -753,7 +753,7 @@ export function CRAReviewSection({
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 1fr) minmax(320px, 1fr)", gap: 18, alignItems: "start", marginTop: 18 }}>
         <div style={{ ...theme.cardStyle(theme.colors.primary), padding: 20 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text, marginBottom: 10 }}>Business Expense Buckets</div>
+          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text, marginBottom: 10 }}>Business Expense Buckets</div>
           {topExpenseBuckets.length === 0 ? (
             <div style={{ color: theme.colors.textSoft, fontSize: 13 }}>No tagged business expenses found yet.</div>
           ) : (
@@ -770,7 +770,7 @@ export function CRAReviewSection({
         </div>
 
         <div style={{ ...theme.cardStyle(theme.colors.primary), padding: 20 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text, marginBottom: 10 }}>Review Flags</div>
+          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text, marginBottom: 10 }}>Review Flags</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ padding: "12px 14px", borderRadius: 12, background: theme.colors.warningSoft, color: theme.colors.warning, fontSize: 13, lineHeight: 1.6 }}>
               Phone/internet, vehicle, and home-office totals should not be treated as filing-ready until their business-use percentages are confirmed.
@@ -786,7 +786,7 @@ export function CRAReviewSection({
       </div>
 
       <div style={{ marginTop: 18, ...theme.cardStyle(), padding: 20 }}>
-        <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text, marginBottom: 10 }}>Tax-Relevant Ledger Snapshot</div>
+        <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text, marginBottom: 10 }}>Tax-Relevant Ledger Snapshot</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 14 }}>
           <StatBox label="Tagged Biz Income" value={fmtCAD(businessIncomeTotal)} sub={`${likelyBusinessIncomeTx.length} entries`} color={theme.colors.success} />
           <StatBox label="Tagged Biz Expenses" value={fmtCAD(businessExpenseTotal)} sub={`${likelyBusinessExpenseTx.length} entries`} color={theme.colors.danger} />

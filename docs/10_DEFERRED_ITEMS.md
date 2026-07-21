@@ -55,6 +55,7 @@ This file records work that remains after the eight-phase production-completion 
 - Modern UI Pass 1 applies those primitives to the app shell, Accounts & Cards, Dashboard / Projection, Transaction History, and Health Report.
 - Modern UI Pass 2 applies the same visual language to Daily Log, pending/recurring quick-add modals, and the shared Transaction Form drawer without changing ledger behavior.
 - Modern UI Pass 3 makes the visual direction materially visible with a light navigation rail, teal primary accent, warmer page background, and a simplified Daily Log activity surface without duplicate new-transaction entry points.
+- Modern UI Pass 4 standardizes typography weight, removes negative letter spacing from application UI, prefers a native Windows-friendly font stack, and aligns shared/local button, panel, metric, and modal primitives across the major finance pages.
 - Visual modernization remains incremental so dense finance workflows stay readable and stable.
 
 ## Remaining External Acceptance Work

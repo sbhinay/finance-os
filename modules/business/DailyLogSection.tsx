@@ -46,7 +46,7 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
       style={{
         padding: small ? "6px 11px" : "10px 16px",
         fontSize: small ? 12 : 13,
-        fontWeight: 800,
+        fontWeight: 700,
         borderRadius: theme.radius.pill,
         border: variant === "secondary" ? `1px solid ${theme.colors.border}` : "1px solid transparent",
         cursor: "pointer",
@@ -82,8 +82,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.42)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
       <div className="finance-drawer" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surfaceAlt }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: theme.colors.text }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
+          <div style={{ fontWeight: 750, fontSize: 15, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -217,7 +217,7 @@ export function DailyLogSection() {
       <DataPanel
         title="Activity"
         actions={
-          <div style={{ fontSize: 12, color: theme.colors.textSoft, fontWeight: 800 }}>
+          <div style={{ fontSize: 12, color: theme.colors.textSoft, fontWeight: 650 }}>
             {showAll || search ? `${filtered.length} matching rows` : fmtDate(viewDate)}
           </div>
         }
@@ -230,7 +230,7 @@ export function DailyLogSection() {
             background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,250,252,0.94))",
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 900, color: theme.colors.textSoft, letterSpacing: ".05em", textTransform: "uppercase" }}>View</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft, letterSpacing: 0, textTransform: "uppercase" }}>View</div>
           <input
             type="date"
             value={viewDate}

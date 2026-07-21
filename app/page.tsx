@@ -261,12 +261,12 @@ function AccountsCardsSection() {
           <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontWeight: 800, fontSize: 14 }}>{a.name}</span>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</span>
                 {a.primary && <StatusChip tone="success">Primary</StatusChip>}
               </div>
               <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 2 }}>{a.type} - {a.currency}</div>
             </div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: a.openingBalance >= 0 ? theme.colors.success : theme.colors.danger }}>
+            <div style={{ fontWeight: 750, fontSize: 16, color: a.openingBalance >= 0 ? theme.colors.success : theme.colors.danger }}>
               {fmtCAD(a.openingBalance)}
             </div>
           </div>
@@ -291,7 +291,7 @@ function AccountsCardsSection() {
                   <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{c.issuer} - Limit {fmtCAD(c.limitAmount)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 900, fontSize: 16, color: c.openingBalance > 0 ? theme.colors.danger : theme.colors.success }}>
+                  <div style={{ fontWeight: 750, fontSize: 16, color: c.openingBalance > 0 ? theme.colors.danger : theme.colors.success }}>
                     {fmtCAD(c.openingBalance)} <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 400 }}>owed</span>
                   </div>
                   <div style={{ fontSize: 11, color: "#1a5fa8" }}>{fmtCAD(available)} available</div>
@@ -411,14 +411,14 @@ export default function Home() {
         transition: "transform .22s ease",
       }}>
         <div style={{ padding: "24px 18px 18px", borderBottom: `1px solid ${theme.colors.border}` }}>
-          <div style={{ color: theme.colors.text, fontWeight: 950, fontSize: 22, letterSpacing: "-.03em" }}>FinanceOS</div>
+          <div style={{ color: theme.colors.text, fontWeight: 800, fontSize: 22, letterSpacing: 0 }}>FinanceOS</div>
           <div style={{ color: theme.colors.sidebarMuted, fontSize: 12, marginTop: 4 }}>Personal command center</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
           {groupOrder.map((group) => (
             <div key={group} style={{ marginBottom: 4 }}>
-              <div style={{ padding: "14px 18px 6px", fontSize: 10, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: theme.colors.sidebarMuted }}>
+              <div style={{ padding: "14px 18px 6px", fontSize: 10, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase", color: theme.colors.sidebarMuted }}>
                 {group}
               </div>
               {(navGroups[group] ?? []).map((item) => {
@@ -433,7 +433,7 @@ export default function Home() {
                     borderRadius: 14,
                     cursor: "pointer",
                     color: active ? theme.colors.primary : theme.colors.sidebarText,
-                    fontSize: 13, fontWeight: active ? 900 : 700,
+                    fontSize: 13, fontWeight: active ? 750 : 600,
                     transition: "background-color .15s ease, color .15s ease, border-color .15s ease",
                   }}>
                     <span style={{
@@ -446,8 +446,8 @@ export default function Home() {
                       borderRadius: 8,
                       background: active ? theme.colors.primary : theme.colors.surfaceMuted,
                       color: active ? "#fff" : theme.colors.sidebarText,
-                      fontWeight: 800,
-                      letterSpacing: ".04em",
+                      fontWeight: 700,
+                      letterSpacing: 0,
                     }}>{item.icon}</span>
                     <span>{item.label}</span>
                   </button>
@@ -474,7 +474,7 @@ export default function Home() {
                 background: "rgba(255,255,255,0.86)",
                 color: theme.colors.text,
                 fontSize: 13,
-                fontWeight: 700,
+                fontWeight: 650,
                 cursor: "pointer",
                 boxShadow: theme.shadow.soft,
               }}
@@ -506,7 +506,7 @@ export default function Home() {
                     background: active ? theme.colors.primary : "rgba(255,255,255,0.78)",
                     color: active ? "#fff" : theme.colors.text,
                     fontSize: 13,
-                    fontWeight: 850,
+                    fontWeight: 700,
                     cursor: "pointer",
                     boxShadow: active ? theme.shadow.soft : "none",
                   }}

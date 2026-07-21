@@ -15,7 +15,7 @@ import { theme } from "@/lib/theme";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 6 }}>{children}</label>;
+  return <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 6 }}>{children}</label>;
 }
 function Inp({ label, type = "text", value, onChange, placeholder, inputRef }: {
   label?: string; type?: string; value: string | number;
@@ -60,15 +60,15 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
     green: { bg: theme.colors.success, color: "#fff", border: theme.colors.success },
     amber: { bg: theme.colors.warningSoft, color: theme.colors.warning, border: "#f5d59d" },
   }[variant];
-  return <button onClick={onClick} style={{ padding: small ? "6px 12px" : "10px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: 999, border: `1px solid ${c.border}`, cursor: "pointer", background: c.bg, color: c.color, boxShadow: variant === "secondary" ? "none" : theme.shadow.soft, ...style }}>{children}</button>;
+  return <button onClick={onClick} className="finance-button" style={{ padding: small ? "6px 12px" : "10px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: theme.radius.pill, border: `1px solid ${c.border}`, cursor: "pointer", background: c.bg, color: c.color, boxShadow: variant === "secondary" ? "none" : theme.shadow.soft, ...style }}>{children}</button>;
 }
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
         <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: theme.colors.text }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Close</button>
+          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" }}>Close</button>
         </div>
         <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
       </div>
@@ -415,7 +415,7 @@ export function FixedPaymentsSection({
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 6 }}>{title}</div>
+      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: 0, color: theme.colors.text, marginBottom: 6 }}>{title}</div>
 
       {pending.length > 0 && (
         <PendingBanner pending={pending} accounts={accounts} cards={cards} hooks={hooks} />
@@ -424,11 +424,11 @@ export function FixedPaymentsSection({
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 18 }}>
         <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
           <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>Monthly Commitments</div>
-          <div style={{ fontWeight: 800, fontSize: 21, color: "#a31515" }}>{fmtCAD(toFixed2(totalMonthly))}</div>
+          <div style={{ fontWeight: 750, fontSize: 21, color: theme.colors.danger }}>{fmtCAD(toFixed2(totalMonthly))}</div>
         </div>
         <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
           <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>Active Payments</div>
-          <div style={{ fontWeight: 800, fontSize: 21 }}>
+          <div style={{ fontWeight: 750, fontSize: 21 }}>
             {fixedPayments.filter((p) => !p.archived && (!p.endDate || new Date(p.endDate + "T12:00:00") >= new Date())).length}
           </div>
         </div>

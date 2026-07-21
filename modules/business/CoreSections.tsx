@@ -25,7 +25,7 @@ type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["init
 // --- Primitives ---------------------------------------------------------------
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>{children}</label>;
+  return <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 4 }}>{children}</label>;
 }
 function Inp({ label, type = "text", value, onChange, placeholder, disabled }: {
   label?: string; type?: string; value: string | number;
@@ -36,7 +36,7 @@ function Inp({ label, type = "text", value, onChange, placeholder, disabled }: {
     <div>
       {label && <Label>{label}</Label>}
       <input type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder} disabled={disabled}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: disabled ? "#f9fafb" : "#fff", fontSize: 13, boxSizing: "border-box" as const }} />
+        style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: disabled ? theme.colors.surfaceMuted : theme.colors.surface, fontSize: 13, boxSizing: "border-box" as const }} />
     </div>
   );
 }
@@ -49,7 +49,7 @@ function Sel({ label, value, onChange, options }: {
     <div>
       {label && <Label>{label}</Label>}
       <select value={value ?? ""} onChange={onChange}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}>
+        style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }}>
         {options.map((o) => {
           const v = typeof o === "string" ? o : o.value;
           const l = typeof o === "string" ? o : o.label;
@@ -63,16 +63,16 @@ function Btn({ children, onClick, variant = "primary", small, disabled, style }:
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "green"; small?: boolean; disabled?: boolean; style?: React.CSSProperties;
 }) {
-  const c = { primary: { bg: "#1a5fa8", color: "#fff" }, secondary: { bg: "#f3f4f6", color: "#374151" }, danger: { bg: "#fef2f2", color: "#a31515" }, green: { bg: "#1a7f3c", color: "#fff" } }[variant];
-  return <button onClick={onClick} disabled={disabled} style={{ padding: small ? "4px 10px" : "8px 16px", fontSize: small ? 12 : 13, fontWeight: 600, borderRadius: 8, border: "1px solid transparent", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color, ...style }}>{children}</button>;
+  const c = { primary: { bg: theme.colors.primary, color: "#fff" }, secondary: { bg: theme.colors.surfaceAlt, color: theme.colors.text }, danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger }, green: { bg: theme.colors.success, color: "#fff" } }[variant];
+  return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: small ? "6px 11px" : "9px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: theme.radius.pill, border: `1px solid ${variant === "secondary" ? theme.colors.border : "transparent"}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color, ...style }}>{children}</button>;
 }
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div className="finance-drawer" style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 640 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Close</button>
+          <div style={{ fontWeight: 750, fontSize: 15 }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
