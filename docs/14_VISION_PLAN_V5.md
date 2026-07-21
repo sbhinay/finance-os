@@ -192,8 +192,8 @@ The stabilization phase has materially landed: balance snapshots, ledger explana
 
 The ordered path to production completion is now:
 
-1. Complete lender and debt-detail UX.
-2. Consolidate recurring architecture.
+1. Complete lender and debt-detail UX. (Landed)
+2. Consolidate recurring architecture. (Landed)
 3. Build the first-class Property parent model. (Landed)
 4. Improve optional detailed mortgage/vehicle debt reporting. (Landed)
 5. Expand findability, Data Health, and import review. (Landed)
@@ -244,4 +244,4 @@ As of this version:
 - genuine Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries
 - the June 29 fixture replays all stored account/card balances without drift
 
-All eight production-completion phases are implemented. Remaining work is final cross-phase verification, external credential/deployment checks, and browser acceptance testing.
+All eight production-completion phases are implemented and locally verified, including browser acceptance. Remaining external work is limited to live AI OCR verification after a server-side provider credential and an explicitly approved statement image are available.

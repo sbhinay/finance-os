@@ -24,6 +24,11 @@
 .DS_Store
 *.pem
 
+# local private scanner verification artifacts
+statement-images/
+scanner-live-output*.json
+.scanner-live/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
