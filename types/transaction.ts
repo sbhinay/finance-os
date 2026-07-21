@@ -1,15 +1,15 @@
-// ─── Transaction Types ────────────────────────────────────────────────────────
+// Transaction Types
 
 export type TransactionType =
-  | "expense"          // money spent — general
-  | "income"           // money earned — general
-  | "transfer"         // between own accounts — neutral, no net worth change
-  | "refund"           // reversal of prior expense — not income
-  | "dividend"         // corporate dividend to self — specific T1 treatment
-  | "tax_payment"      // CRA remittance — not a general expense
-  | "loan_receipt"     // borrowed money arriving — not income, creates liability
-  | "loan_payment"     // debt repayment — principal + interest split
-  | "withdrawal"       // personal draw from corporation — not corporate expense
+  | "expense"          // money spent, general
+  | "income"           // money earned, general
+  | "transfer"         // between own accounts, neutral, no net worth change
+  | "refund"           // reversal of prior expense, not income
+  | "dividend"         // corporate dividend to self, specific T1 treatment
+  | "tax_payment"      // CRA remittance, not a general expense
+  | "loan_receipt"     // borrowed money arriving, not income, creates liability
+  | "loan_payment"     // debt repayment, principal + interest split
+  | "withdrawal"       // personal draw from corporation, not corporate expense
   | "adjustment";      // manual correction, write-off, or opening balance row
 
 export type TransactionSubType =
@@ -92,113 +92,104 @@ export type RecurringOriginType =
   | "property_tax"
   | "tax_obligation";
 
-// ─── Balance Effect Reference ─────────────────────────────────────────────────
-//
-// expense            → source balance decreases
-// income             → source balance increases
-// transfer           → source decreases, destination increases (CC destination = balance decreases/owed reduces)
-// refund             → source balance increases (reverses expense)
-// dividend           → source balance increases (same as income but different tax treatment)
-// tax_payment        → source balance decreases (same as expense but excluded from expense reports)
-// loan_receipt       → source balance increases (same as income but NOT taxable — linked to liability)
-// loan_payment       → source balance decreases (principal reduces liability, interest is expense)
-// withdrawal         → source balance decreases (personal draw — not corporate expense)
-// adjustment         → source adjusted by amount, destination gets offsetting entry
+// Balance effect reference:
+// expense: source balance decreases
+// income: source balance increases
+// transfer: source decreases, destination increases (CC destination = balance decreases / owed reduces)
+// refund: source balance increases (reverses expense)
+// dividend: source balance increases (same as income but different tax treatment)
+// tax_payment: source balance decreases (same as expense but excluded from expense reports)
+// loan_receipt: source balance increases (same as income but not taxable, linked to liability)
+// loan_payment: source balance decreases (principal reduces liability, interest is expense)
+// withdrawal: source balance decreases (personal draw, not corporate expense)
+// adjustment: source adjusted by amount, destination gets offsetting entry
 
 export interface Transaction {
-  // ── Identity ──────────────────────────────────────────────────────────────
+  // Identity
   id: string;
 
-  // ── Classification ────────────────────────────────────────────────────────
+  // Classification
   type: TransactionType;
   subType?: TransactionSubType;    // required for tax_payment, loan, adjustment, transfer
   purpose?: TransactionPurpose;    // stable business meaning, independent of editable labels
 
-  // ── Amount ────────────────────────────────────────────────────────────────
-  amount: number;                  // always positive — type determines direction
-  interestAmount?: number;         // loan_payment only — interest portion (tax deductible if business)
-  principalAmount?: number;        // loan_payment only — principal portion (reduces liability)
+  // Amount
+  amount: number;                  // always positive, type determines direction
+  interestAmount?: number;         // loan_payment only, interest portion (tax deductible if business)
+  principalAmount?: number;        // loan_payment only, principal portion (reduces liability)
 
-  // ── Date & Time ───────────────────────────────────────────────────────────
-  date: string;                    // YYYY-MM-DD — accounting date, user controlled, can be any date
-  createdAt: string;               // ISO UTC e.g. "2026-04-20T18:00:00.000Z" — when logged, system assigned, never user controlled
+  // Date and time
+  date: string;                    // YYYY-MM-DD accounting date, user controlled
+  createdAt: string;               // ISO UTC timestamp for when the row was logged
 
-  // ── Description ───────────────────────────────────────────────────────────
+  // Description
   description: string;             // payee / vendor name
-  notes?: string;                  // user annotation — separate from description
+  notes?: string;                  // user annotation, separate from description
 
-  // ── Accounts ──────────────────────────────────────────────────────────────
-  sourceId: string;                // account or card ID — where money comes FROM
-  destinationId?: string;          // account or card ID — where money goes TO
+  // Accounts
+  sourceId: string;                // account or card ID where money comes from
+  destinationId?: string;          // account or card ID where money goes
                                    // required for: transfer, adjustment
                                    // optional for: loan_receipt (links to liability when built)
 
-  // ── Classification ────────────────────────────────────────────────────────
-  categoryId?: string;             // required for expense/income — exempt for transfer, tax_payment, adjustment
+  // Reporting classification
+  categoryId?: string;             // required for expense/income, exempt for transfer, tax_payment, adjustment
   tag?: "Personal" | "Business";   // for tax separation
-  taxYear?: number;                // derived from date if not set — calendar year for personal, fiscal for corp
+  taxYear?: number;                // derived from date if not set: calendar year for personal, fiscal year for corp
 
-  // ── Payment ───────────────────────────────────────────────────────────────
+  // Payment metadata
   mode?: TransactionMode;
   currency: string;                // default "CAD"
   status: TransactionStatus;       // default "cleared"
 
-  // ── Links ─────────────────────────────────────────────────────────────────
+  // Links
   linkedVehicleId?: string;        // vehicle expense tracking
   linkedPropertyId?: string;       // property expense tracking
   linkedHouseLoanId?: string;      // explicit mortgage/debt parent
-  linkedLiabilityId?: string;      // loan_receipt, loan_payment — links to liability account (future)
+  linkedLiabilityId?: string;      // loan_receipt / loan_payment links to liability account
   linkedInvoiceId?: string;        // invoice deposit source
   recurringOriginType?: RecurringOriginType;
   recurringOriginId?: string;
 
-  // ── Vehicle specific ──────────────────────────────────────────────────────
+  // Vehicle specific
   odometer?: string;               // km reading at time of transaction
 }
 
-// ─── Helper — derive tax year from date ───────────────────────────────────────
 export function deriveTaxYear(date: string, isCorporate = false): number {
   const d = new Date(date + "T12:00:00");
   if (isCorporate) {
-    // Canadian corporate fiscal year — April to March
+    // Canadian corporate fiscal year: April to March
     return d.getMonth() >= 3 ? d.getFullYear() + 1 : d.getFullYear();
   }
-  // Personal T1 — calendar year
+  // Personal T1: calendar year
   return d.getFullYear();
 }
 
-// ─── Helper — does this type affect balance? ──────────────────────────────────
 export function affectsBalance(type: TransactionType, status: TransactionStatus): boolean {
-  if (status === "pending") return false;   // pending never affects balance
-  return true;                              // all cleared/reconciled transactions affect balance
+  if (status === "pending") return false;
+  return true;
 }
 
-// ─── Helper — is this type included in expense reports? ───────────────────────
 export function isExpenseReportable(type: TransactionType): boolean {
   return type === "expense" || type === "refund";
 }
 
-// ─── Helper — is this type included in income reports? ────────────────────────
 export function isIncomeReportable(type: TransactionType): boolean {
   return type === "income" || type === "dividend";
 }
 
-// ─── Helper — is this type tax relevant? ──────────────────────────────────────
 export function isTaxRelevant(type: TransactionType): boolean {
   return ["expense", "income", "dividend", "tax_payment", "loan_payment", "withdrawal"].includes(type);
 }
 
-// ─── Helper — requires destinationId? ────────────────────────────────────────
 export function requiresDestination(type: TransactionType): boolean {
   return type === "transfer" || type === "adjustment";
 }
 
-// ─── Helper — requires subType? ──────────────────────────────────────────────
 export function requiresSubType(type: TransactionType): boolean {
   return ["tax_payment", "loan_receipt", "loan_payment", "transfer"].includes(type);
 }
 
-// ─── SubType options per type ─────────────────────────────────────────────────
 export const SUB_TYPE_OPTIONS: Partial<Record<TransactionType, Array<{ value: TransactionSubType; label: string }>>> = {
   tax_payment: [
     { value: "hst_remittance",      label: "HST Remittance" },
@@ -257,7 +248,6 @@ export function getSubTypeLabel(
     ?? subType;
 }
 
-// ─── Type display labels ──────────────────────────────────────────────────────
 export const TYPE_LABELS: Record<TransactionType, string> = {
   expense:              "Expense",
   income:               "Income",
@@ -271,7 +261,6 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   adjustment:           "Adjustment",
 };
 
-// ─── User facing types (shown in TransactionForm) ─────────────────────────────
 export const USER_FACING_TYPES: TransactionType[] = [
   "expense",
   "income",
@@ -283,7 +272,6 @@ export const USER_FACING_TYPES: TransactionType[] = [
   "withdrawal",
 ];
 
-// ─── System assigned types (never shown in form dropdown) ─────────────────────
 export const SYSTEM_TYPES: TransactionType[] = [
   "tax_payment",
   "adjustment",
