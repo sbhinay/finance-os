@@ -10,6 +10,7 @@ import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
 import { getTransactionListEffect } from "@/utils/transactionSemantics";
 import { calculateDebtSummary, matchesMortgagePayment } from "@/utils/debtReporting";
 import { theme } from "@/lib/theme";
+import { ActionButton, EmptyState, MetricCard, MetricGrid, PageHeader, StatusChip, SurfaceCard, Toolbar } from "@/components/ui";
 import { TransactionForm, type TransactionFormInitial } from "./TransactionForm";
 import { useHouseLoans, useProperties, usePropertyTax } from "./useAssets";
 
@@ -22,40 +23,19 @@ function Button({
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger";
 }) {
-  const palette = {
-    primary: { background: theme.colors.primary, color: "#fff", border: theme.colors.primary },
-    secondary: { background: "#fff", color: theme.colors.text, border: theme.colors.border },
-    danger: { background: "#fff", color: theme.colors.danger, border: "#fecaca" },
-  }[variant];
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "7px 12px",
-        borderRadius: 6,
-        border: `1px solid ${palette.border}`,
-        background: palette.background,
-        color: palette.color,
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: "pointer",
-      }}
-    >
-      {children}
-    </button>
-  );
+  return <ActionButton compact tone={variant} onClick={onClick}>{children}</ActionButton>;
 }
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.42)", padding: "4vh 16px", overflowY: "auto" }}>
-      <div style={{ width: "min(980px, 100%)", margin: "0 auto", background: "#fff", border: `1px solid ${theme.colors.border}`, borderRadius: 8, boxShadow: theme.shadow.shell }}>
-        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <strong>{title}</strong>
-          <button aria-label="Close property details" onClick={onClose} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: 18, color: theme.colors.textSoft }}>x</button>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.42)", padding: "4vh 16px", overflowY: "auto", backdropFilter: "blur(5px)" }}>
+      <SurfaceCard style={{ width: "min(980px, 100%)", margin: "0 auto", boxShadow: theme.shadow.shell, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: theme.colors.surface }}>
+          <strong style={{ color: theme.colors.text }}>{title}</strong>
+          <button aria-label="Close property details" className="finance-button" onClick={onClose} style={{ border: `1px solid ${theme.colors.border}`, background: "transparent", cursor: "pointer", fontSize: 12, color: theme.colors.textSoft, borderRadius: theme.radius.pill, padding: "5px 10px", fontWeight: 700 }}>Close</button>
         </div>
         <div style={{ padding: 18 }}>{children}</div>
-      </div>
+      </SurfaceCard>
     </div>
   );
 }
@@ -79,9 +59,9 @@ const inputStyle = {
   width: "100%",
   boxSizing: "border-box" as const,
   border: `1px solid ${theme.colors.border}`,
-  borderRadius: 6,
+  borderRadius: theme.radius.sm,
   padding: "8px 10px",
-  background: "#fff",
+  background: theme.colors.surface,
   color: theme.colors.text,
 };
 
@@ -213,40 +193,45 @@ export function PropertiesSection() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 0 }}>Properties</div>
-          <div style={{ marginTop: 4, fontSize: 13, color: theme.colors.textSoft }}>Property records own real-estate identity; mortgages, taxes, insurance, and expenses link back here.</div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
+      <PageHeader
+        title="Properties"
+        subtitle="Property records own real-estate identity; mortgages, taxes, insurance, and expenses link back here."
+        actions={(
+          <Toolbar>
           <Button onClick={() => setShowArchived((value) => !value)}>{showArchived ? "Hide Archived" : "Show Archived"}</Button>
           <Button variant="primary" onClick={() => { setSelectedId(null); setDraft(blankProperty()); }}>Add Property</Button>
-        </div>
-      </div>
+          </Toolbar>
+        )}
+      />
 
       {visible.length === 0 ? (
-        <div style={{ padding: 28, border: `1px dashed ${theme.colors.border}`, borderRadius: 8, textAlign: "center", color: theme.colors.textSoft }}>No properties yet.</div>
+        <EmptyState title="No properties yet." detail="Create a property to link mortgages, tax, insurance, and expenses." />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
           {visible.map((property) => {
             const metrics = propertyMetrics[property.id];
             return (
-              <div key={property.id} style={{ ...theme.cardStyle("#b45309"), padding: 16, opacity: property.archived ? 0.65 : 1 }}>
+              <SurfaceCard key={property.id} accent={theme.colors.warning} style={{ padding: 16, opacity: property.archived ? 0.65 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>{property.name}</div>
-                    <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 3 }}>{property.type}{property.archived ? " | Archived" : ""}</div>
+                    <div style={{ fontWeight: 750, color: theme.colors.text }}>{property.name}</div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 5, flexWrap: "wrap" }}>
+                      <StatusChip tone="warning">{property.type}</StatusChip>
+                      {property.archived && <StatusChip tone="secondary">Archived</StatusChip>}
+                    </div>
                     {property.address && <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 3 }}>{property.address}</div>}
                   </div>
                   <Button onClick={() => openProperty(property)}>Details</Button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
-                  <div><div style={{ fontSize: 10, color: theme.colors.textSoft }}>VALUE</div><strong>{property.estimatedValue == null ? "--" : fmtCAD(property.estimatedValue)}</strong></div>
-                  <div><div style={{ fontSize: 10, color: theme.colors.textSoft }}>MORTGAGE</div><strong>{fmtCAD(metrics.mortgageBalance)}</strong></div>
-                  <div><div style={{ fontSize: 10, color: theme.colors.textSoft }}>EQUITY</div><strong>{metrics.equity == null ? "--" : fmtCAD(metrics.equity)}</strong></div>
-                  <div><div style={{ fontSize: 10, color: theme.colors.textSoft }}>MONTHLY CARRY</div><strong>{fmtCAD(metrics.monthlyCarrying)}</strong></div>
+                <div style={{ marginTop: 14 }}>
+                  <MetricGrid>
+                    <MetricCard label="Value" value={property.estimatedValue == null ? "--" : fmtCAD(property.estimatedValue)} />
+                    <MetricCard label="Mortgage" value={fmtCAD(metrics.mortgageBalance)} color={theme.colors.danger} />
+                    <MetricCard label="Equity" value={metrics.equity == null ? "--" : fmtCAD(metrics.equity)} color={theme.colors.success} />
+                    <MetricCard label="Monthly Carry" value={fmtCAD(metrics.monthlyCarrying)} color={theme.colors.warning} />
+                  </MetricGrid>
                 </div>
-              </div>
+              </SurfaceCard>
             );
           })}
         </div>
@@ -255,19 +240,12 @@ export function PropertiesSection() {
       {draft && (
         <Modal title={selected ? `Property - ${selected.name}` : "Add Property"} onClose={closeProperty}>
           {selected && selectedMetrics && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
-              {[
-                ["Estimated Value", selected.estimatedValue == null ? "--" : fmtCAD(selected.estimatedValue)],
-                ["Mortgage Balance", fmtCAD(selectedMetrics.mortgageBalance)],
-                ["Estimated Equity", selectedMetrics.equity == null ? "--" : fmtCAD(selectedMetrics.equity)],
-                ["12-Month Outflow", fmtCAD(selectedMetrics.trailingOutflow)],
-              ].map(([label, value]) => (
-                <div key={label} style={{ padding: 12, background: theme.colors.surfaceAlt, border: `1px solid ${theme.colors.border}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 10, color: theme.colors.textSoft }}>{label.toUpperCase()}</div>
-                  <div style={{ fontSize: 17, fontWeight: 750, marginTop: 4 }}>{value}</div>
-                </div>
-              ))}
-            </div>
+            <MetricGrid>
+              <MetricCard label="Estimated Value" value={selected.estimatedValue == null ? "--" : fmtCAD(selected.estimatedValue)} />
+              <MetricCard label="Mortgage Balance" value={fmtCAD(selectedMetrics.mortgageBalance)} color={theme.colors.danger} />
+              <MetricCard label="Estimated Equity" value={selectedMetrics.equity == null ? "--" : fmtCAD(selectedMetrics.equity)} color={theme.colors.success} />
+              <MetricCard label="12-Month Outflow" value={fmtCAD(selectedMetrics.trailingOutflow)} color={theme.colors.warning} />
+            </MetricGrid>
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>

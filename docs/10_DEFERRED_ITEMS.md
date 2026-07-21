@@ -61,6 +61,7 @@ This file records work that remains after the eight-phase production-completion 
 - Modern UI Pass 7 applies the shared shell to Categories, including metric cards, themed filters, linked-category chips, archive confirmation, and category edit modal cleanup without changing user-managed category data.
 - Modern UI Pass 8 applies the shared shell to Hours & Contracts, including invoice metrics, fiscal-hour allocation metrics, contract cards, modal chrome, and ASCII-only visible invoice/contract labels.
 - Modern UI Pass 9 applies the shared shell to Scan Statement, including privacy/provider panels, upload controls, extraction status, editable candidate preview, duplicate/confidence chips, and confirm/discard actions without changing the server-only scanner boundary.
+- Modern UI Pass 10 applies the shared shell to Properties, including page actions, property summary cards, linked type/archive chips, property metrics, and modal metric summaries without changing Property migration, ledgers, or save behavior.
 - Visual modernization remains incremental so dense finance workflows stay readable and stable.
 
 ## Remaining External Acceptance Work

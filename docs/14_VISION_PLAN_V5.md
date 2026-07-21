@@ -245,6 +245,7 @@ As of this version:
 - Modern UI Pass 7 extends that treatment to Categories, including linked-category chips, archive-safe deletion messaging, category edit modal cleanup, and shared metrics/filters without changing category semantics.
 - Modern UI Pass 8 extends that treatment to Hours & Contracts, including invoice metrics, fiscal-hour allocation metrics, contract cards, modal chrome, and ASCII-only visible invoice/contract labels without changing invoice or contract calculations.
 - Modern UI Pass 9 extends that treatment to Scan Statement, including privacy/provider panels, upload controls, editable candidate preview, duplicate/confidence chips, and confirm/discard actions without changing scanner provider behavior or write semantics.
+- Modern UI Pass 10 extends that treatment to Properties, including property summary cards, type/archive chips, modal metric summaries, and shared page actions without changing Property migration, ledgers, or save behavior.
 - Transaction History supports exact tag and recurring-origin filtering
 - Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
 - import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes
