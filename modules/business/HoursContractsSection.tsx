@@ -13,8 +13,10 @@ import {
   currentWorkFiscalYear,
 } from "@/utils/finance";
 import { validateInvoice } from "@/rules/validationRules";
+import { ActionButton, EmptyState, MetricCard, MetricGrid, PageHeader, StatusChip, SurfaceCard, Toolbar } from "@/components/ui";
+import { theme } from "@/lib/theme";
 
-// ─── Shared primitives ────────────────────────────────────────────────────────
+// Shared primitives
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -24,8 +26,8 @@ const MONTHS = [
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label style={{
-      fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-      textTransform: "uppercase" as const, color: "#6b7280",
+      fontSize: 11, fontWeight: 700, letterSpacing: 0,
+      textTransform: "uppercase" as const, color: theme.colors.textSoft,
       display: "block", marginBottom: 4,
     }}>
       {children}
@@ -48,8 +50,9 @@ function Inp({
         placeholder={placeholder} step={step}
         style={{
           width: "100%", padding: "8px 10px",
-          border: "1px solid #e2e4e8", borderRadius: 8,
-          background: "#fff", fontSize: 13, boxSizing: "border-box" as const,
+          border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm,
+          background: theme.colors.surface, fontSize: 13, boxSizing: "border-box" as const,
+          color: theme.colors.text,
           ...style,
         }}
       />
@@ -73,8 +76,8 @@ function Sel({
         onChange={onChange}
         style={{
           width: "100%", padding: "8px 10px",
-          border: "1px solid #e2e4e8", borderRadius: 8,
-          background: "#fff", fontSize: 13,
+          border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm,
+          background: theme.colors.surface, fontSize: 13, color: theme.colors.text,
         }}
       >
         {options.map((o) => {
@@ -97,29 +100,8 @@ function Btn({
   disabled?: boolean;
   style?: React.CSSProperties;
 }) {
-  const colors = {
-    primary: { bg: "#1a5fa8", color: "#fff" },
-    secondary: { bg: "#f3f4f6", color: "#374151" },
-    danger: { bg: "#fef2f2", color: "#a31515" },
-    green: { bg: "#f0fdf4", color: "#1a7f3c" },
-  };
-  const c = colors[variant];
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        padding: small ? "4px 10px" : "8px 16px",
-        fontSize: small ? 12 : 13,
-        fontWeight: 600, borderRadius: 8, border: "1px solid transparent",
-        cursor: disabled ? "not-allowed" : "pointer",
-        background: c.bg, color: c.color, opacity: disabled ? 0.5 : 1,
-        ...style,
-      }}
-    >
-      {children}
-    </button>
-  );
+  const tone = variant === "green" ? "success" : variant;
+  return <ActionButton tone={tone} compact={small} onClick={onClick} disabled={disabled} style={style}>{children}</ActionButton>;
 }
 
 function Modal({
@@ -129,30 +111,31 @@ function Modal({
 }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.4)",
+      position: "fixed", inset: 0, background: "rgba(15,23,42,.45)",
       zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 16,
+      padding: 16, backdropFilter: "blur(6px)",
     }}>
-      <div style={{
-        background: "#fff", borderRadius: 12, width: "100%",
+      <SurfaceCard style={{
+        background: theme.colors.surface, width: "100%",
         maxWidth: wide ? 720 : 480, maxHeight: "90vh",
-        overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+        overflowY: "auto", boxShadow: theme.shadow.shell,
       }}>
         <div style={{
-          padding: "16px 20px", borderBottom: "1px solid #e2e4e8",
+          padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`,
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          position: "sticky", top: 0, background: "#fff", zIndex: 1,
+          position: "sticky", top: 0, background: theme.colors.surface, zIndex: 1,
         }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{
-            background: "none", border: "none", fontSize: 20,
-            cursor: "pointer", color: "#6b7280", lineHeight: 1,
-          }}>×</button>
+          <div style={{ fontWeight: 750, fontSize: 15, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} className="finance-button" style={{
+            background: "transparent", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.pill,
+            padding: "5px 10px", fontSize: 12, fontWeight: 700,
+            cursor: "pointer", color: theme.colors.textSoft,
+          }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>
           {children}
         </div>
-      </div>
+      </SurfaceCard>
     </div>
   );
 }
@@ -163,36 +146,13 @@ function StatBox({
   label: string; value: string; sub?: string; color?: string;
 }) {
   return (
-    <div style={{
-      flex: 1, minWidth: 120, padding: "12px 14px",
-      background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10,
-    }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: color ?? "#1a1a1a" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
-    </div>
+    <MetricCard label={label} value={value} sub={sub} color={color} />
   );
 }
 
 function Pill({ color, children }: { color: string; children: React.ReactNode }) {
-  const map: Record<string, { bg: string; fg: string }> = {
-    green: { bg: "#dcfce7", fg: "#1a7f3c" },
-    blue: { bg: "#dbeafe", fg: "#1a5fa8" },
-    amber: { bg: "#fef3c7", fg: "#a05c00" },
-    gray: { bg: "#f3f4f6", fg: "#6b7280" },
-    red: { bg: "#fee2e2", fg: "#a31515" },
-  };
-  const c = map[color] ?? map.gray;
-  return (
-    <span style={{
-      padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600,
-      background: c.bg, color: c.fg,
-    }}>
-      {children}
-    </span>
-  );
+  const tone = color === "green" ? "success" : color === "blue" ? "primary" : color === "amber" ? "warning" : color === "red" ? "danger" : "secondary";
+  return <StatusChip tone={tone}>{children}</StatusChip>;
 }
 
 function Grid2({ children }: { children: React.ReactNode }) {
@@ -210,7 +170,7 @@ function Grid3({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── allocateHours — mirrors prototype exactly ────────────────────────────────
+// allocateHours mirrors prototype exactly
 
 function allocateHours(
   totalHours: number,
@@ -232,7 +192,7 @@ function allocateHours(
   });
 }
 
-// ─── AutoOverrideField ────────────────────────────────────────────────────────
+// AutoOverrideField
 
 function AutoOverrideField({
   label, autoValue, value, onChange,
@@ -253,28 +213,29 @@ function AutoOverrideField({
           value={display}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           style={{
-            flex: 1, padding: "8px 10px", border: `1px solid ${isOverridden ? "#a05c00" : "#e2e4e8"}`,
-            borderRadius: 8, background: "#fff", fontSize: 13,
+            flex: 1, padding: "8px 10px", border: `1px solid ${isOverridden ? theme.colors.warning : theme.colors.border}`,
+            borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13, color: theme.colors.text,
           }}
         />
         {isOverridden ? (
           <button
+            className="finance-button"
             onClick={() => onChange(null)}
             title="Reset to auto"
             style={{
-              padding: "6px 10px", fontSize: 11, borderRadius: 8,
-              border: "1px solid #e2e4e8", background: "#f9fafb",
-              cursor: "pointer", color: "#6b7280",
+              padding: "6px 10px", fontSize: 11, borderRadius: theme.radius.sm,
+              border: `1px solid ${theme.colors.border}`, background: theme.colors.surfaceAlt,
+              cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700,
             }}
           >
             Auto
           </button>
         ) : (
-          <span style={{ fontSize: 11, color: "#9ca3af" }}>Auto</span>
+          <span style={{ fontSize: 11, color: theme.colors.textMuted }}>Auto</span>
         )}
       </div>
       {!isOverridden && (
-        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
           From rate settings: {fmtCAD(autoValue)}
         </div>
       )}
@@ -282,9 +243,7 @@ function AutoOverrideField({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // CONTRACTS MANAGER
-// ═══════════════════════════════════════════════════════════════════════════════
 
 function ContractsManager({
   business,
@@ -350,13 +309,10 @@ function ContractsManager({
         <div style={{ fontWeight: 600, fontSize: 14 }}>Contracts ({contracts.length})</div>
         <Btn small onClick={() => { setForm(emptyContract); setShowForm(true); }}>+ Add Contract</Btn>
       </div>
-      <div style={{
-        fontSize: 12, color: "#6b7280", marginBottom: 12,
-        background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd",
-      }}>
-        💡 One contract per client engagement. Add rate history entries when your rate changes — don&apos;t
-        create a new contract. Annual Hours Allocation sets the billable cap per fiscal year (Apr–Mar).
-      </div>
+      <SurfaceCard style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 12, background: "#f0f9ff", padding: "8px 12px" }}>
+        One contract per client engagement. Add rate history entries when your rate changes; do not
+        create a new contract. Annual Hours Allocation sets the billable cap per fiscal year (Apr-Mar).
+      </SurfaceCard>
 
       {contracts.map((c) => {
         const st = getStatus(c);
@@ -364,19 +320,19 @@ function ContractsManager({
           ? [...c.rateHistory].sort((a, b) => (b.effectiveFrom > a.effectiveFrom ? 1 : -1))[0]
           : null;
         return (
-          <div key={c.id} style={{
-            border: `1px solid #e2e4e8`, borderRadius: 10, marginBottom: 12,
+          <SurfaceCard key={c.id} style={{
+            marginBottom: 12,
             borderLeft: `4px solid ${st === "Active" ? "#1a7f3c" : st === "Ending Soon" ? "#a05c00" : "#9ca3af"}`,
             padding: "14px 16px",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{c.name}</div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 2 }}>
                   {c.client}
-                  {currentRate ? ` · Current rate: ${fmtCAD(currentRate.rate)}/hr` : ""}
-                  {c.startDate ? ` · Started: ${fmtDate(c.startDate)}` : ""}
-                  {c.endDate ? ` · Ends: ${fmtDate(c.endDate)}` : ""}
+                  {currentRate ? ` | Current rate: ${fmtCAD(currentRate.rate)}/hr` : ""}
+                  {c.startDate ? ` | Started: ${fmtDate(c.startDate)}` : ""}
+                  {c.endDate ? ` | Ends: ${fmtDate(c.endDate)}` : ""}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
@@ -384,9 +340,9 @@ function ContractsManager({
                 <Btn variant="secondary" small onClick={() => setForm({ startDate: "", endDate: "", ...c, id: c.id, status: c.status as "Active" | "Ended" | "Paused" })}>Edit</Btn>
                 <Btn variant="danger" small onClick={() => {
                   const count = business.invoices.filter((i) => i.contractId === c.id).length;
-                  if (confirm(`Delete "${c.name}"?${count > 0 ? `\n\n⚠ ${count} invoice(s) will lose contract link.` : ""}`))
+                  if (confirm(`Delete "${c.name}"?${count > 0 ? `\n\nWarning: ${count} invoice(s) will lose contract link.` : ""}`))
                     hooks.deleteContract(c.id);
-                }}>✕</Btn>
+                }}>Delete</Btn>
               </div>
             </div>
 
@@ -415,8 +371,8 @@ function ContractsManager({
                     style={{ flex: 1, padding: "4px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12 }}
                   />
                   <button onClick={() => hooks.deleteContractRate(c.id, r.id)} style={{
-                    background: "none", border: "none", cursor: "pointer", color: "#a31515", fontSize: 14,
-                  }}>✕</button>
+                    background: "none", border: "none", cursor: "pointer", color: theme.colors.danger, fontSize: 12, fontWeight: 700,
+                  }}>Delete</button>
                 </div>
               ))}
             </div>
@@ -426,7 +382,7 @@ function ContractsManager({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280" }}>
                   ANNUAL HOURS ALLOCATION{" "}
-                  <span style={{ fontWeight: 400, color: "#9ca3af" }}>(billable cap per fiscal year Apr–Mar)</span>
+                  <span style={{ fontWeight: 400, color: theme.colors.textMuted }}>(billable cap per fiscal year Apr-Mar)</span>
                 </div>
                 <Btn variant="secondary" small onClick={() => hooks.addHoursAllocation(c.id)}>+ Year</Btn>
               </div>
@@ -457,8 +413,8 @@ function ContractsManager({
                       {billed}h billed ({pct}%)
                     </span>
                     <button onClick={() => hooks.deleteHoursAllocation(c.id, a.id)} style={{
-                      background: "none", border: "none", cursor: "pointer", color: "#a31515", fontSize: 14,
-                    }}>✕</button>
+                      background: "none", border: "none", cursor: "pointer", color: theme.colors.danger, fontSize: 12, fontWeight: 700,
+                    }}>Delete</button>
                   </div>
                 );
               })}
@@ -468,14 +424,12 @@ function ContractsManager({
                 </div>
               )}
             </div>
-          </div>
+          </SurfaceCard>
         );
       })}
 
       {contracts.length === 0 && (
-        <div style={{ textAlign: "center", color: "#6b7280", padding: 24, fontSize: 13 }}>
-          No contracts yet. Add your first contract above.
-        </div>
+        <EmptyState title="No contracts yet." detail="Add your first contract above." />
       )}
 
       {showForm && (
@@ -489,7 +443,7 @@ function ContractsManager({
             <Inp label="Start Date (optional)" type="date" value={form.startDate ?? ""} onChange={f("startDate")} />
             <Inp label="End Date (optional)" type="date" value={form.endDate ?? ""} onChange={f("endDate")} />
           </Grid3>
-          <div style={{ fontSize: 12, color: "#6b7280" }}>
+          <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
             Leave End Date blank for active/ongoing contracts.
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -502,9 +456,7 @@ function ContractsManager({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // HOUR ALLOCATION VIEW
-// ═══════════════════════════════════════════════════════════════════════════════
 
 function HourAllocationView({
   business,
@@ -536,7 +488,7 @@ function HourAllocationView({
 
   const fyOptions = Array.from({ length: 6 }, (_, i) => {
     const y = now.getFullYear() - 2 + i;
-    return { value: y, label: `FY${y} (Apr ${y - 1}–Mar ${y})` };
+    return { value: y, label: `FY${y} (Apr ${y - 1}-Mar ${y})` };
   });
 
   return (
@@ -574,12 +526,12 @@ function HourAllocationView({
         </div>
       ) : (
         <>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+          <MetricGrid>
             <StatBox label="Total Allocated" value={`${totalHours}h`} />
             <StatBox label="Billed So Far" value={`${billedTotal}h`} color="#1a7f3c" />
             <StatBox label="Remaining" value={`${remaining}h`} color={remaining < 0 ? "#a31515" : "#1a5fa8"} />
             <StatBox label="Utilisation" value={`${toFixed2((billedTotal / totalHours) * 100)}%`} color={billedTotal > totalHours ? "#a31515" : "#1a7f3c"} />
-          </div>
+          </MetricGrid>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
             {allocation.map((m) => {
               const inv = fyInvs.find((i) => Number(i.workMonth) === m.month && Number(i.workYear) === m.year);
@@ -604,7 +556,7 @@ function HourAllocationView({
                     <div style={{ height: "100%", width: `${pct}%`, background: pct >= 100 ? "#1a7f3c" : "#1a5fa8", borderRadius: 99 }} />
                   </div>
                   <div style={{ fontSize: 10, color: billedHrs > 0 ? "#1a7f3c" : "#6b7280", marginTop: 2 }}>
-                    {billedHrs > 0 ? `${billedHrs}h` : "—"}
+                    {billedHrs > 0 ? `${billedHrs}h` : "-"}
                   </div>
                 </div>
               );
@@ -616,9 +568,7 @@ function HourAllocationView({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // INVOICE LOG
-// ═══════════════════════════════════════════════════════════════════════════════
 
 function InvoiceLog({
   business,
@@ -681,7 +631,7 @@ function InvoiceLog({
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  // Live calc — mirrors prototype's useMemo calc
+  // Live calc mirrors prototype's useMemo calc
   const calc = useMemo(() => {
     return hooks.calcInvoiceFields(
       Number(form.hours) || 0,
@@ -752,18 +702,18 @@ function InvoiceLog({
   const totalHours = toFixed2(fyInvoices.reduce((s, i) => s + (Number(i.hours) || 0), 0));
 
   const acctOpts = [
-    { value: "", label: "— Select deposit account —" },
+    { value: "", label: "- Select deposit account -" },
     ...accounts.map((a) => ({ value: a.name, label: a.name })),
   ];
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <MetricGrid>
         <StatBox label={selectedFY === "all" ? "All Years Revenue" : `FY${activeFY} Revenue`} value={fmtCAD(totalRevenue)} color="#1a7f3c" />
         <StatBox label="HST Collected" value={fmtCAD(totalHST)} color="#1a5fa8" />
         <StatBox label="HST to Remit" value={fmtCAD(totalToRemit)} color="#a05c00" />
         <StatBox label="Total Hours" value={`${totalHours}h`} />
-      </div>
+      </MetricGrid>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -775,7 +725,7 @@ function InvoiceLog({
           >
             <option value="all">All Years</option>
             {Object.keys(fyGroups).sort((a, b) => Number(b) - Number(a)).map((fy) => (
-              <option key={fy} value={fy}>FY{fy} (Apr {Number(fy)-1}–Mar {fy})</option>
+              <option key={fy} value={fy}>FY{fy} (Apr {Number(fy)-1}-Mar {fy})</option>
             ))}
           </select>
         </div>
@@ -791,7 +741,7 @@ function InvoiceLog({
               fontWeight: 600, fontSize: 13, marginBottom: 8,
               color: "#6b7280", borderBottom: "1px solid #e2e4e8", paddingBottom: 6,
             }}>
-              FY{fy} (Apr {Number(fy) - 1} – Mar {fy})
+              FY{fy} (Apr {Number(fy) - 1} - Mar {fy})
             </div>
             {fyGroups[Number(fy)].length === 0 ? (
               <div style={{ textAlign: "center", color: "#6b7280", padding: 16, fontSize: 13 }}>No invoices for FY{fy}.</div>
@@ -801,20 +751,20 @@ function InvoiceLog({
               return db > da ? 1 : -1;
             }).map((inv) => (
               <div key={inv.id} style={{
-                background: "#fff", border: "1px solid #e2e4e8",
-                borderRadius: 10, padding: "12px 14px", marginBottom: 8,
+                background: theme.colors.surface, border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 8,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>
-                      {inv.invoiceNumber} — {MONTHS[(Number(inv.workMonth) || 1) - 1]} {inv.workYear}
+                      {inv.invoiceNumber} - {MONTHS[(Number(inv.workMonth) || 1) - 1]} {inv.workYear}
                     </div>
                     <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-                      {inv.hours}h × {fmtCAD(inv.hourlyRate)}/hr
-                      {inv.invoiceDate ? ` · Sent: ${fmtDate(inv.invoiceDate)}` : ""}
+                      {inv.hours}h x {fmtCAD(inv.hourlyRate)}/hr
+                      {inv.invoiceDate ? ` | Sent: ${fmtDate(inv.invoiceDate)}` : ""}
                       {inv.paymentDate
-                        ? <span style={{ color: "#1a7f3c" }}> · Received: {fmtDate(inv.paymentDate)}</span>
-                        : <span style={{ color: "#a05c00" }}> · ⏳ Awaiting payment</span>}
+                        ? <span style={{ color: "#1a7f3c" }}> | Received: {fmtDate(inv.paymentDate)}</span>
+                        : <span style={{ color: "#a05c00" }}> | Awaiting payment</span>}
                     </div>
                     <div style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 12 }}>Net: <strong>{fmtCAD(inv.subtotal)}</strong></span>
@@ -823,7 +773,7 @@ function InvoiceLog({
                       <span style={{ fontSize: 12 }}>Remit: <strong style={{ color: "#a05c00" }}>{fmtCAD(inv.hstToRemit)}</strong></span>
                     </div>
                     {inv.depositAccount && (
-                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>→ {inv.depositAccount}</div>
+                      <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 2 }}>Deposit account: {inv.depositAccount}</div>
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 6, marginLeft: 12 }}>
@@ -835,7 +785,7 @@ function InvoiceLog({
                     }}>Edit</Btn>
                     <Btn variant="danger" small onClick={() => {
                       if (confirm(`Delete invoice ${inv.invoiceNumber}?`)) hooks.deleteInvoice(inv.id);
-                    }}>✕</Btn>
+                    }}>Delete</Btn>
                   </div>
                 </div>
               </div>
@@ -844,9 +794,7 @@ function InvoiceLog({
         ))}
 
       {business.invoices.length === 0 && (
-        <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>
-          No invoices yet. Click + New Invoice above.
-        </div>
+        <EmptyState title="No invoices yet." detail="Click + New Invoice above." />
       )}
 
       {/* Invoice Form Modal */}
@@ -904,7 +852,7 @@ function InvoiceLog({
                 ["Quarter", calc.quarter, "#4a3ab5"],
               ].map(([l, v, c]) => (
                 <div key={l} style={{ background: "#fff", borderRadius: 8, padding: "8px 10px", border: "1px solid #e2e4e8" }}>
-                  <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", marginBottom: 2 }}>{l}</div>
+                  <div style={{ fontSize: 10, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 2 }}>{l}</div>
                   <div style={{ fontWeight: 700, color: c, fontSize: 13 }}>{v}</div>
                 </div>
               ))}
@@ -952,7 +900,7 @@ function InvoiceLog({
               <tbody>
                 <tr style={{ background: "#f9fafb" }}>
                   <td style={{ padding: "10px 12px", fontSize: 13 }}>
-                    Professional Services — {MONTHS[(Number(printInv.workMonth) || 1) - 1]} {printInv.workYear}
+                    Professional Services - {MONTHS[(Number(printInv.workMonth) || 1) - 1]} {printInv.workYear}
                   </td>
                   <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 13 }}>{printInv.hours}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 13 }}>{fmtCAD(printInv.hourlyRate)}</td>
@@ -988,9 +936,7 @@ function InvoiceLog({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // ROOT EXPORT
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export function HoursContractsSection({ accounts }: { accounts: Account[] }) {
   const hooks = useBusiness();
@@ -1005,24 +951,24 @@ export function HoursContractsSection({ accounts }: { accounts: Account[] }) {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Hours & Contracts</div>
+      <PageHeader
+        title="Hours & Contracts"
+        subtitle="Invoice logging, fiscal-hour allocation, and contract rate history in one business workflow."
+      />
 
       {hooks.error && (
-        <div style={{
-          padding: "8px 12px", background: "#fee2e2", borderRadius: 8,
-          fontSize: 13, color: "#a31515", marginBottom: 12,
-        }}>
+        <SurfaceCard style={{ padding: "8px 12px", background: theme.colors.dangerSoft, fontSize: 13, color: theme.colors.danger, marginBottom: 12 }}>
           {hooks.error}
-        </div>
+        </SurfaceCard>
       )}
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+      <Toolbar style={{ marginBottom: 16 }}>
         {(["invoices", "hours", "contracts"] as const).map((t) => (
           <Btn key={t} variant={tab === t ? "primary" : "secondary"} small onClick={() => setTab(t)}>
             {t === "invoices" ? "Invoice Log" : t === "hours" ? "Hour Allocation" : "Contracts"}
           </Btn>
         ))}
-      </div>
+      </Toolbar>
 
       {tab === "contracts" && (
         <ContractsManager business={business} hooks={hooks} />

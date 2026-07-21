@@ -109,7 +109,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Secondary pages remain available, but they are increasingly treated as subviews under those stronger destinations.
 - The current UX modernization uses a shared theme/token layer in `lib/theme.ts` rather than a UI framework migration.
 - Mobile navigation now uses an off-canvas drawer so narrow screens are not dominated by the sidebar.
-- Dashboard, Daily Log, Transaction History, Assets, Recurring, Business tax, Import / Export, and Categories surfaces are in active visual refresh so desktop and phone layouts stay usable from the same code path.
+- Dashboard, Daily Log, Transaction History, Assets, Recurring, Business tax, Import / Export, Categories, and Hours & Contracts surfaces are in active visual refresh so desktop and phone layouts stay usable from the same code path.
 - The `Business` hub now separates:
   - operational business tracking
   - corporation income snapshots

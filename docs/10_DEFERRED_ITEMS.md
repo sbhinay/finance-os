@@ -59,6 +59,7 @@ This file records work that remains after the eight-phase production-completion 
 - Modern UI Pass 5 applies the shared Business-page visual language to Tax Obligations, Corporation Income, and Tax & Rate Settings, including display-side cleanup for rate-setting notes that contain legacy mojibake.
 - Modern UI Pass 6 applies the shared shell to Import / Export, including guarded-cloud status panels, JSON preview grids, import warning cleanup, restore points, export, and danger-zone surfaces.
 - Modern UI Pass 7 applies the shared shell to Categories, including metric cards, themed filters, linked-category chips, archive confirmation, and category edit modal cleanup without changing user-managed category data.
+- Modern UI Pass 8 applies the shared shell to Hours & Contracts, including invoice metrics, fiscal-hour allocation metrics, contract cards, modal chrome, and ASCII-only visible invoice/contract labels.
 - Visual modernization remains incremental so dense finance workflows stay readable and stable.
 
 ## Remaining External Acceptance Work
