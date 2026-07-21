@@ -4,20 +4,15 @@
 
 ### Core Principle: Single Source of Truth
 
-```
+```text
 User action (add/edit/delete transaction)
-        ↓
-Write to transaction repository
-        ↓
-syncBalances()
-        ↓
-recalculateBalances() replays all applicable ledger rows
-        ↓
-accountRepository.saveAll() + creditCardRepository.saveAll()
-        ↓
-notifyDataChanged()
-        ↓
-UI reloads from hooks
+  -> canonical transaction pipeline
+  -> transaction repository write
+  -> syncBalances()
+  -> recalculateBalances() replay
+  -> accountRepository.saveAll() + creditCardRepository.saveAll()
+  -> notifyDataChanged()
+  -> UI hooks reload
 ```
 
 ### Balance Flow
@@ -31,7 +26,8 @@ UI reloads from hooks
 ### Repository Layer
 - All storage access is centralized in repository files.
 - This cleanly separates UI and domain logic from persistence.
-- The current implementation uses localStorage; a future swap to Supabase should only require repository changes.
+- The primary app remains local-first through repository-backed localStorage.
+- Supabase is used for guarded backup/restore snapshots with revision checks, not as an automatic live write path.
 
 ### TransactionForm
 - `TransactionForm.tsx` is the universal entry point for all transaction creates and edits.

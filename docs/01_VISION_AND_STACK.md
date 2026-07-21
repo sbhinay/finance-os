@@ -60,9 +60,9 @@ Detail views such as `Transaction History`, `Projection`, `Vehicles`, `House Loa
 | Language | TypeScript |
 | Styling | Inline styles + internal theme tokens (`lib/theme.ts`) |
 | State | React state + custom event bus |
-| Storage (current) | Browser localStorage |
-| Storage (future) | Supabase / PostgreSQL |
-| Auth (future) | Supabase Auth |
+| Storage (primary) | Browser localStorage |
+| Cloud backup / restore | Supabase guarded snapshots |
+| Auth | Supabase Auth for guarded cloud backup |
 | Deployment | Vercel |
 
 ### Project Configuration
@@ -71,4 +71,4 @@ Detail views such as `Transaction History`, `Projection`, `Vehicles`, `House Loa
 - No external component UI library is used.
 - No Tailwind, Chakra, MUI, or CSS-in-JS framework has been added; the current overhaul stays inside the existing stack.
 - No global state library; cross-module updates happen through repository writes and event notifications.
-- The current live app is deployed to Vercel, while core data still remains local-first with safe manual Supabase cloud backup/restore.
+- The current live app is deployed to Vercel, while core data remains local-first with safe manual Supabase cloud backup/restore and guarded conflict checks.

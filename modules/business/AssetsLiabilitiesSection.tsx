@@ -13,6 +13,7 @@ import type { Liability } from "@/types/domain";
 import { getLiabilityLedger, getLiabilitySummary, isLenderLiabilityTransaction } from "./useLiabilities";
 import { useTransactions } from "@/modules/transactions/useTransactions";
 import { calculateDebtSummary, matchesMortgagePayment } from "@/utils/debtReporting";
+import { MetricCard } from "@/components/ui";
 
 type NavTarget = "accounts" | "cards" | "properties" | "vehicles" | "houseloans";
 type PendingPropertyMark = { propertyId: string; paymentId: string } | null;
@@ -25,11 +26,7 @@ type UpcomingItem =
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 750, fontSize: 22, color: color ?? theme.colors.text }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
-    </div>
+    <MetricCard label={label} value={value} sub={sub} color={color} style={{ flex: 1, minWidth: 160, marginBottom: 0 }} />
   );
 }
 
@@ -69,10 +66,10 @@ function ActionBtn({
   style?: CSSProperties;
 }) {
   const styles = {
-    primary: { background: "#1a5fa8", color: "#fff", border: "1px solid #1a5fa8" },
-    secondary: { background: "#fff", color: "#1f2937", border: "1px solid #d1d5db" },
-    green: { background: "#1a7f3c", color: "#fff", border: "1px solid #1a7f3c" },
-    danger: { background: "#fff", color: "#a31515", border: "1px solid #fecaca" },
+    primary: { background: theme.colors.primary, color: "#fff", border: `1px solid ${theme.colors.primary}` },
+    secondary: { background: "rgba(255,255,255,0.92)", color: theme.colors.text, border: `1px solid ${theme.colors.border}` },
+    green: { background: theme.colors.success, color: "#fff", border: `1px solid ${theme.colors.success}` },
+    danger: { background: theme.colors.dangerSoft, color: theme.colors.danger, border: "1px solid #f7c8c4" },
   }[variant];
 
   return (
@@ -82,8 +79,9 @@ function ActionBtn({
         padding: "6px 10px",
         fontSize: 12,
         fontWeight: 700,
-        borderRadius: 8,
+        borderRadius: theme.radius.pill,
         cursor: "pointer",
+        boxShadow: variant === "secondary" || variant === "danger" ? "none" : theme.shadow.soft,
         ...styles,
         ...style,
       }}
@@ -95,11 +93,11 @@ function ActionBtn({
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.38)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "4vh 16px", overflowY: "auto" }}>
-      <div style={{ width: "min(920px, 100%)", background: "#fff", borderRadius: 8, border: "1px solid #d1d5db", boxShadow: "0 20px 50px rgba(15,23,42,.24)", overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 18px", borderBottom: "1px solid #e5e7eb" }}>
-          <div style={{ fontWeight: 750, fontSize: 16 }}>{title}</div>
-          <button onClick={onClose} aria-label="Close lender details" style={{ border: "none", background: "transparent", color: "#475569", fontSize: 18, cursor: "pointer" }}>x</button>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.42)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "4vh 16px", overflowY: "auto", backdropFilter: "blur(4px)" }}>
+      <div className="finance-drawer" style={{ width: "min(920px, 100%)", background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, boxShadow: theme.shadow.shell, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.surfaceAlt }}>
+          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} aria-label="Close lender details" style={{ border: `1px solid ${theme.colors.border}`, background: "#fff", color: theme.colors.textSoft, borderRadius: theme.radius.pill, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Close</button>
         </div>
         <div style={{ padding: 18 }}>{children}</div>
       </div>
@@ -109,7 +107,7 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
 
 function EmptyNote({ children }: { children: ReactNode }) {
   return (
-    <div style={{ padding: "12px 14px", borderRadius: 10, background: "#f9fafb", color: "#6b7280", fontSize: 13, border: "1px dashed #d1d5db" }}>
+    <div style={{ padding: "12px 14px", borderRadius: theme.radius.md, background: theme.colors.surfaceAlt, color: theme.colors.textSoft, fontSize: 13, border: `1px dashed ${theme.colors.borderStrong}` }}>
       {children}
     </div>
   );

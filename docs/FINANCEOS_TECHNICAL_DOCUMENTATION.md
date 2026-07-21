@@ -95,7 +95,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Production Phases 1 through 8 are landed. Final acceptance still requires browser UX checks plus any approved external provider, Supabase migration, and deployment verification.
+- Production Phases 1 through 8 are landed and locally/browser verified. The only remaining external acceptance item is live statement extraction with an approved provider credential and approved statement image.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:
@@ -142,7 +142,7 @@ The docs are organized into the following cross-linked files:
 - Where implementation is not fully complete, deferred items are explicitly listed.
 - This set is a v3 refresh of the repo docs.
 - Some documents have been refreshed after the June 2026 balance snapshot and category-linking work; older references to reconciliation baselines should be considered obsolete.
-- Cloud save is now an active planned direction using Supabase rather than a speculative future-only idea.
+- Cloud save is implemented as guarded Supabase backup/restore snapshots while FinanceOS remains local-first for normal ledger work.
 - FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.
 - The current navigation now deliberately emphasizes a reduced hub set while still preserving older detail pages behind sub-navigation during transition.
 
