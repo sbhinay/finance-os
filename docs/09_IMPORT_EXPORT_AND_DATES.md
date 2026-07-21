@@ -13,9 +13,11 @@ The current app exports the following domains:
 - `houseLoans`
 - `properties`
 - `propertyTaxes`
+- `liabilities`
 - `futurePayments`
 
-The export is a full JSON snapshot of the current app state.
+The export is a full durable JSON snapshot of the current app state. The durable import/export contract is enforced by `npm run validate:import-export`.
+Transient UI state such as pending confirmation rows, dismissed warning keys, profile display metadata, and unsupported investment placeholders are intentionally not part of the guarded cloud snapshot until they have matching import validation.
 
 ### Import Behavior
 The import process supports:
@@ -59,6 +61,7 @@ This resolution is applied to vehicles, properties, house loans, and fixed payme
 - Numbered personal-loan receipt series such as `Loan DP 1` through `Loan DP 7` can be grouped into one lender liability without changing amounts, dates, accounts, or tags.
 - Invalid or incomplete recurring origins and recurring parent-owner pairs are detached with an import warning; transaction amounts, dates, descriptions, and categories remain unchanged.
 - Legacy house loans create Property parents safely. A standalone property-tax record merges only when its name exactly and uniquely matches a Property; ambiguous records remain unchanged.
+- Durable domains must stay symmetric between cloud export, JSON import preview, and fixture validation. Adding a new persisted entity requires updating the import/export contract gate.
 
 ### Date & Time Standards
 | Field | Format | Meaning |

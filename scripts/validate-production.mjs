@@ -13,6 +13,7 @@ const steps = [
   ["Architecture", process.execPath, ["scripts/validate-canonical-architecture.mjs"]],
   ["Reports", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-report-exports.mjs"]],
   ["Cloud", process.execPath, ["scripts/validate-cloud-guards.mjs"]],
+  ["Import/export contract", process.execPath, ["scripts/validate-import-export-contract.mjs", fixturePath]],
   ["Scanner", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-statement-scanner.mjs"]],
   ["Debt reporting", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-debt-reporting.mjs"]],
   ["Debt projection", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-debt-projection.mjs"]],

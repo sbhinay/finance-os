@@ -30,6 +30,7 @@ npm run validate:mojibake
 npm run validate:architecture
 npm run validate:reports
 npm run validate:cloud
+npm run validate:import-export
 npm run validate:scanner
 npm run validate:debt
 npm run validate:debt-projection
@@ -48,6 +49,7 @@ At completion:
 - lint and the production build passed
 - the full and production dependency audits reported zero vulnerabilities
 - source, script, and documentation files are scanned for mojibake by `npm run validate:mojibake`
+- durable JSON/cloud domains are checked for symmetric export, import-preview mapping, and fixture presence by `npm run validate:import-export`
 
 ## Browser Acceptance
 
