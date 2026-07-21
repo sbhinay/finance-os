@@ -19,10 +19,24 @@ import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction, getSubTypeLabel } from "@/ty
 import { getExpenseReportEffect, getTransactionEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
 import { buildCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
 import { theme } from "@/lib/theme";
-import { MetricCard, PageHeader } from "@/components/ui";
+import { MetricCard, PageHeader, StatusChip } from "@/components/ui";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // --- Primitives ---------------------------------------------------------------
+
+const listCardStyle = {
+  ...theme.cardStyle(),
+  padding: "15px 16px",
+  marginBottom: 11,
+  background: "rgba(255,255,255,0.94)",
+};
+
+const alertPanelStyle = {
+  borderRadius: theme.radius.md,
+  padding: "11px 13px",
+  fontSize: 13,
+  lineHeight: 1.45,
+};
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 4 }}>{children}</label>;
@@ -63,16 +77,21 @@ function Btn({ children, onClick, variant = "primary", small, disabled, style }:
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "green"; small?: boolean; disabled?: boolean; style?: React.CSSProperties;
 }) {
-  const c = { primary: { bg: theme.colors.primary, color: "#fff" }, secondary: { bg: theme.colors.surfaceAlt, color: theme.colors.text }, danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger }, green: { bg: theme.colors.success, color: "#fff" } }[variant];
-  return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: small ? "6px 11px" : "9px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: theme.radius.pill, border: `1px solid ${variant === "secondary" ? theme.colors.border : "transparent"}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color, ...style }}>{children}</button>;
+  const c = {
+    primary: { bg: theme.colors.primary, color: "#fff", border: theme.colors.primary },
+    secondary: { bg: "rgba(255,255,255,0.92)", color: theme.colors.text, border: theme.colors.border },
+    danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger, border: "#f7c8c4" },
+    green: { bg: theme.colors.success, color: "#fff", border: theme.colors.success },
+  }[variant];
+  return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: small ? "6px 11px" : "9px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: theme.radius.pill, border: `1px solid ${c.border}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color, ...style }}>{children}</button>;
 }
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div className="finance-drawer" style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 640 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 750, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" }}>Close</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.42)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+      <div className="finance-drawer" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: wide ? 680 : 500, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: `linear-gradient(180deg, ${theme.colors.surfaceAlt}, rgba(255,255,255,0.94))`, zIndex: 1 }}>
+          <div style={{ fontWeight: 760, fontSize: 16, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} className="finance-button" style={{ background: "rgba(255,255,255,0.92)", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.pill, padding: "6px 10px", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase" }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -357,17 +376,17 @@ export function BankAccountsSection() {
         const bal30 = toFixed2(a.openingBalance - t30);
 
         return (
-          <div key={a.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
+          <div key={a.id} className="finance-card" style={listCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
-                  {a.primary && <span style={{ fontSize: 10, fontWeight: 700, background: "#1a7f3c", color: "#fff", padding: "1px 7px", borderRadius: 99 }}>PRIMARY</span>}
+                  <div style={{ fontWeight: 720, fontSize: 14 }}>{a.name}</div>
+                  {a.primary && <StatusChip tone="success">Primary</StatusChip>}
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{a.type}</div>
+                <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 2 }}>{a.type}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontWeight: 700, fontSize: 18, color: a.openingBalance >= 0 ? "#1a7f3c" : "#a31515" }}>
+                <div style={{ fontWeight: 760, fontSize: 18, color: a.openingBalance >= 0 ? theme.colors.success : theme.colors.danger }}>
                   {fmtCAD(a.openingBalance)}
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
@@ -380,10 +399,9 @@ export function BankAccountsSection() {
                     setReconDate(a.balanceSnapshotDate ?? todayLocal);
                   }}>Snapshot</Btn>
                   <Btn variant="secondary" small onClick={() => setLedgerAccount(a)}>Ledger</Btn>
-                  <button onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}
-                    style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: a.primary ? "#1a7f3c" : "#f3f4f6", color: a.primary ? "#fff" : "#6b7280" }}>
+                  <Btn variant={a.primary ? "green" : "secondary"} small onClick={() => { updateAccount({ ...a, primary: !a.primary }); notifyDataChanged("accounts"); }}>
                     {a.primary ? "Primary" : "Set Primary"}
-                  </button>
+                  </Btn>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...a, id: a.id }); setShowForm(true); }}>Edit</Btn>
                   <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${a.name}?`)) { deleteAccount(a.id); notifyDataChanged("accounts"); } }}>Delete</Btn>
                 </div>
@@ -391,25 +409,25 @@ export function BankAccountsSection() {
             </div>
 
             {expanded === a.id && (
-              <div style={{ marginTop: 10, borderTop: "1px solid #e2e4e8", paddingTop: 10 }}>
+              <div style={{ marginTop: 12, borderTop: `1px solid ${theme.colors.border}`, paddingTop: 12 }}>
                 <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-                  <div style={{ background: "#fef3e2", borderRadius: 8, padding: "8px 12px", flex: 1, minWidth: 110 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#a05c00", textTransform: "uppercase", marginBottom: 2 }}>Next 7 Days Out</div>
-                    <div style={{ fontWeight: 700, color: "#a05c00" }}>{fmtCAD(t7)}</div>
+                  <div style={{ ...alertPanelStyle, background: theme.colors.warningSoft, color: theme.colors.warning, flex: 1, minWidth: 110 }}>
+                    <div style={{ fontSize: 10, fontWeight: 750, textTransform: "uppercase", marginBottom: 2 }}>Next 7 Days Out</div>
+                    <div style={{ fontWeight: 760 }}>{fmtCAD(t7)}</div>
                   </div>
-                  <div style={{ background: "#fdecea", borderRadius: 8, padding: "8px 12px", flex: 1, minWidth: 110 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#a31515", textTransform: "uppercase", marginBottom: 2 }}>Next 30 Days Out</div>
-                    <div style={{ fontWeight: 700, color: "#a31515" }}>{fmtCAD(t30)}</div>
+                  <div style={{ ...alertPanelStyle, background: theme.colors.dangerSoft, color: theme.colors.danger, flex: 1, minWidth: 110 }}>
+                    <div style={{ fontSize: 10, fontWeight: 750, textTransform: "uppercase", marginBottom: 2 }}>Next 30 Days Out</div>
+                    <div style={{ fontWeight: 760 }}>{fmtCAD(t30)}</div>
                   </div>
-                  <div style={{ background: bal30 >= 0 ? "#e6f4ea" : "#fdecea", borderRadius: 8, padding: "8px 12px", flex: 1, minWidth: 110 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: bal30 >= 0 ? "#1a7f3c" : "#a31515", textTransform: "uppercase", marginBottom: 2 }}>Balance After 30 Days</div>
-                    <div style={{ fontWeight: 700, color: bal30 >= 0 ? "#1a7f3c" : "#a31515" }}>{fmtCAD(bal30)}</div>
+                  <div style={{ ...alertPanelStyle, background: bal30 >= 0 ? theme.colors.successSoft : theme.colors.dangerSoft, color: bal30 >= 0 ? theme.colors.success : theme.colors.danger, flex: 1, minWidth: 110 }}>
+                    <div style={{ fontSize: 10, fontWeight: 750, textTransform: "uppercase", marginBottom: 2 }}>Balance After 30 Days</div>
+                    <div style={{ fontWeight: 760 }}>{fmtCAD(bal30)}</div>
                   </div>
                 </div>
                 {outflows30.length === 0
                   ? <div style={{ fontSize: 12, color: "#6b7280", textAlign: "center", padding: 8 }}>No scheduled outflows in the next 30 days.</div>
                   : outflows30.map((item, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "5px 0", borderBottom: `1px solid ${theme.colors.border}` }}>
                       <span>{item.label}</span>
                       <span style={{ color: "#a31515", fontWeight: 500 }}>
                         {fmtCAD(item.amount)} - {item.date.toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
@@ -437,7 +455,7 @@ export function BankAccountsSection() {
 
       {reconcile && (
         <Modal title={`Balance Snapshot - ${reconcile.name}`} onClose={() => setReconcile(null)}>
-          <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
+          <div style={{ ...alertPanelStyle, background: theme.colors.warningSoft, color: theme.colors.warning }}>
             Set the known real balance as of the selected date. Transactions after this date are replayed from this amount.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcile.openingBalance)}</strong></div>
@@ -446,7 +464,7 @@ export function BankAccountsSection() {
             <Inp label="Balance Date" type="date" value={reconDate} onChange={(e) => setReconDate(e.target.value)} />
           </Grid2>
           {reconAmt === 0 && (
-            <div style={{ background: "#fef2f2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a31515" }}>
+            <div style={{ ...alertPanelStyle, background: theme.colors.dangerSoft, color: theme.colors.danger }}>
               Warning: Setting balance to $0.00. This will reset the account balance to zero.
             </div>
           )}
@@ -728,26 +746,26 @@ export function CreditCardsSection() {
         const linked = accounts.find((a) => a.id === c.linkedAccountId);
         const isLoc = c.type === "loc";
         return (
-          <div key={c.id} style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
+          <div key={c.id} className="finance-card" style={listCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
-                  {c.primary && <span style={{ fontSize: 10, fontWeight: 700, background: "#1a7f3c", color: "#fff", padding: "1px 7px", borderRadius: 99 }}>PRIMARY</span>}
+                  <div style={{ fontWeight: 720, fontSize: 14 }}>{c.name}</div>
+                  {c.primary && <StatusChip tone="success">Primary</StatusChip>}
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2, display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 2, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   {c.issuer}
                   <Pill color={isLoc ? "teal" : c.type === "business" ? "blue" : "purple"}>{isLoc ? "LOC" : c.type}</Pill>
                   {linked && <span>- {linked.name}</span>}
                 </div>
-                <div style={{ marginTop: 8, height: 4, background: "#e5e7eb", borderRadius: 99, width: 200 }}>
-                  <div style={{ height: "100%", width: `${Math.min(u, 100)}%`, background: u > 80 ? "#a31515" : u > 30 ? "#EF9F27" : "#1a7f3c", borderRadius: 99 }} />
+                <div style={{ marginTop: 9, height: 5, background: theme.colors.surfaceMuted, borderRadius: 99, width: "min(260px, 100%)" }}>
+                  <div style={{ height: "100%", width: `${Math.min(u, 100)}%`, background: u > 80 ? theme.colors.danger : u > 30 ? "#EF9F27" : theme.colors.success, borderRadius: 99, transition: "width .24s ease" }} />
                 </div>
-                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3 }}>Utilization: {u}%</div>
+                <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 3 }}>Utilization: {u}%</div>
               </div>
               <div style={{ textAlign: "right", marginLeft: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: 16, color: "#a31515" }}>{fmtCAD(c.openingBalance)}</div>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>Limit: {fmtCAD(c.limitAmount)}</div>
+                <div style={{ fontWeight: 760, fontSize: 17, color: c.openingBalance > 0 ? theme.colors.danger : theme.colors.success }}>{fmtCAD(c.openingBalance)}</div>
+                <div style={{ fontSize: 12, color: theme.colors.textSoft }}>Limit: {fmtCAD(c.limitAmount)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                   {isLoc ? (
                     <>
@@ -763,13 +781,13 @@ export function CreditCardsSection() {
                     setCardReconDate(c.balanceSnapshotDate ?? todayLocal);
                   }}>Snapshot</Btn>
                   <Btn variant="secondary" small onClick={() => setLedgerCard(c)}>Ledger</Btn>
-                  <button onClick={() => {
+                  <Btn variant={c.primary ? "green" : "secondary"} small onClick={() => {
                     const all = creditCardRepository.getAll();
                     creditCardRepository.saveAll(all.map((x) => ({ ...x, primary: x.id === c.id ? !c.primary : x.primary })));
                     reloadCards(); notifyDataChanged("cards");
-                  }} style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 8, border: "none", cursor: "pointer", background: c.primary ? "#1a7f3c" : "#f3f4f6", color: c.primary ? "#fff" : "#6b7280" }}>
+                  }}>
                     {c.primary ? "Primary" : "Set Primary"}
-                  </button>
+                  </Btn>
                   <Btn variant="secondary" small onClick={() => { setForm({ ...emptyForm, ...c, id: c.id }); setShowForm(true); }}>Edit</Btn>
                   <Btn variant="danger" small onClick={() => { if (confirm(`Delete ${c.name}?`)) { deleteCard(c.id); notifyDataChanged("cards"); } }}>Delete</Btn>
                 </div>
@@ -794,7 +812,7 @@ export function CreditCardsSection() {
 
       {locPaymentCard && (
         <Modal title={`Pay LOC - ${locPaymentCard.name}`} onClose={() => setLocPaymentCard(null)}>
-          <div style={{ background: "#f0f9ff", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a5fa8" }}>
+          <div style={{ ...alertPanelStyle, background: "#f0f9ff", color: "#1a5fa8" }}>
             Principal reduces the LOC balance. Interest is logged as an expense from the payment account.
           </div>
           <Grid2>
@@ -834,7 +852,7 @@ export function CreditCardsSection() {
 
       {reconcileCard && (
         <Modal title={`Balance Snapshot - ${reconcileCard.name}`} onClose={() => setReconcileCard(null)}>
-          <div style={{ background: "#fef3e2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#a05c00" }}>
+          <div style={{ ...alertPanelStyle, background: theme.colors.warningSoft, color: theme.colors.warning }}>
             Set the known real balance owing as of the selected date. Transactions after this date are replayed from this amount.
           </div>
           <div style={{ fontSize: 13 }}>Current system balance: <strong>{fmtCAD(reconcileCard.openingBalance)}</strong></div>
@@ -880,14 +898,14 @@ export function CreditCardsSection() {
             <Inp label="Credit Limit ($)" type="number" value={form.limitAmount} onChange={f("limitAmount")} />
             <Inp label={form.type === "loc" ? "LOC Balance Owing ($)" : "Balance Owing ($)"} type="number" value={form.openingBalance} onChange={f("openingBalance")} />
           </Grid2>
-          <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Annual Card Fee (optional)</div>
+          <div style={{ ...alertPanelStyle, background: theme.colors.surfaceAlt, border: `1px solid ${theme.colors.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft, marginBottom: 8 }}>Annual Card Fee (optional)</div>
             <Grid2>
               <Inp label="Fee Amount ($)" type="number" value={form.annualFeeAmount} onChange={f("annualFeeAmount")} />
               <Inp label="Next Charge Date" type="date" value={form.annualFeeDate} onChange={f("annualFeeDate")} />
             </Grid2>
           </div>
-          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ ...alertPanelStyle, background: "#fff7ed", border: "1px solid #fed7aa" }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, color: "#9a3412", marginBottom: 8 }}>
               <input
                 type="checkbox"
