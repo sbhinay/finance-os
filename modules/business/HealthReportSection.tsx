@@ -16,7 +16,7 @@ import { TransactionForm } from "./TransactionForm";
 import { useLiabilities } from "./useLiabilities";
 import { toFixed2 } from "@/utils/finance";
 import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
-import { ActionButton, PageHeader } from "@/components/ui";
+import { ActionButton, MetricCard, MetricGrid, PageHeader, StatusChip } from "@/components/ui";
 import { theme } from "@/lib/theme";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
@@ -526,17 +526,16 @@ export function HealthReportSection({
     saveDismissedHealthIssues([]);
   }
 
-  const statCard = (label: string, value: number, color: string) => (
-    <div style={{ flex: 1, minWidth: 160, padding: "14px 16px", background: `linear-gradient(180deg, ${theme.colors.surface}, ${theme.colors.surfaceAlt})`, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md }}>
-      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 5, letterSpacing: 0 }}>{label}</div>
-      <div style={{ fontWeight: 750, fontSize: 19, color }}>{value}</div>
-    </div>
-  );
+  const severityTone: Record<HealthSeverity, "danger" | "warning" | "primary"> = {
+    high: "danger",
+    medium: "warning",
+    low: "primary",
+  };
 
-  const severityColor: Record<HealthSeverity, { bg: string; fg: string }> = {
-    high: { bg: "#fee2e2", fg: "#991b1b" },
-    medium: { bg: "#fef3c7", fg: "#92400e" },
-    low: { bg: "#dbeafe", fg: "#1d4ed8" },
+  const severityAccent: Record<HealthSeverity, string> = {
+    high: theme.colors.danger,
+    medium: theme.colors.warning,
+    low: theme.colors.primary,
   };
 
   return (
@@ -551,49 +550,47 @@ export function HealthReportSection({
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
-        {statCard("Total Issues", issues.length, highCount > 0 ? "#a31515" : "#1a7f3c")}
-        {statCard("Uncategorized", uncategorizedCount, "#a05c00")}
-        {statCard("Broken References", brokenRefCount, "#a31515")}
-        {statCard("Stale Schedules", staleScheduleCount, "#1a5fa8")}
-        {statCard("Recurring Gaps", recurringCount, "#6b21a8")}
-        {statCard("Duplicates", duplicateCount, "#a05c00")}
-      </div>
+      <MetricGrid>
+        <MetricCard label="Total Issues" value={String(issues.length)} tone={highCount > 0 ? "danger" : "success"} />
+        <MetricCard label="Uncategorized" value={String(uncategorizedCount)} tone="warning" />
+        <MetricCard label="Broken References" value={String(brokenRefCount)} tone="danger" />
+        <MetricCard label="Stale Schedules" value={String(staleScheduleCount)} tone="primary" />
+        <MetricCard label="Recurring Gaps" value={String(recurringCount)} tone="secondary" />
+        <MetricCard label="Duplicates" value={String(duplicateCount)} tone="warning" />
+      </MetricGrid>
 
       {issues.length === 0 ? (
-        <div style={{ padding: 18, border: "1px solid #d1fae5", background: "#ecfdf5", borderRadius: 10, color: "#065f46", fontSize: 13 }}>
+        <div className="finance-card" style={{ padding: 18, border: "1px solid #d1fae5", background: theme.colors.successSoft, borderRadius: theme.radius.md, color: "#065f46", fontSize: 13 }}>
           No issues detected right now. The ledger, links, and recurring metadata all passed the current health checks.
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid", gap: 12 }}>
           {issues.map((issue) => (
-            <div key={issue.id} style={{ border: `1px solid ${theme.colors.border}`, background: theme.colors.surface, borderRadius: theme.radius.md, padding: 14 }}>
+            <div
+              key={issue.id}
+              className="finance-card"
+              style={{
+                border: `1px solid ${theme.colors.border}`,
+                borderLeft: `4px solid ${severityAccent[issue.severity]}`,
+                background: "rgba(255,255,255,0.94)",
+                borderRadius: theme.radius.md,
+                padding: 15,
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: theme.colors.text }}>{issue.title}</div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    padding: "2px 8px",
-                    borderRadius: theme.radius.pill,
-                    background: severityColor[issue.severity].bg,
-                    color: severityColor[issue.severity].fg,
-                  }}
-                >
-                  {issue.severity}
-                </span>
+                <div style={{ fontWeight: 760, fontSize: 14, color: theme.colors.text }}>{issue.title}</div>
+                <StatusChip tone={severityTone[issue.severity]}>{issue.severity}</StatusChip>
               </div>
-              <div style={{ color: "#334155", fontSize: 13, marginBottom: issue.hint ? 4 : 0 }}>{issue.detail}</div>
-              {issue.hint && <div style={{ color: "#6b7280", fontSize: 12 }}>{issue.hint}</div>}
+              <div style={{ color: theme.colors.textSoft, fontSize: 13, marginBottom: issue.hint ? 4 : 0 }}>{issue.detail}</div>
+              {issue.hint && <div style={{ color: theme.colors.textMuted, fontSize: 12, lineHeight: 1.45 }}>{issue.hint}</div>}
               {issue.duplicateTransactions && (
                 <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
                   {issue.duplicateTransactions.map((tx) => (
                     <div
                       key={tx.id}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "7px 10px", border: "1px solid #e5e7eb", borderRadius: 8, background: "#f9fafb" }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surfaceAlt }}
                     >
-                      <div style={{ fontSize: 12, color: "#334155" }}>
+                      <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
                         <strong>{tx.description}</strong> - {tx.date} - {Number(tx.amount).toFixed(2)} - id={tx.id}
                       </div>
                       <FixButton onClick={() => deleteTransactionFromHealth(tx.id)}>Delete This Row</FixButton>
@@ -609,7 +606,7 @@ export function HealthReportSection({
                   <select
                     value={categoryFixes[issue.transactionId] ?? ""}
                     onChange={(e) => setCategoryFixes((current) => ({ ...current, [issue.transactionId!]: e.target.value }))}
-                    style={{ minWidth: 220, padding: "7px 10px", border: "1px solid #d1d5db", borderRadius: 8, background: "#fff", fontSize: 12 }}
+                    style={{ minWidth: 220, padding: "7px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 12 }}
                   >
                     <option value="">Select category...</option>
                     {categoryOptions(categories, issue.transactionType).map((category) => (
