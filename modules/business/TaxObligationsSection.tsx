@@ -6,14 +6,16 @@ import { useBusiness, calcHSTFromInvoices } from "./useBusiness";
 import { Account } from "@/types/account";
 import { ArrearsType } from "@/types/business";
 import { fmtCAD, fmtDate } from "@/utils/finance";
+import { ActionButton, MetricCard, MetricGrid, PageHeader, StatusChip } from "@/components/ui";
+import { theme } from "@/lib/theme";
 
 // ─── Shared primitives (same tokens as HoursContractsSection) ────────────────
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label style={{
-      fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-      textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4,
+      fontSize: 11, fontWeight: 700, letterSpacing: 0,
+      textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 4,
     }}>{children}</label>
   );
 }
@@ -24,19 +26,8 @@ function Btn({
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "green"; small?: boolean; disabled?: boolean;
 }) {
-  const c = {
-    primary: { bg: "#1a5fa8", color: "#fff" },
-    secondary: { bg: "#f3f4f6", color: "#374151" },
-    danger: { bg: "#fef2f2", color: "#a31515" },
-    green: { bg: "#f0fdf4", color: "#1a7f3c" },
-  }[variant];
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      padding: small ? "4px 10px" : "8px 16px", fontSize: small ? 12 : 13,
-      fontWeight: 600, borderRadius: 8, border: "1px solid transparent",
-      cursor: disabled ? "not-allowed" : "pointer", background: c.bg, color: c.color, opacity: disabled ? 0.5 : 1,
-    }}>{children}</button>
-  );
+  const tone = variant === "green" ? "success" : variant;
+  return <ActionButton tone={tone} compact={small} onClick={onClick} disabled={disabled}>{children}</ActionButton>;
 }
 
 function Inp({
@@ -49,7 +40,7 @@ function Inp({
     <div>
       {label && <Label>{label}</Label>}
       <input type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13, boxSizing: "border-box" as const }} />
+        style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13, boxSizing: "border-box" as const }} />
     </div>
   );
 }
@@ -65,7 +56,7 @@ function Sel({
     <div>
       {label && <Label>{label}</Label>}
       <select value={value ?? ""} onChange={onChange}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}>
+        style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }}>
         {options.map((o) => {
           const v = typeof o === "string" ? o : o.value;
           const l = typeof o === "string" ? o : o.label;
@@ -84,24 +75,17 @@ function Grid3({ children }: { children: React.ReactNode }) {
 }
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div style={{ flex: 1, minWidth: 120, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: color ?? "#1a1a1a" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
+  return <MetricCard label={label} value={value} sub={sub} color={color} style={{ minWidth: 140 }} />;
 }
 
 function Pill({ color, children }: { color: string; children: React.ReactNode }) {
-  const m: Record<string, { bg: string; fg: string }> = {
-    green: { bg: "#dcfce7", fg: "#1a7f3c" }, blue: { bg: "#dbeafe", fg: "#1a5fa8" },
-    amber: { bg: "#fef3c7", fg: "#a05c00" }, gray: { bg: "#f3f4f6", fg: "#6b7280" },
-    red: { bg: "#fee2e2", fg: "#a31515" }, purple: { bg: "#ede9fe", fg: "#4a3ab5" },
-    teal: { bg: "#d1fae5", fg: "#065f46" },
-  };
-  const c = m[color] ?? m.gray;
-  return <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: c.bg, color: c.fg }}>{children}</span>;
+  const tone =
+    color === "green" || color === "teal" ? "success"
+      : color === "red" ? "danger"
+        : color === "amber" ? "warning"
+          : color === "blue" ? "primary"
+            : "secondary";
+  return <StatusChip tone={tone}>{children}</StatusChip>;
 }
 
 // ─── Obligation type (combined view) ─────────────────────────────────────────
@@ -193,7 +177,7 @@ function ObligationsList({
     if (!confirm("Undo this payment? The linked transaction and bank balance change will be reversed.")) return;
     hooks.unpayObligation(o.id, o.type, o.txnId);
     if (!o.txnId) {
-      alert("Payment marked as unpaid. Note: the original transaction was created before transaction-linking was added — delete it manually from Daily Log if needed.");
+      alert("Payment marked as unpaid. Note: the original transaction was created before transaction-linking was added - delete it manually from Daily Log if needed.");
     }
   }
 
@@ -209,7 +193,7 @@ function ObligationsList({
       </div>
 
       {showAddCorp && (
-        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+        <div className="finance-card" style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 12 }}>
           <Grid3>
             <Inp label="Year" type="number" value={newCorpYear} onChange={(e) => setNewCorpYear(Number(e.target.value))} />
             <Inp label="Amount per Quarter ($)" type="number" value={newCorpAmt} onChange={(e) => setNewCorpAmt(Number(e.target.value))} />
@@ -221,17 +205,17 @@ function ObligationsList({
       )}
 
       {showAddPayroll && (
-        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+        <div className="finance-card" style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 12 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
             <div>
               <Label>Month</Label>
               <input type="month" value={payrollMonth} onChange={(e) => setPayrollMonth(e.target.value)}
-                style={{ padding: "7px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }} />
+                style={{ padding: "7px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }} />
             </div>
             <div>
               <Label>Amount ($)</Label>
               <input type="number" value={payrollAmt} onChange={(e) => setPayrollAmt(Number(e.target.value))}
-                style={{ width: 110, padding: "7px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }} />
+                style={{ width: 110, padding: "7px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }} />
             </div>
             <Btn small onClick={() => {
               if (payrollMonth) { hooks.addPayrollMonth(payrollMonth, payrollAmt); setShowAddPayroll(false); setPayrollMonth(""); }
@@ -242,8 +226,8 @@ function ObligationsList({
       )}
 
       {unpaid.length === 0 && (
-        <div style={{ textAlign: "center", color: "#1a7f3c", padding: 24, fontSize: 14, fontWeight: 600 }}>
-          ✓ All obligations paid — nothing outstanding
+        <div className="finance-card" style={{ textAlign: "center", color: theme.colors.success, padding: 24, fontSize: 14, fontWeight: 700 }}>
+          All obligations paid - nothing outstanding
         </div>
       )}
 
@@ -251,9 +235,9 @@ function ObligationsList({
         const st = getStatus(o);
         const borderColor = st.color === "red" ? "#a31515" : st.color === "amber" ? "#EF9F27" : "#9ca3af";
         return (
-          <div key={o.id} style={{
-            background: "#fff", border: "1px solid #e2e4e8", borderLeft: `4px solid ${borderColor}`,
-            borderRadius: 10, padding: "12px 14px", marginBottom: 10,
+          <div key={o.id} className="finance-card" style={{
+            background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderLeft: `4px solid ${borderColor}`,
+            borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 10,
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
               <div style={{ flex: 1 }}>
@@ -262,30 +246,30 @@ function ObligationsList({
                   <Pill color={typeColors[o.type] ?? "gray"}>{o.type}</Pill>
                   <Pill color={st.color}>{st.label}</Pill>
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
                   Due: {fmtDate(o.dueDate)}
                   {o.plannedDate && o.plannedDate !== o.dueDate
-                    ? <span style={{ color: "#a05c00" }}> · Planned: {fmtDate(o.plannedDate)}</span>
+                    ? <span style={{ color: theme.colors.warning }}> - Planned: {fmtDate(o.plannedDate)}</span>
                     : ""}
                 </div>
                 {o.type === "HST" && (o.autoAmount ?? 0) > 0 && (
-                  <div style={{ fontSize: 12, color: "#1a5fa8", marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: theme.colors.primary, marginTop: 2 }}>
                     Auto-calc from invoices: {fmtCAD(o.autoAmount!)}
                   </div>
                 )}
                 {/* Inline planned date + amount edit */}
                 <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, color: "#6b7280" }}>Planned:</span>
+                    <span style={{ fontSize: 11, color: theme.colors.textSoft }}>Planned:</span>
                     <input type="date" value={o.plannedDate ?? ""}
                       onChange={(e) => hooks.updateObligationPlannedDate(o.id, o.type, e.target.value)}
-                      style={{ padding: "3px 7px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 11, background: "#fff", color: o.plannedDate ? "#1a5fa8" : "#9ca3af" }} />
+                      style={{ padding: "3px 7px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 11, background: theme.colors.surface, color: o.plannedDate ? theme.colors.primary : theme.colors.textMuted }} />
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, color: "#6b7280" }}>Amount:</span>
+                    <span style={{ fontSize: 11, color: theme.colors.textSoft }}>Amount:</span>
                     <input type="number" value={o.amount ?? ""}
                       onChange={(e) => hooks.updateObligationAmount(o.id, o.type, Number(e.target.value))}
-                      style={{ width: 100, padding: "3px 7px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 11 }} />
+                      style={{ width: 100, padding: "3px 7px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 11 }} />
                   </div>
                 </div>
               </div>
@@ -306,7 +290,7 @@ function ObligationsList({
         initial={txFormInitial}
         scheduledAmount={markingPaid?.amount}
         lockType="tax_payment"
-        title={markingPaid ? `Pay CRA — ${markingPaid.label}` : "CRA Payment"}
+        title={markingPaid ? `Pay CRA - ${markingPaid.label}` : "CRA Payment"}
         onSaved={(txn) => {
           if (markingPaid) {
             hooks.markObligationPaid(
@@ -324,11 +308,11 @@ function ObligationsList({
       {/* Paid obligations (compact) */}
       {paid.length > 0 && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>PAID ({paid.length})</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft, marginBottom: 8 }}>PAID ({paid.length})</div>
           {paid.slice(0, 5).map((o) => (
-            <div key={o.id} style={{
+            <div key={o.id} className="finance-card" style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, marginBottom: 6,
+              padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: theme.radius.sm, marginBottom: 6,
             }}>
               <div>
                 <span style={{ fontSize: 13, fontWeight: 500 }}>{o.label}</span>
@@ -373,7 +357,7 @@ function ArrearsSection({
 
   const bizAcct = accounts.find((a) => a.type === "business" || a.name.toLowerCase().includes("business"));
   const acctOpts = [
-    { value: "", label: "— No account (balance unchanged) —" },
+    { value: "", label: "- No account (balance unchanged) -" },
     ...accounts.map((a) => ({ value: a.id, label: a.name })),
   ];
 
@@ -387,9 +371,9 @@ function ArrearsSection({
       </div>
 
       {editArrears && (
-        <div style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#a05c00", marginBottom: 10 }}>
-            Set the opening arrears balances. These are manually entered — enter whatever CRA has told you is outstanding.
+        <div className="finance-card" style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: theme.colors.warning, marginBottom: 10 }}>
+            Set the opening arrears balances. These are manually entered - enter whatever CRA has told you is outstanding.
           </div>
           <Grid2>
             <Inp label="HST Arrears ($)" type="number" value={hstVal} onChange={(e) => setHstVal(Number(e.target.value))} />
@@ -401,19 +385,19 @@ function ArrearsSection({
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <MetricGrid>
         <StatBox label="HST Arrears" value={fmtCAD(business.arrearsHST ?? 0)} color="#a31515" />
         <StatBox label="Corp Tax Arrears" value={fmtCAD(business.arrearsCorp ?? 0)} color="#a31515" />
         <StatBox label="Total Outstanding" value={fmtCAD(totalArrears)} color="#a31515" />
         <StatBox label="Total Paid" value={fmtCAD(totalPaid)} color="#1a7f3c" />
-      </div>
+      </MetricGrid>
 
       {totalPaid > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ height: 8, background: "#e5e7eb", borderRadius: 99 }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: "#1a7f3c", borderRadius: 99, transition: "width .5s" }} />
+          <div style={{ height: 8, background: theme.colors.border, borderRadius: 99 }}>
+            <div style={{ height: "100%", width: `${pct}%`, background: theme.colors.success, borderRadius: 99, transition: "width .5s" }} />
           </div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{pct}% paid down from opening balance</div>
+          <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4 }}>{pct}% paid down from opening balance</div>
         </div>
       )}
 
@@ -423,7 +407,7 @@ function ArrearsSection({
       </div>
 
       {showAdd && (
-        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+        <div className="finance-card" style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 12 }}>
           <Grid3>
             <Inp label="Amount ($)" type="number" value={addForm.amount}
               onChange={(e) => setAddForm((p) => ({ ...p, amount: Number(e.target.value) }))} />
@@ -432,7 +416,7 @@ function ArrearsSection({
             <div>
               <Label>Applied To</Label>
               <select value={addForm.type} onChange={(e) => setAddForm((p) => ({ ...p, type: e.target.value as ArrearsType }))}
-                style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}>
+                style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }}>
                 {["HST", "Corporate", "Both"].map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
@@ -444,11 +428,11 @@ function ArrearsSection({
               onChange={(e) => setAddForm((p) => ({ ...p, accountId: e.target.value }))} options={acctOpts} />
           </Grid2>
           {addForm.accountId
-            ? <div style={{ fontSize: 12, color: "#1a7f3c", marginBottom: 8, background: "#f0fdf4", padding: "6px 10px", borderRadius: 6 }}>
-                ✓ A transaction will be auto-logged and the account balance reduced.
+            ? <div style={{ fontSize: 12, color: theme.colors.success, marginBottom: 8, background: "#f0fdf4", padding: "6px 10px", borderRadius: theme.radius.sm }}>
+                A transaction will be auto-logged and the account balance reduced.
               </div>
-            : <div style={{ fontSize: 12, color: "#a05c00", marginBottom: 8, background: "#fef3e2", padding: "6px 10px", borderRadius: 6 }}>
-                ⚠ No account selected — payment recorded but bank balance won&apos;t change.
+            : <div style={{ fontSize: 12, color: theme.colors.warning, marginBottom: 8, background: "#fef3e2", padding: "6px 10px", borderRadius: theme.radius.sm }}>
+                No account selected - payment recorded but bank balance won&apos;t change.
               </div>
           }
           <div style={{ display: "flex", gap: 6 }}>
@@ -468,9 +452,9 @@ function ArrearsSection({
       {[...business.arrearsPayments].reverse().map((p) => {
         if (editingId === p.id && editForm) {
           return (
-            <div key={p.id} style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+            <div key={p.id} className="finance-card" style={{ background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: theme.radius.md, padding: "12px 14px", marginBottom: 8 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
-                Editing: {p.note || `${p.type} Arrears Payment`} — {fmtDate(p.date)}
+                Editing: {p.note || `${p.type} Arrears Payment`} - {fmtDate(p.date)}
               </div>
               <Grid3>
                 <Inp label="Amount ($)" type="number" value={editForm.amount}
@@ -480,7 +464,7 @@ function ArrearsSection({
                 <div>
                   <Label>Applied To</Label>
                   <select value={editForm.type} onChange={(e) => setEditForm((f) => f ? { ...f, type: e.target.value as ArrearsType } : f)}
-                    style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}>
+                    style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }}>
                     {["HST", "Corporate", "Both"].map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
@@ -491,8 +475,8 @@ function ArrearsSection({
                 <Sel label="Pay From Account" value={editForm.accountId}
                   onChange={(e) => setEditForm((f) => f ? { ...f, accountId: e.target.value } : f)} options={acctOpts} />
               </Grid2>
-              <div style={{ fontSize: 11, color: "#a05c00", marginBottom: 8 }}>
-                ⚠ Saving will reverse the old transaction and create a new one.
+              <div style={{ fontSize: 11, color: theme.colors.warning, marginBottom: 8 }}>
+                Saving will reverse the old transaction and create a new one.
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <Btn small onClick={() => {
@@ -511,18 +495,18 @@ function ArrearsSection({
         }
 
         return (
-          <div key={p.id} style={{
+          <div key={p.id} className="finance-card" style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "8px 12px", background: "#fff", border: "1px solid #e2e4e8", borderRadius: 8, marginBottom: 6,
+            padding: "8px 12px", background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, marginBottom: 6,
           }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{p.note || `${p.type} Arrears Payment`}</div>
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
-                {fmtDate(p.date)} · {p.type}
-                {p.account ? ` · ${accounts.find((a) => a.id === p.account)?.name ?? p.account}` : ""}
+              <div style={{ fontSize: 11, color: theme.colors.textSoft }}>
+                {fmtDate(p.date)} - {p.type}
+                {p.account ? ` - ${accounts.find((a) => a.id === p.account)?.name ?? p.account}` : ""}
                 {p.txnId
-                  ? <span style={{ color: "#1a7f3c" }}> · ✓ txn linked</span>
-                  : <span style={{ color: "#9ca3af" }}> · no txn link</span>}
+                  ? <span style={{ color: theme.colors.success }}> - txn linked</span>
+                  : <span style={{ color: theme.colors.textMuted }}> - no txn link</span>}
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -534,7 +518,7 @@ function ArrearsSection({
               <Btn variant="danger" small onClick={() => {
                 if (confirm("Delete this arrears payment? All related balance changes will be reversed."))
                   hooks.deleteArrearsPayment(p.id);
-              }}>✕</Btn>
+              }}>Delete</Btn>
             </div>
           </div>
         );
@@ -562,17 +546,17 @@ function PaidHistory({ obligations, arrearsPayments, accounts }: {
         Paid Tax History ({obligations.length})
       </div>
       {sorted.length === 0 && arrears.length === 0 && (
-        <div style={{ textAlign: "center", color: "#6b7280", padding: 24 }}>No paid obligations yet.</div>
+        <div className="finance-card" style={{ textAlign: "center", color: theme.colors.textSoft, padding: 24 }}>No paid obligations yet.</div>
       )}
       {sorted.map((o) => (
-        <div key={o.id} style={{
+        <div key={o.id} className="finance-card" style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "9px 14px", background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, marginBottom: 8,
+          padding: "9px 14px", background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md, marginBottom: 8,
         }}>
           <div>
             <div style={{ fontWeight: 500, fontSize: 13 }}>{o.label}</div>
-            <div style={{ fontSize: 11, color: "#6b7280" }}>
-              Paid: {fmtDate(o.paidDate ?? "")} · Due was: {fmtDate(o.dueDate)}
+            <div style={{ fontSize: 11, color: theme.colors.textSoft }}>
+              Paid: {fmtDate(o.paidDate ?? "")} - Due was: {fmtDate(o.dueDate)}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -583,22 +567,22 @@ function PaidHistory({ obligations, arrearsPayments, accounts }: {
       ))}
       {arrears.length > 0 && (
         <>
-          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, marginTop: 16, paddingTop: 12, borderTop: "1px solid #e2e4e8" }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, marginTop: 16, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
             Arrears Payments ({arrears.length})
           </div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, background: "#f0f9ff", padding: "6px 10px", borderRadius: 6 }}>
-            💡 These payments reduce your outstanding CRA arrears balance. Separate from quarterly obligations above.
+          <div className="finance-card" style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 10, background: "#f0f9ff", padding: "6px 10px", borderRadius: theme.radius.sm }}>
+            These payments reduce your outstanding CRA arrears balance. Separate from quarterly obligations above.
           </div>
           {arrears.map((p) => (
-            <div key={p.id} style={{
+            <div key={p.id} className="finance-card" style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "9px 14px", background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, marginBottom: 8,
+              padding: "9px 14px", background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md, marginBottom: 8,
             }}>
               <div>
                 <div style={{ fontWeight: 500, fontSize: 13 }}>{p.note || `${p.type} Arrears Payment`}</div>
-                <div style={{ fontSize: 11, color: "#6b7280" }}>
-                  {fmtDate(p.date)} · {p.type}
-                  {p.account ? ` · ${accounts.find((a) => a.id === p.account)?.name ?? p.account}` : ""}
+                <div style={{ fontSize: 11, color: theme.colors.textSoft }}>
+                  {fmtDate(p.date)} - {p.type}
+                  {p.account ? ` - ${accounts.find((a) => a.id === p.account)?.name ?? p.account}` : ""}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -627,7 +611,7 @@ export function TaxObligationsSection({ accounts }: { accounts: Account[] }) {
     ...business.hstRemittances.map((h) => ({
       ...h,
       type: "HST" as ObligationType,
-      label: `HST — ${h.period}`,
+      label: `HST - ${h.period}`,
       autoAmount: calcHSTFromInvoices(h.quarter, business.invoices),
     })),
     ...business.corporateInstalments.map((i) => ({
@@ -638,7 +622,7 @@ export function TaxObligationsSection({ accounts }: { accounts: Account[] }) {
     ...business.payrollRemittances.map((p) => ({
       ...p,
       type: "Payroll" as ObligationType,
-      label: `Payroll — ${p.month}`,
+      label: `Payroll - ${p.month}`,
     })),
   ].sort((a, b) => {
     const da = a.plannedDate ?? a.dueDate;
@@ -656,7 +640,10 @@ export function TaxObligationsSection({ accounts }: { accounts: Account[] }) {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Tax Obligations</div>
+      <PageHeader
+        title="Tax Obligations"
+        subtitle="CRA remittances, instalments, arrears, planned dates, and payment history."
+      />
 
       {hooks.error && (
         <div style={{ padding: "8px 12px", background: "#fee2e2", borderRadius: 8, fontSize: 13, color: "#a31515", marginBottom: 12 }}>
@@ -664,13 +651,13 @@ export function TaxObligationsSection({ accounts }: { accounts: Account[] }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <MetricGrid>
         <StatBox label="Total Owing" value={fmtCAD(totalOwing)} color="#a31515" sub="current obligations" />
-        <StatBox label="Next Due" value={nextDue ? fmtCAD(nextDue.amount ?? 0) : "—"} color="#a05c00"
+        <StatBox label="Next Due" value={nextDue ? fmtCAD(nextDue.amount ?? 0) : "-"} color="#a05c00"
           sub={nextDue ? fmtDate(nextDue.plannedDate ?? nextDue.dueDate) : "nothing due"} />
         <StatBox label="Paid This Year" value={fmtCAD(totalPaidYear)} color="#1a7f3c" />
         <StatBox label="CRA Arrears" value={fmtCAD(totalArrears)} color={totalArrears > 0 ? "#a31515" : "#1a7f3c"} sub="outstanding balance" />
-      </div>
+      </MetricGrid>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
         {(["obligations", "arrears", "history"] as const).map((t) => (
