@@ -91,6 +91,34 @@ function ActionBtn({
   );
 }
 
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: theme.colors.textSoft, marginBottom: 6 }}>
+      {children}
+    </label>
+  );
+}
+
+const lenderControlStyle: CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  border: `1px solid ${theme.colors.border}`,
+  borderRadius: theme.radius.md,
+  background: theme.colors.surface,
+  color: theme.colors.text,
+  fontSize: 13,
+  boxSizing: "border-box",
+};
+
+function FieldShell({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      {children}
+    </div>
+  );
+}
+
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.42)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "4vh 16px", overflowY: "auto", backdropFilter: "blur(4px)" }}>
@@ -591,17 +619,23 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
           }
         >
           {showLenderForm && (
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, 1fr) minmax(140px, 180px) minmax(120px, 150px) auto", gap: 8, marginBottom: 14 }}>
-              <input value={lenderName} onChange={(event) => setLenderName(event.target.value)} placeholder="Lender name" style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }} />
-              <select value={lenderType} onChange={(event) => setLenderType(event.target.value as Liability["type"])} style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
-                <option>Personal Loan</option>
-                <option>Bank Loan</option>
-                <option>Shareholder Loan</option>
-              </select>
-              <select value={lenderTag} onChange={(event) => setLenderTag(event.target.value as Liability["tag"])} style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
-                <option>Personal</option>
-                <option>Business</option>
-              </select>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) minmax(150px, 180px) minmax(120px, 150px) auto", gap: 10, marginBottom: 14, alignItems: "end", padding: 12, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md, background: theme.colors.surfaceAlt }}>
+              <FieldShell label="Lender">
+                <input value={lenderName} onChange={(event) => setLenderName(event.target.value)} placeholder="Lender name" style={lenderControlStyle} />
+              </FieldShell>
+              <FieldShell label="Type">
+                <select value={lenderType} onChange={(event) => setLenderType(event.target.value as Liability["type"])} style={lenderControlStyle}>
+                  <option>Personal Loan</option>
+                  <option>Bank Loan</option>
+                  <option>Shareholder Loan</option>
+                </select>
+              </FieldShell>
+              <FieldShell label="Tag">
+                <select value={lenderTag} onChange={(event) => setLenderTag(event.target.value as Liability["tag"])} style={lenderControlStyle}>
+                  <option>Personal</option>
+                  <option>Business</option>
+                </select>
+              </FieldShell>
               <ActionBtn variant="green" onClick={() => {
                 if (!lenderName.trim()) return;
                 saveLiability({
@@ -671,49 +705,44 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
             </ActionBtn>
           </div>
 
-          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginBottom: 18 }}>
-            <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 10 }}>Lender Details</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-              <label style={{ fontSize: 12, color: "#475569" }}>
-                Name
-                <input value={liabilityDraft.name} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, name: event.target.value })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
-              </label>
-              <label style={{ fontSize: 12, color: "#475569" }}>
-                Type
-                <select value={liabilityDraft.type} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, type: event.target.value as Liability["type"] })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
-                  <option>Personal Loan</option>
-                  <option>Bank Loan</option>
-                  <option>Shareholder Loan</option>
-                </select>
-              </label>
-              <label style={{ fontSize: 12, color: "#475569" }}>
-                Tag
-                <select value={liabilityDraft.tag} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, tag: event.target.value as Liability["tag"] })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
-                  <option>Personal</option>
-                  <option>Business</option>
-                </select>
-              </label>
-              <label style={{ fontSize: 12, color: "#475569" }}>
-                Starting Balance ($)
-                <input type="number" value={liabilityDraft.openingBalance} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, openingBalance: Number(event.target.value) })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
-              </label>
-            </div>
-            <label style={{ display: "block", fontSize: 12, color: "#475569", marginTop: 10 }}>
-              Notes
-              <textarea value={liabilityDraft.notes ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, notes: event.target.value })} rows={2} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box", resize: "vertical" }} />
-            </label>
+            <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 14, marginBottom: 18 }}>
+              <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 10 }}>Lender Details</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                <FieldShell label="Name">
+                  <input value={liabilityDraft.name} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, name: event.target.value })} style={lenderControlStyle} />
+                </FieldShell>
+                <FieldShell label="Type">
+                  <select value={liabilityDraft.type} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, type: event.target.value as Liability["type"] })} style={lenderControlStyle}>
+                    <option>Personal Loan</option>
+                    <option>Bank Loan</option>
+                    <option>Shareholder Loan</option>
+                  </select>
+                </FieldShell>
+                <FieldShell label="Tag">
+                  <select value={liabilityDraft.tag} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, tag: event.target.value as Liability["tag"] })} style={lenderControlStyle}>
+                    <option>Personal</option>
+                    <option>Business</option>
+                  </select>
+                </FieldShell>
+                <FieldShell label="Starting Balance ($)">
+                  <input type="number" value={liabilityDraft.openingBalance} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, openingBalance: Number(event.target.value) })} style={lenderControlStyle} />
+                </FieldShell>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <FieldShell label="Notes">
+                  <textarea value={liabilityDraft.notes ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, notes: event.target.value })} rows={2} style={{ ...lenderControlStyle, resize: "vertical" }} />
+                </FieldShell>
+              </div>
 
             <div style={{ fontWeight: 750, fontSize: 14, marginTop: 16, marginBottom: 8 }}>Balance Snapshot</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Use a known lender statement balance and date. Only later principal activity is replayed.</div>
+            <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 8 }}>Use a known lender statement balance and date. Only later principal activity is replayed.</div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(160px, 1fr) minmax(160px, 1fr) auto", gap: 10, alignItems: "end" }}>
-              <label style={{ fontSize: 12, color: "#475569" }}>
-                Known Owing ($)
-                <input ref={snapshotAmountRef} type="number" value={liabilityDraft.balanceSnapshotAmount ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotAmount: event.target.value === "" ? undefined : Number(event.target.value) })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
-              </label>
-              <label style={{ fontSize: 12, color: "#475569" }}>
-                Snapshot Date
-                <input ref={snapshotDateRef} type="date" value={liabilityDraft.balanceSnapshotDate ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotDate: event.target.value || undefined })} style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, boxSizing: "border-box" }} />
-              </label>
+              <FieldShell label="Known Owing ($)">
+                <input ref={snapshotAmountRef} type="number" value={liabilityDraft.balanceSnapshotAmount ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotAmount: event.target.value === "" ? undefined : Number(event.target.value) })} style={lenderControlStyle} />
+              </FieldShell>
+              <FieldShell label="Snapshot Date">
+                <input ref={snapshotDateRef} type="date" value={liabilityDraft.balanceSnapshotDate ?? ""} onChange={(event) => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotDate: event.target.value || undefined })} style={lenderControlStyle} />
+              </FieldShell>
               <ActionBtn onClick={() => setLiabilityDraft({ ...liabilityDraft, balanceSnapshotAmount: undefined, balanceSnapshotDate: undefined })}>Clear Snapshot</ActionBtn>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
@@ -721,10 +750,10 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
             </div>
           </div>
 
-          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginBottom: 18 }}>
+          <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 14, marginBottom: 18 }}>
             <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8 }}>Attach Existing Loan Transaction</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <select value={attachTransactionId} onChange={(event) => setAttachTransactionId(event.target.value)} style={{ flex: 1, minWidth: 240, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6 }}>
+              <select value={attachTransactionId} onChange={(event) => setAttachTransactionId(event.target.value)} style={{ ...lenderControlStyle, flex: 1, minWidth: 240 }}>
                 <option value="">-- Select unlinked loan transaction --</option>
                 {unlinkedLoanTransactions.map((transaction) => (
                   <option key={transaction.id} value={transaction.id}>
