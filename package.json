@@ -11,6 +11,7 @@
     "validate:properties": "node --no-warnings --experimental-strip-types scripts/validate-property-migration.mjs",
     "validate:debt": "node --no-warnings --experimental-strip-types scripts/validate-debt-reporting.mjs",
     "validate:scanner": "node --no-warnings --experimental-strip-types scripts/validate-statement-scanner.mjs",
+    "validate:scanner:live": "node --no-warnings --experimental-strip-types scripts/validate-live-statement-scanner.mjs",
     "validate:cloud": "node scripts/validate-cloud-guards.mjs",
     "validate:reports": "node --no-warnings --experimental-strip-types scripts/validate-report-exports.mjs",
     "validate:architecture": "node scripts/validate-canonical-architecture.mjs"

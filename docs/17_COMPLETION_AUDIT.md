@@ -58,7 +58,13 @@ The browser session used isolated local browser data and did not mutate the user
 
 ### AI provider
 
-Scanner parsing, normalization, invalid-row rejection, privacy controls, server boundaries, editable preview, duplicate-review entry point, and canonical confirmation are tested locally. The `local_fixture` provider supports deterministic server/API/browser acceptance without sending images to an external provider. A live OCR extraction still requires a real server-side provider credential and remains pending.
+Scanner parsing, normalization, invalid-row rejection, privacy controls, server boundaries, editable preview, duplicate-review entry point, and canonical confirmation are tested locally. The `local_fixture` provider supports deterministic server/API/browser acceptance without sending images to an external provider. A live OCR extraction still requires a real server-side provider credential and an explicitly approved statement image.
+
+The read-only final provider check is:
+
+```text
+npm run validate:scanner:live -- --image C:\path\to\approved-statement-image.png
+```
 
 ### Supabase
 

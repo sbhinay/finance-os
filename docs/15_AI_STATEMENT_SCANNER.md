@@ -43,6 +43,25 @@ AI_SCANNER_FIXTURE_JSON={"accountHint":"Local fixture","transactions":[{"date":"
 
 `local_fixture` is server-only and deterministic. It validates the same JSON response shape and exercises the API, editable preview, duplicate review, and canonical confirmation path, but it is not OCR and must not be treated as a live extraction provider.
 
+## Live Provider Verification
+
+After a real server-side provider key is configured, run one read-only live OCR check with a user-approved statement image:
+
+```text
+npm run validate:scanner:live -- --image C:\path\to\statement.png
+```
+
+This script:
+
+- requires an external configured provider such as `anthropic`
+- sends only the image passed with `--image`
+- uses a small temporary category/account context
+- validates the provider response through the same parser used by the app
+- prints a short JSON summary and first five extracted rows
+- does not write transactions, localStorage, cloud snapshots, or files
+
+Do not commit provider keys or private statement images. Keep live verification output out of source control unless it has been manually redacted.
+
 ## Review Rules
 
 - Exact semantic duplicates default to skipped.
