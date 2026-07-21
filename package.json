@@ -15,7 +15,8 @@
     "validate:scanner:live": "node --no-warnings --experimental-strip-types scripts/validate-live-statement-scanner.mjs",
     "validate:cloud": "node scripts/validate-cloud-guards.mjs",
     "validate:reports": "node --no-warnings --experimental-strip-types scripts/validate-report-exports.mjs",
-    "validate:architecture": "node scripts/validate-canonical-architecture.mjs"
+    "validate:architecture": "node scripts/validate-canonical-architecture.mjs",
+    "validate:production": "node scripts/validate-production.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",

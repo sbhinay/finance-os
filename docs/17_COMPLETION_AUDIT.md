@@ -20,6 +20,12 @@ This audit closes the local implementation work for the eight-phase production-c
 The final local gate includes:
 
 ```text
+npm run validate:production
+```
+
+The production gate expands to:
+
+```text
 npm run validate:architecture
 npm run validate:reports
 npm run validate:cloud
