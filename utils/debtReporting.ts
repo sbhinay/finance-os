@@ -25,16 +25,30 @@ export interface DebtSummary {
   rows: DebtPaymentRow[];
 }
 
-function splitPayment(transaction: Transaction) {
+function splitPayment(
+  transaction: Transaction,
+  estimatedSplits?: Map<string, { principalAmount: number; interestAmount: number }>
+) {
+  const estimated = estimatedSplits?.get(transaction.id);
+  if (estimated) {
+    return {
+      principal: toFixed2(estimated.principalAmount),
+      interest: toFixed2(estimated.interestAmount),
+      unallocated: 0,
+      splitSource: "estimated" as const,
+    };
+  }
+
   const hasSplit = transaction.principalAmount != null || transaction.interestAmount != null;
-  if (!hasSplit) {
+  if (!hasSplit || isFinanceOsEstimatedSplit(transaction)) {
     return { principal: 0, interest: 0, unallocated: transaction.amount, splitSource: "unallocated" as const };
   }
+
   return {
     principal: toFixed2(transaction.principalAmount ?? 0),
     interest: toFixed2(transaction.interestAmount ?? 0),
     unallocated: 0,
-    splitSource: isFinanceOsEstimatedSplit(transaction) ? "estimated" as const : "manual" as const,
+    splitSource: "manual" as const,
   };
 }
 
@@ -44,12 +58,14 @@ export function calculateDebtSummary({
   balanceSnapshotAmount,
   balanceSnapshotDate,
   fallbackBalance,
+  estimatedSplits,
 }: {
   transactions: Transaction[];
   matches: (transaction: Transaction) => boolean;
   balanceSnapshotAmount?: number;
   balanceSnapshotDate?: string;
   fallbackBalance: number;
+  estimatedSplits?: Map<string, { principalAmount: number; interestAmount: number }>;
 }): DebtSummary {
   const hasAnchor = balanceSnapshotAmount != null && Boolean(balanceSnapshotDate);
   const anchorAmount = toFixed2(hasAnchor ? balanceSnapshotAmount : fallbackBalance);
@@ -61,7 +77,7 @@ export function calculateDebtSummary({
     )
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
     .map((transaction): DebtPaymentRow => {
-      const split = splitPayment(transaction);
+      const split = splitPayment(transaction, estimatedSplits);
       return {
         transaction,
         ...split,

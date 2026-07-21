@@ -317,7 +317,10 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
         linkedLiabilityId: normalizedInitial.linkedLiabilityId ?? "",
         odometer:        normalizedInitial.odometer ?? "",
       });
-      setShowLoanDetails(Number(normalizedInitial.interestAmount) > 0 || Number(normalizedInitial.principalAmount) > 0);
+      setShowLoanDetails(
+        (Number(normalizedInitial.interestAmount) > 0 || Number(normalizedInitial.principalAmount) > 0)
+        && !isFinanceOsEstimatedSplit(normalizedInitial as Transaction)
+      );
       setShowNotes(Boolean(normalizedInitial.notes));
     } else {
       setForm(emptyForm);
@@ -351,7 +354,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
     && (initial.principalAmount != null || initial.interestAmount != null)
     && !isFinanceOsEstimatedSplit(initial as Transaction)
   );
-  const showLoanSplit = txType === "loan_payment" && !isMortgagePayment;
+  const showLoanSplit = txType === "loan_payment" && (!isMortgagePayment || showLoanDetails || isManualSplitEdit);
+  const canShowMortgageCorrection = isMortgagePayment;
   const showMortgageLink = txType === "loan_payment" && form.subType === "mortgage";
   const showLiability = txType === "loan_receipt" || (txType === "loan_payment" && form.subType !== "mortgage");
   const loanDetailsVisible = showLoanSplit && showLoanDetails;
@@ -365,18 +369,18 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
 
   const paymentSources = isCreditCardPayTransfer
     ? [
-        { value: "", label: "— Select bank account —" },
-        ...accounts.filter((a) => a.primary).map((a) => ({ value: a.id, label: `★ ${a.name} (${a.type})` })),
+        { value: "", label: "-- Select bank account --" },
+        ...accounts.filter((a) => a.primary).map((a) => ({ value: a.id, label: `Primary ${a.name} (${a.type})` })),
         ...accounts.filter((a) => !a.primary).map((a) => ({ value: a.id, label: `${a.name} (${a.type})` })),
       ]
     : buildSourceOptions(accounts, cards);
   const destinationOptions = isCreditCardPayTransfer
     ? [
-        { value: "", label: "— Select card —" },
-        ...cards.map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
+        { value: "", label: "-- Select card --" },
+        ...cards.map((c) => ({ value: c.id, label: `${c.primary ? "Primary " : ""}${c.name} (Credit)` })),
       ]
     : [
-        { value: "", label: "— Select destination —" },
+        { value: "", label: "-- Select destination --" },
         ...accounts.filter((a) => a.id !== form.sourceId).map((a) => ({ value: a.id, label: `${a.primary ? "★ " : ""}${a.name} (${a.type})` })),
         ...cards.filter((c) => c.id !== form.sourceId).map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
       ];
@@ -693,16 +697,31 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             />
           )}
 
+          {canShowMortgageCorrection && !showLoanSplit && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Alert type="info">
+                Mortgage details estimate principal and interest dynamically from the loan snapshot, rate, schedule, and payment history. Add a stored split only when a statement confirms the exact principal and interest for this row.
+              </Alert>
+              <div>
+                <Btn variant="secondary" onClick={() => setShowLoanDetails(true)}>
+                  Add Statement-Confirmed Split
+                </Btn>
+              </div>
+            </div>
+          )}
+
           {/* Loan payment split */}
           {showLoanSplit && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <Alert type="info">
-                Regular mode: log the full payment amount and source account only. Detailed mode is optional and lets you split the payment into principal and interest for richer reports later.
+                {isMortgagePayment
+                  ? "Statement-confirmed correction: only enter principal and interest when the lender statement confirms the exact split for this payment."
+                  : "Regular mode: log the full payment amount and source account only. Detailed mode is optional and lets you split the payment into principal and interest for richer reports later."}
               </Alert>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <div style={{ fontSize: 12, color: "#6b7280" }}>
                   {form.subType === "mortgage"
-                    ? "Cash planning uses the full mortgage payment; only interest is expense-like in detailed reporting."
+                    ? "Cash planning uses the full mortgage payment. Debt Details will label stored values as Manual and calculated values as Estimated."
                     : "Cash planning uses the full debt payment; principal and interest are optional details."}
                 </div>
                 <Btn

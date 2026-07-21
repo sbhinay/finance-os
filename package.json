@@ -10,6 +10,7 @@
     "validate:fixture": "node scripts/validate-finance-export.mjs",
     "validate:properties": "node --no-warnings --experimental-strip-types scripts/validate-property-migration.mjs",
     "validate:debt": "node --no-warnings --experimental-strip-types scripts/validate-debt-reporting.mjs",
+    "validate:debt-projection": "node --no-warnings --experimental-strip-types scripts/validate-debt-projection.mjs",
     "validate:scanner": "node --no-warnings --experimental-strip-types scripts/validate-statement-scanner.mjs",
     "validate:scanner:live": "node --no-warnings --experimental-strip-types scripts/validate-live-statement-scanner.mjs",
     "validate:cloud": "node scripts/validate-cloud-guards.mjs",

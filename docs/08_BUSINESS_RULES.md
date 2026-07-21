@@ -80,6 +80,8 @@
 - Normal mortgage logging and backfill must not store app-generated estimated split fields.
 - Mortgage/Debt Details may dynamically estimate principal and interest from snapshot, rate, schedule, and payment history; calculated values must be labeled as Estimated.
 - Stored non-generated split rows must be labeled as Manual in detailed views.
+- Mortgage transaction entry exposes principal/interest only through a deliberate statement-confirmed correction flow, not as normal entry fields.
+- Legacy FinanceOS-generated split rows must not be trusted as manual truth; dynamic debt details recalculate them, and editing/saving the row without deliberate confirmation removes the generated override.
 - Mortgage rows use `linkedHouseLoanId` for exact debt ownership; legacy rows migrate only from a valid house-loan origin or a Property with exactly one mortgage.
 - Mortgage and financed-vehicle owing is derived from the latest balance snapshot plus later manual or dynamically estimated principal reductions when enough loan data exists.
 - Unsplit secured-debt payments remain full cash outflows; they reduce derived owing only when a manual split or dynamic estimate is available.

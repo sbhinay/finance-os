@@ -78,8 +78,10 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Lender snapshots use a known owing amount/date as the replay anchor; later repayments reduce owing only by principal while interest remains separately reported.
 - Mortgage and financed-vehicle snapshots now use the same conservative principal-only replay contract.
 - Debt details separate cash paid, principal, interest, unallocated payments, and current owing; dashboard, Property equity, and net-worth views consume the same calculation.
-- Mortgage details calculate estimated principal/interest dynamically when possible; stored split fields remain manual/import overrides.
+- Mortgage details calculate estimated principal/interest dynamically when possible; stored split fields remain manual/import/statement-confirmed overrides.
+- Normal mortgage entry and backfill do not store app-generated split estimates; legacy FinanceOS-generated split rows are recalculated for display instead of trusted as manual truth.
 - Projection views include card/LOC repayment pressure or unplanned exposure without changing ledger balances.
+- The design refresh has shared theme tokens plus reusable surface, button, and chip primitives for incremental modernization.
 - `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
 - Transaction History now filters by tag and exact recurring origin.
 - Data Health can open the canonical transaction editor for correction/relinking, delete rows safely, and reversibly dismiss legitimate warnings.

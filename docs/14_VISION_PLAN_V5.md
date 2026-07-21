@@ -216,6 +216,7 @@ As of this version:
 - cloud backup is manual and safe
 - balance snapshots are the current account/card balance-alignment model
 - debt payments support regular-first UX
+- mortgage transaction entry hides principal/interest by default and uses a deliberate statement-confirmed correction flow for stored overrides
 - vehicle/property category linking can be configured from the Categories UI
 - vehicle and mortgage backfill use the real next-payment cadence anchor when available
 - transaction descriptions are system-first
@@ -230,9 +231,11 @@ As of this version:
 - first-class primary, rental, and commercial Property records are live
 - Property details unify linked mortgages, property tax, insurance, expenses, carrying costs, equity, and transaction history
 - unambiguous legacy house-loan/property-tax migration is fixture validated
-- mortgage and financed-vehicle balances replay explicit principal from their latest snapshots
-- debt details separate cash paid, principal, interest, and unsplit payments without guessing
+- mortgage and financed-vehicle balances replay manual or render-time estimated principal from their latest snapshots
+- debt details separate cash paid, principal, interest, estimated rows, manual rows, and unsplit payments without storing generated estimates
 - dashboard, Property equity, net worth, and debt detail views share derived secured-debt owing
+- dashboard projection includes card/LOC repayment pressure, existing planned-payment offsets, and unplanned exposure warnings
+- the visual system has shared tokens, reusable surface/button/chip primitives, global focus treatment, subtle motion classes, and table styling for gradual modernization
 - Transaction History supports exact tag and recurring-origin filtering
 - Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
 - import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes

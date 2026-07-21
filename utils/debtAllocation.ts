@@ -112,14 +112,14 @@ export function estimateHouseLoanSplit(
   });
 }
 
-export function estimateMissingHouseLoanSplits(
+export function buildHouseLoanSplitEstimates(
   loan: HouseLoan,
   transactions: Transaction[]
-): Transaction[] {
+): Map<string, { principalAmount: number; interestAmount: number }> {
   const anchorDate = loan.balanceSnapshotDate;
   const anchorAmount = loan.balanceSnapshotAmount ?? loan.remaining;
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
-  const prepared = new Map<string, Transaction>();
+  const estimates = new Map<string, { principalAmount: number; interestAmount: number }>();
 
   if (!anchorDate) {
     let runningOwing = loan.principal || anchorAmount;
@@ -129,9 +129,9 @@ export function estimateMissingHouseLoanSplits(
         : estimateHouseLoanSplit(loan, transaction.amount, runningOwing);
       const principal = split?.principalAmount ?? existingPrincipal(transaction);
       runningOwing = toFixed2(Math.max(0, runningOwing - principal));
-      prepared.set(transaction.id, split ? withEstimatedSplit(transaction, split) : transaction);
+      if (split) estimates.set(transaction.id, split);
     });
-    return sorted.map((transaction) => prepared.get(transaction.id) ?? transaction);
+    return estimates;
   }
 
   let forwardOwing = anchorAmount;
@@ -143,7 +143,7 @@ export function estimateMissingHouseLoanSplits(
         : estimateHouseLoanSplit(loan, transaction.amount, forwardOwing);
       const principal = split?.principalAmount ?? existingPrincipal(transaction);
       forwardOwing = toFixed2(Math.max(0, forwardOwing - principal));
-      prepared.set(transaction.id, split ? withEstimatedSplit(transaction, split) : transaction);
+      if (split) estimates.set(transaction.id, split);
     });
 
   let endingOwing = anchorAmount;
@@ -161,24 +161,8 @@ export function estimateMissingHouseLoanSplits(
           });
       const principal = split?.principalAmount ?? existingPrincipal(transaction);
       endingOwing = split?.openingOwing ?? toFixed2(endingOwing + principal);
-      prepared.set(transaction.id, split ? withEstimatedSplit(transaction, split) : transaction);
+      if (split) estimates.set(transaction.id, split);
     });
 
-  return sorted.map((transaction) => prepared.get(transaction.id) ?? transaction);
-}
-
-function withEstimatedSplit(
-  transaction: Transaction,
-  split: { principalAmount: number; interestAmount: number }
-): Transaction {
-  return {
-    ...transaction,
-    principalAmount: split.principalAmount,
-    interestAmount: split.interestAmount,
-    notes: transaction.notes?.includes(FINANCEOS_ESTIMATED_SPLIT_NOTE)
-      ? transaction.notes
-      : transaction.notes
-        ? `${transaction.notes}\n${FINANCEOS_ESTIMATED_SPLIT_NOTE}`
-        : FINANCEOS_ESTIMATED_SPLIT_NOTE,
-  };
+  return estimates;
 }

@@ -2,12 +2,12 @@ import type { CSSProperties } from "react";
 
 export const theme = {
   colors: {
-    pageBg: "#f3f6fb",
-    pageGlow: "linear-gradient(135deg, #f7f9fc 0%, #eef4fb 46%, #f8fafc 100%)",
+    pageBg: "#eef3f8",
+    pageGlow: "radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 32rem), linear-gradient(135deg, #f7f9fc 0%, #eef3f8 52%, #f8fafc 100%)",
     surface: "#ffffff",
     surfaceAlt: "#f8fafc",
-    surfaceMuted: "#eef4f9",
-    border: "#d8e1ec",
+    surfaceMuted: "#edf3f8",
+    border: "#d7e0ea",
     borderStrong: "#b8c7d8",
     text: "#111827",
     textSoft: "#526277",
@@ -44,6 +44,7 @@ export const theme = {
       borderTop: accentColor ? `3px solid ${accentColor}` : `1px solid ${theme.colors.border}`,
       borderRadius: theme.radius.md,
       boxShadow: theme.shadow.card,
+      backdropFilter: "saturate(1.1)",
     };
   },
 };

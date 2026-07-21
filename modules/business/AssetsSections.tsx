@@ -12,7 +12,7 @@ import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useF
 import { theme } from "@/lib/theme";
 import { buildCanonicalTransaction, persistCanonicalTransactions } from "@/services/transactionPipeline";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
-import { estimateMissingHouseLoanSplits } from "@/utils/debtAllocation";
+import { buildHouseLoanSplitEstimates } from "@/utils/debtAllocation";
 import {
   calculateDebtSummary,
   matchesMortgagePayment,
@@ -739,11 +739,12 @@ export function HouseLoansSection({
       && matches(transaction)
     );
     return calculateDebtSummary({
-      transactions: estimateMissingHouseLoanSplits(loan, loanTransactions),
+      transactions: loanTransactions,
       matches,
       balanceSnapshotAmount: loan.balanceSnapshotAmount,
       balanceSnapshotDate: loan.balanceSnapshotDate,
       fallbackBalance: loan.remaining,
+      estimatedSplits: buildHouseLoanSplitEstimates(loan, loanTransactions),
     });
   };
   const totalRemaining = houseLoans.reduce((sum, loan) => sum + getMortgageSummary(loan).currentOwing, 0);

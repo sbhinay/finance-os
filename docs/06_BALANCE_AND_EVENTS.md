@@ -73,7 +73,8 @@ Transactions may carry a stable `purpose` such as `vehicle_lease_payment`, `mort
 - Mortgages and financed vehicles use their own `balanceSnapshotAmount` and `balanceSnapshotDate` as the latest known owing anchor.
 - Detailed mortgage views estimate principal and interest dynamically from the debt snapshot, date, rate, schedule, and linked payment history.
 - Stored `principalAmount` / `interestAmount` fields are backward-compatible manual overrides or imported statement details, not normal app-generated ledger data.
-- Later `loan_payment` rows reduce derived owing by manual principal when supplied, or by a clearly labeled dynamic estimate when the loan has enough rate/snapshot data.
+- Later `loan_payment` rows reduce derived owing by manual principal when supplied, or by a clearly labeled render-time dynamic estimate when the loan has enough rate/snapshot data.
+- FinanceOS-generated legacy estimate notes are treated as stale generated data, recalculated for display, and removed if the row is edited and saved without a deliberate statement-confirmed split.
 - The full transaction `amount` always remains the cash-flow effect.
 - `interestAmount` is reported as financing expense.
 - Rows without enough information for a split remain valid regular-mode cash transactions and are shown as unallocated.

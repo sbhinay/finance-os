@@ -24,6 +24,8 @@ This file records work that remains after the eight-phase production-completion 
 - Stored split fields remain only for backward-compatible manual overrides, imports, or statement-confirmed exception rows.
 - Full payments remain in cash planning; manual or dynamically estimated principal reduces derived mortgage liability.
 - Regular mode remains valid when a split is unavailable.
+- Normal mortgage entry and backfill do not store app-generated estimated split fields.
+- Legacy FinanceOS-generated split fields are treated as generated data, not manual truth.
 
 ### Phase 5: Findability and Data Health
 - Transaction History supports account/card, subtype, linked entity, tag, and recurring-origin filters.
@@ -47,6 +49,10 @@ This file records work that remains after the eight-phase production-completion 
 - CRA working papers keep bookkeeping totals separate from proposed or user-confirmed tax treatment.
 - Missing-information and accountant-review states remain explicit.
 - Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries.
+
+### Modern design foundation
+- Shared theme tokens, reusable card/button/chip primitives, global focus states, subtle motion classes, responsive shell styling, and finance-table styling are in place.
+- Visual modernization remains incremental so dense finance workflows stay readable and stable.
 
 ## Remaining External Acceptance Work
 
@@ -87,7 +93,7 @@ The guarded Supabase migration is deployed. Read-only verification confirmed the
 ### Product and QA
 - Continue accessibility, responsive-layout, performance, and browser-compatibility testing.
 - Add broader end-to-end coverage when the browser automation runtime is restored.
-- Continue visual modernization without weakening dense operational workflows.
+- Continue applying the shared design primitives to older inline-heavy screens without weakening dense operational workflows.
 
 ## Non-Negotiable Architecture Rules
 

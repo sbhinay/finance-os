@@ -25,6 +25,7 @@ npm run validate:reports
 npm run validate:cloud
 npm run validate:scanner
 npm run validate:debt
+npm run validate:debt-projection
 npm run validate:properties
 npm run validate:fixture
 npm run lint
@@ -36,7 +37,7 @@ npm audit --omit=dev
 At completion:
 
 - all account and card balances in the June 29 fixture matched snapshot-based replay with zero difference
-- Property migration, principal-only debt replay, scanner parsing, cloud guards, and binary report exports passed
+- Property migration, principal-only debt replay, card/LOC debt projection pressure, scanner parsing, cloud guards, and binary report exports passed
 - lint and the production build passed
 - the full and production dependency audits reported zero vulnerabilities
 - touched source files were scanned for mojibake before commit, including comments and compatibility normalization helpers
