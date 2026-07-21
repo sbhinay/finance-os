@@ -6,6 +6,8 @@ import { Transaction } from "@/types/transaction";
 import { RateEntry, PayrollDrawEntry } from "@/types/business";
 import { fmtCAD, fmtDate, getRateOnDate, toFixed2 } from "@/utils/finance";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
+import { ActionButton, MetricCard, MetricGrid, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
+import { theme } from "@/lib/theme";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -17,8 +19,8 @@ const MONTHS = [
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label style={{
-      fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-      textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4,
+      fontSize: 11, fontWeight: 700, letterSpacing: 0,
+      textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 4,
     }}>{children}</label>
   );
 }
@@ -29,18 +31,7 @@ function Btn({
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger"; small?: boolean;
 }) {
-  const c = {
-    primary: { bg: "#1a5fa8", color: "#fff" },
-    secondary: { bg: "#f3f4f6", color: "#374151" },
-    danger: { bg: "#fef2f2", color: "#a31515" },
-  }[variant];
-  return (
-    <button onClick={onClick} style={{
-      padding: small ? "4px 10px" : "8px 16px", fontSize: small ? 12 : 13,
-      fontWeight: 600, borderRadius: 8, border: "1px solid transparent",
-      cursor: "pointer", background: c.bg, color: c.color,
-    }}>{children}</button>
-  );
+  return <ActionButton tone={variant} compact={small} onClick={onClick}>{children}</ActionButton>;
 }
 
 function Inp({
@@ -54,21 +45,21 @@ function Inp({
     <div>
       {label && <Label>{label}</Label>}
       <input type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder} step={step}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13, boxSizing: "border-box" as const }} />
+        style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13, boxSizing: "border-box" as const }} />
     </div>
   );
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <SurfaceCard style={{ width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surface, zIndex: 1 }}>
+          <div style={{ fontWeight: 750, fontSize: 15, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} className="finance-button" style={{ background: "transparent", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.pill, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
-      </div>
+      </SurfaceCard>
     </div>
   );
 }
@@ -78,22 +69,12 @@ function Grid2({ children }: { children: React.ReactNode }) {
 }
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div style={{ flex: 1, minWidth: 120, padding: "12px 14px", background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 10 }}>
-      <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: color ?? "#1a1a1a" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
+  return <MetricCard label={label} value={value} sub={sub} color={color} style={{ minWidth: 140 }} />;
 }
 
 function Pill({ color, children }: { color: string; children: React.ReactNode }) {
-  const m: Record<string, { bg: string; fg: string }> = {
-    green: { bg: "#dcfce7", fg: "#1a7f3c" }, amber: { bg: "#fef3c7", fg: "#a05c00" },
-    gray: { bg: "#f3f4f6", fg: "#6b7280" },
-  };
-  const c = m[color] ?? m.gray;
-  return <span style={{ padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: c.bg, color: c.fg }}>{children}</span>;
+  const tone = color === "green" ? "success" : color === "amber" ? "warning" : "secondary";
+  return <StatusChip tone={tone}>{children}</StatusChip>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -177,30 +158,33 @@ export function CorporationIncomeSection({ transactions }: { transactions: Trans
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Corporation Income</div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        Cash basis — grouped by payment received date. This is when income counts for tax purposes.
-      </div>
+      <PageHeader
+        title="Corporation Income"
+        subtitle="Cash-basis income grouped by payment received date for tax planning."
+      />
+      <SurfaceCard style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 12, background: "#f0f9ff", padding: "8px 12px" }}>
+        Cash basis - grouped by payment received date. This is when income counts for tax purposes.
+      </SurfaceCard>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <Label>Calendar Year:</Label>
         <select value={viewYear} onChange={(e) => setViewYear(Number(e.target.value))}
-          style={{ padding: "6px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 13 }}>
+          style={{ padding: "6px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13 }}>
           {allYears.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <MetricGrid>
         <StatBox label="Total Received" value={fmtCAD(totals.gross)} color="#1a7f3c" />
         <StatBox label="HST to Remit" value={fmtCAD(totals.hstToRemit)} color="#a05c00" />
         <StatBox label="Personal Draw" value={fmtCAD(totals.draw)} color="#1a5fa8" />
         <StatBox label="Net Retained" value={fmtCAD(totals.netRetained)} color={totals.netRetained >= 0 ? "#1a7f3c" : "#a31515"} />
         <StatBox label="Months Received" value={`${nonEmpty.length}/12`} />
-      </div>
+      </MetricGrid>
 
-      <div style={{ overflowX: "auto", marginBottom: 12 }}>
+      <SurfaceCard style={{ overflowX: "auto", marginBottom: 12 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
           <thead>
-            <tr style={{ background: "#1e2530", color: "#fff" }}>
+            <tr style={{ background: theme.colors.text, color: "#fff" }}>
               {cols.map((c) => (
                 <th key={c.key} style={{ padding: "8px 10px", textAlign: c.key === "month" ? "left" : "right", fontWeight: 600, whiteSpace: "nowrap" }}>
                   {c.label}
@@ -210,23 +194,23 @@ export function CorporationIncomeSection({ transactions }: { transactions: Trans
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={r.key} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa", opacity: r.empty ? 0.4 : 1 }}>
+              <tr key={r.key} style={{ background: i % 2 === 0 ? theme.colors.surface : theme.colors.surfaceAlt, opacity: r.empty ? 0.45 : 1 }}>
                 {cols.map((c) => {
                   if (c.key === "month") {
                     return (
-                      <td key="month" style={{ padding: "7px 10px", color: "#1a1a1a" }}>
+                      <td key="month" style={{ padding: "7px 10px", color: theme.colors.text }}>
                         {MONTHS[r.month - 1]} {r.year}
                       </td>
                     );
                   }
                   if (r.empty) {
-                    return <td key={c.key} style={{ padding: "7px 10px", textAlign: "right", color: "#9ca3af" }}>—</td>;
+                    return <td key={c.key} style={{ padding: "7px 10px", textAlign: "right", color: theme.colors.textMuted }}>-</td>;
                   }
                   const row = r as Exclude<typeof r, { empty: true }>;
                   const val = row[c.key as keyof typeof row] as number;
                   const color = c.key === "netRetained" ? (val < 0 ? "#a31515" : "#1a7f3c") : c.color;
                   return (
-                    <td key={c.key} style={{ padding: "7px 10px", textAlign: "right", color: color ?? "#1a1a1a", fontWeight: c.bold ? 700 : 400 }}>
+                    <td key={c.key} style={{ padding: "7px 10px", textAlign: "right", color: color ?? theme.colors.text, fontWeight: c.bold ? 700 : 400 }}>
                       {fmtCAD(val)}
                     </td>
                   );
@@ -234,7 +218,7 @@ export function CorporationIncomeSection({ transactions }: { transactions: Trans
               </tr>
             ))}
             {/* Totals row */}
-            <tr style={{ background: "#1e2530", color: "#fff", fontWeight: 700 }}>
+            <tr style={{ background: theme.colors.text, color: "#fff", fontWeight: 700 }}>
               {cols.map((c) => (
                 <td key={c.key} style={{ padding: "8px 10px", textAlign: c.key === "month" ? "left" : "right" }}>
                   {c.key === "month" ? "Total" : fmtCAD(totals[c.key as keyof typeof totals] ?? 0)}
@@ -243,12 +227,12 @@ export function CorporationIncomeSection({ transactions }: { transactions: Trans
             </tr>
           </tbody>
         </table>
-      </div>
+      </SurfaceCard>
 
-      <div style={{ padding: "10px 14px", background: "#f8f9fa", borderRadius: 8, fontSize: 12, color: "#6b7280", border: "1px solid #e2e4e8" }}>
+      <SurfaceCard style={{ padding: "10px 14px", background: theme.colors.surfaceAlt, fontSize: 12, color: theme.colors.textSoft }}>
         <strong>How to read this:</strong> Total Received = Net Revenue + HST. HST to Remit (Quick Method) goes to CRA quarterly.
-        HST Kept is retained by the corporation. Net Retained = Net Revenue − Personal Draw − HST to Remit − Corp Tax Reserve − Business Expenses.
-      </div>
+        HST Kept is retained by the corporation. Net Retained = Net Revenue - Personal Draw - HST to Remit - Corp Tax Reserve - Business Expenses.
+      </SurfaceCard>
     </div>
   );
 }
@@ -286,12 +270,12 @@ function RateListSettings({
         <div style={{ fontWeight: 600, fontSize: 14 }}>{label}</div>
         <Btn small onClick={() => { setForm(emptyForm); setShowForm(true); }}>+ Add Entry</Btn>
       </div>
-      {note && <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{note}</div>}
+      {note && <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 8 }}>{note}</div>}
       {sorted.map((e, i) => (
-        <div key={e.id} style={{
+        <div key={e.id} className="finance-card" style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "9px 14px", background: i === 0 ? "#f0fdf4" : "#fff",
-          border: `1px solid ${i === 0 ? "#bbf7d0" : "#e2e4e8"}`, borderRadius: 10, marginBottom: 6,
+          padding: "9px 14px", background: i === 0 ? "#f0fdf4" : theme.colors.surface,
+          border: `1px solid ${i === 0 ? "#bbf7d0" : theme.colors.border}`, borderRadius: theme.radius.md, marginBottom: 6,
         }}>
           <div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
@@ -300,14 +284,14 @@ function RateListSettings({
                 {isPercent ? `${(e.value * 100).toFixed(3)}%` : fmtCAD(e.value)}
               </span>
             </div>
-            <div style={{ fontSize: 12, color: "#6b7280" }}>
-              Effective from: {fmtDate(e.effectiveFrom)}{e.note ? ` · ${e.note}` : ""}
+            <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
+              Effective from: {fmtDate(e.effectiveFrom)}{e.note ? ` - ${e.note}` : ""}
             </div>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <Btn variant="secondary" small onClick={() => { setForm({...e, note: e.note ?? ""}); setShowForm(true); }}>Edit</Btn>
             {entries.length > 1 && (
-              <Btn variant="danger" small onClick={() => onChange(entries.filter((x) => x.id !== e.id))}>✕</Btn>
+              <Btn variant="danger" small onClick={() => onChange(entries.filter((x) => x.id !== e.id))}>Delete</Btn>
             )}
           </div>
         </div>
@@ -362,39 +346,39 @@ function PayrollDrawSettings({
         <div style={{ fontWeight: 600, fontSize: 14 }}>Personal Draw & CRA Payroll Remittance</div>
         <Btn small onClick={() => { setForm(emptyForm); setShowForm(true); }}>+ Add Entry</Btn>
       </div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, background: "#fef3e2", padding: "8px 10px", borderRadius: 6 }}>
+      <SurfaceCard style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 10, background: theme.colors.warningSoft, padding: "8px 10px" }}>
         These two values are linked. When your draw changes, your CRA remittance changes too. Add one entry per change.
-      </div>
+      </SurfaceCard>
       {sorted.map((e, i) => (
-        <div key={e.id} style={{
+        <div key={e.id} className="finance-card" style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "10px 14px", background: i === 0 ? "#f0fdf4" : "#fff",
-          border: `1px solid ${i === 0 ? "#bbf7d0" : "#e2e4e8"}`, borderRadius: 10, marginBottom: 8,
+          padding: "10px 14px", background: i === 0 ? "#f0fdf4" : theme.colors.surface,
+          border: `1px solid ${i === 0 ? "#bbf7d0" : theme.colors.border}`, borderRadius: theme.radius.md, marginBottom: 8,
         }}>
           <div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
               {i === 0 && <Pill color="green">Current</Pill>}
               <span style={{ fontWeight: 600, fontSize: 14 }}>{fmtCAD(e.value)}/mo draw</span>
-              <span style={{ color: "#6b7280", fontSize: 13 }}>→</span>
+              <span style={{ color: theme.colors.textSoft, fontSize: 13 }}>to</span>
               <span style={{ fontWeight: 600, fontSize: 14, color: "#4a3ab5" }}>{fmtCAD(e.craRemittance)}/mo to CRA</span>
             </div>
-            <div style={{ fontSize: 12, color: "#6b7280" }}>
-              Effective from: {fmtDate(e.effectiveFrom)}{e.note ? ` · ${e.note}` : ""}
+            <div style={{ fontSize: 12, color: theme.colors.textSoft }}>
+              Effective from: {fmtDate(e.effectiveFrom)}{e.note ? ` - ${e.note}` : ""}
             </div>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <Btn variant="secondary" small onClick={() => { setForm({...e, note: e.note ?? ""}); setShowForm(true); }}>Edit</Btn>
             {entries.length > 1 && (
-              <Btn variant="danger" small onClick={() => onChange(entries.filter((x) => x.id !== e.id))}>✕</Btn>
+              <Btn variant="danger" small onClick={() => onChange(entries.filter((x) => x.id !== e.id))}>Delete</Btn>
             )}
           </div>
         </div>
       ))}
       {showForm && (
         <Modal title={form.id ? "Edit Draw & Remittance" : "Add Draw & Remittance Entry"} onClose={() => setShowForm(false)}>
-          <div style={{ background: "#f0f9ff", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#1a5fa8" }}>
+          <SurfaceCard style={{ background: "#f0f9ff", padding: "8px 12px", fontSize: 12, color: theme.colors.primary }}>
             Enter both the personal draw and the CRA payroll remittance your accountant calculated for that draw amount.
-          </div>
+          </SurfaceCard>
           <Grid2>
             <Inp label="Personal Draw ($/month)" type="number" value={form.value}
               onChange={(e) => setForm((p) => ({ ...p, value: Number(e.target.value) }))} placeholder="e.g. 4000" />
@@ -433,18 +417,21 @@ export function TaxRateSettingsSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Tax & Rate Settings</div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12, background: "#f0f9ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #bae6fd" }}>
-        All rates and values here drive calculations across the entire app. Add a new entry when a value changes —
+      <PageHeader
+        title="Tax & Rate Settings"
+        subtitle="Historical rate lists that drive invoice, payroll, HST, and corporation-tax calculations."
+      />
+      <SurfaceCard style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 12, background: "#f0f9ff", padding: "8px 12px" }}>
+        All rates and values here drive calculations across the entire app. Add a new entry when a value changes -
         old entries are kept for historical accuracy. The system uses the correct value for each date automatically.
-      </div>
+      </SurfaceCard>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+      <MetricGrid>
         <StatBox label="Current Draw" value={fmtCAD(currentDraw?.value ?? 0)} sub={`CRA: ${fmtCAD((currentDraw as PayrollDrawEntry | null)?.craRemittance ?? 0)}/mo`} color="#1a5fa8" />
         <StatBox label="HST Rate" value={currentHST ? `${(currentHST.value * 100).toFixed(1)}%` : "Not set"} sub="Ontario" />
         <StatBox label="Quick Method" value={currentQM ? `${(currentQM.value * 100).toFixed(1)}%` : "Not set"} sub="of gross invoiced" />
         <StatBox label="Corp Instalment" value={currentCorp ? fmtCAD(currentCorp.value) : "Not set"} sub="per quarter" />
-      </div>
+      </MetricGrid>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
         {(["payroll", "hst", "corp"] as const).map((t) => (

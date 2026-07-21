@@ -171,6 +171,15 @@ const EMPTY_BUSINESS: Business = {
 };
 
 function normalizeBusiness(biz?: Partial<Business> | null): Business {
+  const normalizeRateEntry = <T extends RateEntry>(entry: T): T => ({
+    ...entry,
+    note: normalizeText(entry.note) ?? entry.note,
+  });
+  const normalizePayrollDrawEntry = (entry: PayrollDrawEntry): PayrollDrawEntry => ({
+    ...entry,
+    note: normalizeText(entry.note) ?? entry.note,
+  });
+
   return {
     ...EMPTY_BUSINESS,
     ...(biz ?? {}),
@@ -189,10 +198,10 @@ function normalizeBusiness(biz?: Partial<Business> | null): Business {
     rateSettings: {
       ...EMPTY_BUSINESS.rateSettings,
       ...(biz?.rateSettings ?? {}),
-      hstRate: biz?.rateSettings?.hstRate ?? [],
-      quickMethodRate: biz?.rateSettings?.quickMethodRate ?? [],
-      payrollDraw: biz?.rateSettings?.payrollDraw ?? [],
-      corpTaxInstalment: biz?.rateSettings?.corpTaxInstalment ?? [],
+      hstRate: (biz?.rateSettings?.hstRate ?? []).map(normalizeRateEntry),
+      quickMethodRate: (biz?.rateSettings?.quickMethodRate ?? []).map(normalizeRateEntry),
+      payrollDraw: (biz?.rateSettings?.payrollDraw ?? []).map(normalizePayrollDrawEntry),
+      corpTaxInstalment: (biz?.rateSettings?.corpTaxInstalment ?? []).map(normalizeRateEntry),
     },
     craReviewProfile: {
       ...DEFAULT_CRA_REVIEW_PROFILE,

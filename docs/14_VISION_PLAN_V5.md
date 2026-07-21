@@ -240,6 +240,7 @@ As of this version:
 - Modern UI Pass 2 has been applied to Daily Log, pending/recurring quick-add modals, and the shared Transaction Form drawer without changing ledger behavior.
 - Modern UI Pass 3 makes the visual direction materially visible with a light navigation rail, teal primary accent, warmer page background, and a simplified Daily Log activity surface without duplicate new-transaction entry points.
 - Modern UI Pass 4 standardizes typography weight, removes negative letter spacing from application UI, prefers a native Windows-friendly font stack, and aligns shared/local button, panel, metric, and modal primitives across the major finance pages.
+- Modern UI Pass 5 extends that shared treatment across Business tax surfaces: Tax Obligations, Corporation Income, and Tax & Rate Settings now use common headers, metric cards, action buttons, status chips, modal chrome, and display-cleaned rate notes.
 - Transaction History supports exact tag and recurring-origin filtering
 - Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
 - import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes
