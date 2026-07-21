@@ -22,6 +22,7 @@ User action (add/edit/delete transaction)
 - `balanceSnapshotAmount` and `balanceSnapshotDate` are the user-entered real-world anchor when available.
 - Replay starts from the snapshot amount for that item and applies only transactions after the snapshot date.
 - Legacy reconciliation adjustment rows are skipped by replay and are not the current balance-alignment workflow.
+- The architecture validator permits the legacy `reconciliation` subtype only inside compatibility cleanup utilities.
 
 ### Repository Layer
 - All storage access is centralized in repository files.

@@ -2,12 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const sourceRoots = ["app", "modules", "repositories", "services", "utils"];
+const sourceRoots = ["app", "modules", "repositories", "services", "types", "utils"];
 const sourceExtensions = new Set([".ts", ".tsx"]);
 const repositoryWritePattern =
   /transactionRepository\.(?:saveAll|add|update|delete)\s*\(/g;
 const accountingDateFallbackPattern =
   /(?:date\s*\?\?\s*[^\n]*createdAt|createdAt\s*\?\?\s*[^\n]*date)/g;
+const reconciliationSubtypePattern = /["']reconciliation["']/g;
+const reconciliationCompatibilityFiles = new Set([
+  "utils/recalculateBalances.ts",
+  "utils/transactionNormalization.ts",
+]);
 
 function collectFiles(directory) {
   if (!fs.existsSync(directory)) return [];
@@ -40,6 +45,14 @@ for (const sourceRoot of sourceRoots) {
       if (relative !== "utils/transactionNormalization.ts") {
         violations.push(
           `${relative}:${lineNumber(source, match.index)} falls back from accounting date to createdAt`
+        );
+      }
+    }
+
+    for (const match of source.matchAll(reconciliationSubtypePattern)) {
+      if (!reconciliationCompatibilityFiles.has(relative)) {
+        violations.push(
+          `${relative}:${lineNumber(source, match.index)} references the legacy reconciliation subtype outside compatibility cleanup`
         );
       }
     }

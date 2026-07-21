@@ -13,7 +13,7 @@ This audit closes the local implementation work for the eight-phase production-c
 - `createdAt` remains creation metadata and may break ties between transactions on the same accounting date.
 - Balance alignment uses record-owned snapshots; reconciliation adjustment rows are never introduced.
 
-`npm run validate:architecture` enforces the write-boundary and accounting-date rules.
+`npm run validate:architecture` enforces the write-boundary, accounting-date, and no-new-reconciliation-subtype rules.
 
 ## Automated Verification
 
