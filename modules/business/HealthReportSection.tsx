@@ -16,6 +16,7 @@ import { TransactionForm } from "./TransactionForm";
 import { useLiabilities } from "./useLiabilities";
 import { toFixed2 } from "@/utils/finance";
 import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
+import { ActionButton, PageHeader } from "@/components/ui";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -67,23 +68,7 @@ function recurringLabel(fp: FixedPayment): string {
 }
 
 function FixButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "6px 10px",
-        fontSize: 12,
-        fontWeight: 600,
-        borderRadius: 8,
-        border: "1px solid #d1d5db",
-        background: "#fff",
-        color: "#1f2937",
-        cursor: "pointer",
-      }}
-    >
-      {children}
-    </button>
-  );
+  return <ActionButton tone="secondary" compact onClick={onClick}>{children}</ActionButton>;
 }
 
 function categoryOptions(categories: Category[], txType: Transaction["type"]) {
@@ -555,10 +540,10 @@ export function HealthReportSection({
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Health Report</div>
-      <div style={{ color: "#556070", fontSize: 13, marginBottom: 16 }}>
-        Warning-first data quality scan with canonical edit, delete, relink, and dismissal controls.
-      </div>
+      <PageHeader
+        title="Health Report"
+        subtitle="Warning-first data quality scan with canonical edit, delete, relink, and dismissal controls."
+      />
       {dismissedHealthIssues.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <FixButton onClick={restoreDismissedIssues}>Restore {dismissedHealthIssues.length} Dismissed Warning{dismissedHealthIssues.length === 1 ? "" : "s"}</FixButton>

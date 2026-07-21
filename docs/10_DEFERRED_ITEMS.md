@@ -52,6 +52,7 @@ This file records work that remains after the eight-phase production-completion 
 
 ### Modern design foundation
 - Shared theme tokens, reusable card/button/chip primitives, global focus states, subtle motion classes, responsive shell styling, and finance-table styling are in place.
+- Modern UI Pass 1 applies those primitives to the app shell, Accounts & Cards, Dashboard / Projection, Transaction History, and Health Report.
 - Visual modernization remains incremental so dense finance workflows stay readable and stable.
 
 ## Remaining External Acceptance Work

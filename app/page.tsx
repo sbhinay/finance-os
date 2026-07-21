@@ -35,6 +35,7 @@ import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { theme } from "@/lib/theme";
 import { useProperties } from "@/modules/business/useAssets";
 import { StatementScannerSection } from "@/modules/business/StatementScannerSection";
+import { DataPanel, EmptyState, MetricCard, MetricGrid, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
 
 type SectionId =
   | "accounts"
@@ -240,50 +241,41 @@ function AccountsCardsSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Accounts & Cards</div>
+      <PageHeader
+        title="Accounts & Cards"
+        subtitle="Snapshot-backed cash accounts and revolving credit in one consolidated view."
+      />
 
-      {/* Summary bar */}
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 24 }}>
-        {[
-          { label: "Total Bank Balance", value: fmtCAD(totalBankBalance), color: totalBankBalance >= 0 ? "#1a7f3c" : "#a31515" },
-          { label: "Total CC Owing", value: fmtCAD(totalOwed), color: "#a31515" },
-          { label: "Total CC Available", value: fmtCAD(totalAvailable), color: "#1a5fa8" },
-          { label: "Net Position", value: fmtCAD(totalBankBalance - totalOwed), color: (totalBankBalance - totalOwed) >= 0 ? "#1a7f3c" : "#a31515" },
-        ].map((s) => (
-          <div key={s.label} style={{ ...theme.cardStyle(), flex: 1, minWidth: 180, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-            <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{s.label}</div>
-            <div style={{ fontWeight: 800, fontSize: 21, color: s.color }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
+      <MetricGrid>
+        <MetricCard label="Total Bank Balance" value={fmtCAD(totalBankBalance)} tone={totalBankBalance >= 0 ? "success" : "danger"} />
+        <MetricCard label="Total CC Owing" value={fmtCAD(totalOwed)} tone="danger" />
+        <MetricCard label="Total CC Available" value={fmtCAD(totalAvailable)} tone="primary" />
+        <MetricCard label="Net Position" value={fmtCAD(totalBankBalance - totalOwed)} tone={(totalBankBalance - totalOwed) >= 0 ? "success" : "danger"} />
+      </MetricGrid>
 
-      {/* Bank Accounts */}
-      <div style={{ fontWeight: 700, fontSize: 15, color: theme.colors.primary, marginBottom: 10 }}>Bank Accounts</div>
-      <div style={{ ...theme.cardStyle(theme.colors.primary), marginBottom: 24, overflow: "hidden" }}>
+      <DataPanel title="Bank Accounts" accent={theme.colors.primary} style={{ marginBottom: 22 }}>
         {accounts.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280", fontSize: 13, textAlign: "center" }}>No accounts yet.</div>
+          <EmptyState title="No bank accounts yet" detail="Add accounts from the Bank Accounts tab when you are ready." />
         )}
         {accounts.map((a) => (
           <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</span>
-                {a.primary && <span style={{ fontSize: 10, fontWeight: 700, background: "#1a7f3c", color: "#fff", padding: "1px 7px", borderRadius: 99 }}>PRIMARY</span>}
+                <span style={{ fontWeight: 800, fontSize: 14 }}>{a.name}</span>
+                {a.primary && <StatusChip tone="success">Primary</StatusChip>}
               </div>
-              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{a.type} - {a.currency}</div>
+              <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 2 }}>{a.type} - {a.currency}</div>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: a.openingBalance >= 0 ? "#1a7f3c" : "#a31515" }}>
+            <div style={{ fontWeight: 900, fontSize: 16, color: a.openingBalance >= 0 ? theme.colors.success : theme.colors.danger }}>
               {fmtCAD(a.openingBalance)}
             </div>
           </div>
         ))}
-      </div>
+      </DataPanel>
 
-      {/* Credit Cards */}
-      <div style={{ fontWeight: 700, fontSize: 15, color: theme.colors.primary, marginBottom: 10 }}>Credit Cards</div>
-      <div style={{ ...theme.cardStyle(theme.colors.primary), overflow: "hidden" }}>
+      <DataPanel title="Credit Cards" accent={theme.colors.primary}>
         {cards.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280", fontSize: 13, textAlign: "center" }}>No cards yet.</div>
+          <EmptyState title="No cards yet" detail="Cards and LOCs will appear here after they are created." />
         )}
         {cards.map((c) => {
           const available = c.limitAmount - c.openingBalance;
@@ -294,12 +286,12 @@ function AccountsCardsSection() {
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</span>
-                    {c.primary && <span style={{ fontSize: 10, fontWeight: 700, background: "#1a7f3c", color: "#fff", padding: "1px 7px", borderRadius: 99 }}>PRIMARY</span>}
+                    {c.primary && <StatusChip tone="success">Primary</StatusChip>}
                   </div>
                   <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{c.issuer} - Limit {fmtCAD(c.limitAmount)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: c.openingBalance > 0 ? "#a31515" : "#1a7f3c" }}>
+                  <div style={{ fontWeight: 900, fontSize: 16, color: c.openingBalance > 0 ? theme.colors.danger : theme.colors.success }}>
                     {fmtCAD(c.openingBalance)} <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 400 }}>owed</span>
                   </div>
                   <div style={{ fontSize: 11, color: "#1a5fa8" }}>{fmtCAD(available)} available</div>
@@ -313,7 +305,7 @@ function AccountsCardsSection() {
             </div>
           );
         })}
-      </div>
+      </DataPanel>
     </div>
   );
 }
@@ -374,7 +366,7 @@ export default function Home() {
   const currentHubLinks = PRIMARY_SECTION_BY_SECTION[section] === "fixedpayments" ? [] : (HUB_LINKS[section] ?? []);
 
   const wrap = (children: React.ReactNode) => (
-    <div style={{ ...theme.cardStyle(), padding: 24, background: theme.colors.surface, animation: "financeFadeUp 180ms ease both" }}>{children}</div>
+    <SurfaceCard style={{ padding: 24, background: "rgba(255,255,255,0.94)", animation: "financeFadeUp 180ms ease both" }}>{children}</SurfaceCard>
   );
 
   return (

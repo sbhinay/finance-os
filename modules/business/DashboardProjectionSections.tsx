@@ -15,25 +15,19 @@ import { theme } from "@/lib/theme";
 import { getExpenseReportEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
 import { calculateDebtSummary, matchesMortgagePayment, matchesVehicleFinancePayment } from "@/utils/debtReporting";
 import { buildDebtRepaymentProjection } from "@/utils/debtProjection";
+import { ActionButton, DataPanel, MetricCard, PageHeader } from "@/components/ui";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 160, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 22, color: color ?? theme.colors.text }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
-    </div>
-  );
+  return <MetricCard label={label} value={value} sub={sub} color={color} style={{ flex: 1, minWidth: 160 }} />;
 }
 
 function Card({ title, children, accent }: { title?: string; children: React.ReactNode; accent?: string }) {
   return (
-    <div style={{ ...theme.cardStyle(accent), padding: "16px 18px", marginBottom: 14, background: theme.colors.surface }}>
-      {title && <div style={{ fontWeight: 800, fontSize: 15, color: theme.colors.text, marginBottom: 12 }}>{title}</div>}
-      {children}
-    </div>
+    <DataPanel title={title} accent={accent} style={{ marginBottom: 14 }}>
+      <div style={{ padding: title ? "14px 16px" : "16px 18px" }}>{children}</div>
+    </DataPanel>
   );
 }
 
@@ -41,8 +35,11 @@ function Btn({ children, onClick, variant = "primary", small }: {
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary"; small?: boolean;
 }) {
-  const c = { primary: { bg: "#1a5fa8", color: "#fff" }, secondary: { bg: "#f3f4f6", color: "#374151" } }[variant];
-  return <button onClick={onClick} style={{ padding: small ? "6px 12px" : "10px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: 999, border: "none", cursor: "pointer", background: c.bg, color: c.color }}>{children}</button>;
+  return (
+    <ActionButton compact={small} tone={variant === "primary" ? "primary" : "secondary"} onClick={onClick}>
+      {children}
+    </ActionButton>
+  );
 }
 
 function useAutoReload(reload: () => void) {
@@ -914,10 +911,10 @@ export function DashboardSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 6 }}>Dashboard</div>
-      <div style={{ fontSize: 13, color: theme.colors.textSoft, marginBottom: 16, lineHeight: 1.5 }}>
-        Current financial snapshot and forward-looking projection in one place.
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Current financial snapshot and forward-looking projection in one place."
+      />
 
       <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
         <Btn variant={tab === "overview" ? "primary" : "secondary"} small onClick={() => setTab("overview")}>

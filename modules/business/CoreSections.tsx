@@ -19,6 +19,7 @@ import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction, getSubTypeLabel } from "@/ty
 import { getExpenseReportEffect, getTransactionEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
 import { buildCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
 import { theme } from "@/lib/theme";
+import { MetricCard, PageHeader } from "@/components/ui";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
 // --- Primitives ---------------------------------------------------------------
@@ -68,7 +69,7 @@ function Btn({ children, onClick, variant = "primary", small, disabled, style }:
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 640 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
+      <div className="finance-drawer" style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: wide ? 640 : 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, cursor: "pointer", color: theme.colors.textSoft, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Close</button>
@@ -82,13 +83,7 @@ function Grid2({ children }: { children: React.ReactNode }) {
   return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>{children}</div>;
 }
 function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 150, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
-    </div>
-  );
+  return <MetricCard label={label} value={value} sub={sub} color={color} style={{ flex: 1, minWidth: 150 }} />;
 }
 function Pill({ color, children }: { color: string; children: React.ReactNode }) {
   const m: Record<string, { bg: string; fg: string }> = {
@@ -342,7 +337,7 @@ export function BankAccountsSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Bank Accounts</div>
+      <PageHeader title="Bank Accounts" subtitle="Snapshot-backed balances, linked obligations, and ledger explanation tools." />
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
         <StatBox label="Total Balance" value={fmtCAD(totalBalance)} color="#1a7f3c" />
         <StatBox label="Accounts" value={String(accounts.length)} />
@@ -715,7 +710,7 @@ export function CreditCardsSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Credit Cards</div>
+      <PageHeader title="Credit Cards" subtitle="Cards and LOCs with ledger-based owing, repayment planning, and payoff actions." />
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
         <StatBox label="Total Owing" value={fmtCAD(totalOwing)} color="#a31515" />
         <StatBox label="Total Limit" value={fmtCAD(totalLimit)} />
@@ -1127,7 +1122,7 @@ export function TransactionHistorySection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Transaction History</div>
+      <PageHeader title="Transaction History" subtitle="Search, filter, edit, and export ledger rows by accounting date." />
 
       {/* Filters */}
       <div style={{ ...theme.cardStyle(theme.colors.primary), padding: "16px 18px", marginBottom: 14, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>

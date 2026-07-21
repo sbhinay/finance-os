@@ -47,6 +47,177 @@ export function SurfaceCard({
   );
 }
 
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 16,
+        flexWrap: "wrap",
+        marginBottom: 18,
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontWeight: 900,
+            fontSize: 26,
+            color: theme.colors.text,
+            marginBottom: subtitle ? 5 : 0,
+          }}
+        >
+          {title}
+        </div>
+        {subtitle && (
+          <div style={{ fontSize: 13, color: theme.colors.textSoft, lineHeight: 1.5 }}>
+            {subtitle}
+          </div>
+        )}
+      </div>
+      {actions && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{actions}</div>}
+    </div>
+  );
+}
+
+export function MetricGrid({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: 12,
+        marginBottom: 18,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function MetricCard({
+  label,
+  value,
+  sub,
+  tone = "secondary",
+  color,
+  style,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: Tone;
+  color?: string;
+  style?: CSSProperties;
+}) {
+  const toneStyle = toneStyles[tone];
+  return (
+    <SurfaceCard
+      style={{
+        padding: "16px 18px",
+        background: `linear-gradient(180deg, ${theme.colors.surface}, ${theme.colors.surfaceAlt})`,
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          color: theme.colors.textSoft,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          marginBottom: 7,
+          letterSpacing: ".06em",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontWeight: 900, fontSize: 22, color: color ?? toneStyle.color }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
+    </SurfaceCard>
+  );
+}
+
+export function DataPanel({
+  title,
+  children,
+  accent,
+  actions,
+  style,
+}: {
+  title?: string;
+  children: ReactNode;
+  accent?: string;
+  actions?: ReactNode;
+  style?: CSSProperties;
+}) {
+  return (
+    <SurfaceCard accent={accent} style={{ overflow: "hidden", ...style }}>
+      {(title || actions) && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "14px 16px",
+            borderBottom: `1px solid ${theme.colors.border}`,
+            background: theme.colors.surfaceAlt,
+          }}
+        >
+          {title && <div style={{ fontSize: 14, fontWeight: 900, color: theme.colors.text }}>{title}</div>}
+          {actions}
+        </div>
+      )}
+      {children}
+    </SurfaceCard>
+  );
+}
+
+export function Toolbar({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+        padding: 12,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.radius.md,
+        background: "rgba(255,255,255,0.84)",
+        boxShadow: theme.shadow.soft,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function EmptyState({
+  title,
+  detail,
+}: {
+  title: string;
+  detail?: string;
+}) {
+  return (
+    <div style={{ textAlign: "center", color: theme.colors.textSoft, padding: "28px 18px", fontSize: 13 }}>
+      <div style={{ fontWeight: 900, color: theme.colors.text, marginBottom: detail ? 4 : 0 }}>{title}</div>
+      {detail && <div>{detail}</div>}
+    </div>
+  );
+}
+
 export function ActionButton({
   children,
   tone = "primary",
