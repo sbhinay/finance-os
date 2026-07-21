@@ -17,6 +17,7 @@ import { CreditCard } from "@/types/creditCard";
 import { deleteCanonicalTransaction } from "@/services/transactionPipeline";
 import { getTransactionListEffect } from "@/utils/transactionSemantics";
 import { theme } from "@/lib/theme";
+import { ActionButton, DataPanel, EmptyState, MetricCard, MetricGrid, PageHeader, Toolbar } from "@/components/ui";
 
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -41,12 +42,13 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
   return (
     <button
       onClick={onClick}
+      className="finance-button"
       style={{
-        padding: small ? "4px 10px" : "8px 16px",
+        padding: small ? "6px 11px" : "10px 16px",
         fontSize: small ? 12 : 13,
-        fontWeight: 600,
-        borderRadius: 8,
-        border: "1px solid transparent",
+        fontWeight: 800,
+        borderRadius: theme.radius.pill,
+        border: variant === "secondary" ? `1px solid ${theme.colors.border}` : "1px solid transparent",
         cursor: "pointer",
         background: colors.bg,
         color: colors.color,
@@ -60,15 +62,6 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
 
 function Grid2({ children }: { children: React.ReactNode }) {
   return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>{children}</div>;
-}
-
-function StatBox({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div style={{ ...theme.cardStyle(), flex: 1, minWidth: 150, padding: "16px 18px", background: theme.colors.surfaceAlt }}>
-      <div style={{ fontSize: 11, color: theme.colors.textSoft, fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: ".06em" }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 21, color: color ?? theme.colors.text }}>{value}</div>
-    </div>
-  );
 }
 
 function Pill({ color, children }: { color: string; children: React.ReactNode }) {
@@ -86,11 +79,11 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>x</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.42)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+      <div className="finance-drawer" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surfaceAlt }}>
+          <div style={{ fontWeight: 900, fontSize: 15, color: theme.colors.text }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
         </div>
         <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
       </div>
@@ -199,7 +192,11 @@ export function DailyLogSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: theme.colors.text, marginBottom: 16 }}>Daily Log</div>
+      <PageHeader
+        title="Daily Log"
+        subtitle="Capture today, confirm scheduled items, and review recent cash movement from one place."
+        actions={<ActionButton onClick={openNewEntry}>New Transaction</ActionButton>}
+      />
 
       {fixedHooks.pending.length > 0 && (
         <PendingBanner
@@ -210,24 +207,25 @@ export function DailyLogSection() {
         />
       )}
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatBox label="Today In" value={fmtCAD(tIn)} color="#1a7f3c" />
-        <StatBox label="Today Out" value={fmtCAD(tOut)} color="#a31515" />
-        <StatBox label="Month In" value={fmtCAD(mIn)} color="#1a7f3c" />
-        <StatBox label="Month Out" value={fmtCAD(mOut)} color="#a31515" />
-      </div>
+      <MetricGrid>
+        <MetricCard label="Today In" value={fmtCAD(tIn)} tone="success" />
+        <MetricCard label="Today Out" value={fmtCAD(tOut)} tone="danger" />
+        <MetricCard label="Month In" value={fmtCAD(mIn)} tone="success" />
+        <MetricCard label="Month Out" value={fmtCAD(mOut)} tone="danger" />
+      </MetricGrid>
 
-      <div style={{ ...theme.cardStyle(theme.colors.primary), padding: "18px 20px", marginBottom: 18, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>
-        <div style={{ fontWeight: 800, fontSize: 15, color: theme.colors.primary, marginBottom: 8 }}>New Entry</div>
-        <div style={{ fontSize: 13, color: theme.colors.textSoft, marginBottom: 12, maxWidth: 720, lineHeight: 1.5 }}>
-          Open the shared transaction form so labels, validation, and balance updates stay consistent with the rest of FinanceOS.
+      <DataPanel
+        title="New Entry"
+        accent={theme.colors.primary}
+        actions={<ActionButton compact onClick={openNewEntry}>Open Form</ActionButton>}
+        style={{ marginBottom: 18 }}
+      >
+        <div style={{ padding: "14px 16px", fontSize: 13, color: theme.colors.textSoft, lineHeight: 1.5 }}>
+          The shared transaction form keeps labels, validation, balances, and linked records consistent across FinanceOS.
         </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <Btn onClick={openNewEntry}>Open Transaction Form</Btn>
-        </div>
-      </div>
+      </DataPanel>
 
-      <div style={{ ...theme.cardStyle(), padding: "12px 14px", marginBottom: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", background: theme.colors.surface }}>
+      <Toolbar style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft, letterSpacing: ".05em", textTransform: "uppercase" }}>Viewing</div>
         <input
           type="date"
@@ -239,9 +237,9 @@ export function DailyLogSection() {
           {showAll ? "Showing All" : "Show All"}
         </Btn>
         <Btn variant="secondary" small onClick={() => { setViewDate(todayStr); setShowAll(false); }}>Today</Btn>
-      </div>
+      </Toolbar>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <Toolbar style={{ marginBottom: 12 }}>
         {(["all", "income", "expense", "transfer"] as const).map((v) => (
           <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => setFilter(v)}>
             {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
@@ -253,9 +251,9 @@ export function DailyLogSection() {
           placeholder="Search..."
           style={{ padding: "5px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: "#fff", fontSize: 12, flex: 1, minWidth: 120 }}
         />
-      </div>
+      </Toolbar>
 
-      <div style={{ ...theme.cardStyle(), overflow: "hidden", background: theme.colors.surface }}>
+      <DataPanel title="Entries" style={{ overflow: "hidden" }}>
         {filtered.slice(0, 60).map((t) => {
           const veh = t.linkedVehicleId ? vehicles.find((v) => v.id === t.linkedVehicleId) : null;
           const prop = t.linkedPropertyId ? properties.find((property) => property.id === t.linkedPropertyId) : null;
@@ -265,7 +263,7 @@ export function DailyLogSection() {
           return (
             <div
               key={t.id}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 16px", borderBottom: "1px solid #edf2f7", background: "transparent", gap: 10, flexWrap: "wrap" }}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "13px 16px", borderBottom: `1px solid ${theme.colors.border}`, background: "transparent", gap: 10, flexWrap: "wrap" }}
             >
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.text }}>
@@ -295,16 +293,17 @@ export function DailyLogSection() {
         })}
 
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", color: "#6b7280", padding: 24, fontSize: 13 }}>
-            {showAll || search ? "No entries found." : "No entries for this date. Use date picker or Show All."}
-          </div>
+          <EmptyState
+            title="No entries found"
+            detail={showAll || search ? "Try a different search or filter." : "Use the date picker or Show All to widen the view."}
+          />
         )}
         {filtered.length > 60 && (
           <div style={{ textAlign: "center", color: "#6b7280", fontSize: 12, padding: 8 }}>
             Showing 60 of {filtered.length} entries
           </div>
         )}
-      </div>
+      </DataPanel>
 
       <TransactionForm
         open={txFormOpen}

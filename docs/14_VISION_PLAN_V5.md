@@ -237,6 +237,7 @@ As of this version:
 - dashboard projection includes card/LOC repayment pressure, existing planned-payment offsets, and unplanned exposure warnings
 - the visual system has shared tokens, reusable surface/button/chip primitives, global focus treatment, subtle motion classes, and table styling for gradual modernization
 - Modern UI Pass 1 has been applied to the app shell, Accounts & Cards, Dashboard / Projection, Transaction History, and Health Report without changing ledger behavior.
+- Modern UI Pass 2 has been applied to Daily Log, pending/recurring quick-add modals, and the shared Transaction Form drawer without changing ledger behavior.
 - Transaction History supports exact tag and recurring-origin filtering
 - Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
 - import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes

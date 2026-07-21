@@ -11,6 +11,7 @@ import { buildSourceOptions, fmtCAD, toFixed2, uid } from "@/utils/finance";
 import { deleteCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
 import { inferTransactionPurpose } from "@/utils/transactionSemantics";
 import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
+import { theme } from "@/lib/theme";
 import {
   Transaction, TransactionType, TransactionSubType, TransactionMode,
   TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES, getSubTypeLabel,
@@ -19,7 +20,7 @@ import {
   RecurringOriginType,
 } from "@/types/transaction";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 export interface TransactionFormInitial {
   id?: string;
@@ -57,12 +58,12 @@ interface Props {
   onSaved?: (txn: Transaction) => void;
 }
 
-// ─── Primitives ───────────────────────────────────────────────────────────────
+// Primitives
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase" as const, color: "#6b7280", display: "block", marginBottom: 4 }}>
-      {children}{required && <span style={{ color: "#a31515", marginLeft: 2 }}>*</span>}
+    <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase" as const, color: theme.colors.textSoft, display: "block", marginBottom: 5 }}>
+      {children}{required && <span style={{ color: theme.colors.danger, marginLeft: 2 }}>*</span>}
     </label>
   );
 }
@@ -75,7 +76,7 @@ function Inp({ label, type = "text", value, onChange, placeholder, disabled, req
     <div>
       {label && <Label required={required}>{label}</Label>}
       <input type={type} value={value ?? ""} onChange={onChange} placeholder={placeholder} disabled={disabled}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: disabled ? "#f9fafb" : "#fff", fontSize: 13, boxSizing: "border-box" as const }} />
+        style={{ width: "100%", minHeight: 38, padding: "8px 11px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: disabled ? theme.colors.surfaceMuted : theme.colors.surface, fontSize: 13, boxSizing: "border-box" as const, color: theme.colors.text }} />
     </div>
   );
 }
@@ -89,7 +90,7 @@ function Sel({ label, value, onChange, options, disabled, required }: {
     <div>
       {label && <Label required={required}>{label}</Label>}
       <select value={value ?? ""} onChange={onChange} disabled={disabled}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, background: disabled ? "#f9fafb" : "#fff", fontSize: 13 }}>
+        style={{ width: "100%", minHeight: 38, padding: "8px 11px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, background: disabled ? theme.colors.surfaceMuted : theme.colors.surface, fontSize: 13, color: theme.colors.text }}>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -99,20 +100,24 @@ function Btn({ children, onClick, variant = "primary", disabled }: {
   children: React.ReactNode; onClick?: () => void;
   variant?: "primary" | "secondary" | "danger"; disabled?: boolean;
 }) {
-  const c = { primary: { bg: "#1a5fa8", color: "#fff" }, secondary: { bg: "#f3f4f6", color: "#374151" }, danger: { bg: "#fef2f2", color: "#a31515" } }[variant];
-  return <button onClick={onClick} disabled={disabled} style={{ padding: "8px 16px", fontSize: 13, fontWeight: 600, borderRadius: 8, border: "none", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color }}>{children}</button>;
+  const c = {
+    primary: { bg: theme.colors.primary, color: "#fff", border: theme.colors.primary },
+    secondary: { bg: theme.colors.surfaceAlt, color: theme.colors.text, border: theme.colors.border },
+    danger: { bg: theme.colors.dangerSoft, color: theme.colors.danger, border: theme.colors.dangerSoft },
+  }[variant];
+  return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: "9px 16px", fontSize: 13, fontWeight: 800, borderRadius: theme.radius.pill, border: `1px solid ${c.border}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color }}>{children}</button>;
 }
 function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
 function Alert({ type, children }: { type: "warning" | "error" | "info"; children: React.ReactNode }) {
   const s = {
-    warning: { bg: "#fef3c7", border: "#fde68a", color: "#a05c00" },
-    error:   { bg: "#fef2f2", border: "#fecaca", color: "#a31515" },
-    info:    { bg: "#f0f9ff", border: "#bae6fd", color: "#1a5fa8" },
+    warning: { bg: theme.colors.warningSoft, border: "#f4d37b", color: theme.colors.warning },
+    error:   { bg: theme.colors.dangerSoft, border: "#f6b9b3", color: theme.colors.danger },
+    info:    { bg: theme.colors.primarySoft, border: "#b9cdfd", color: theme.colors.primary },
   }[type];
-  return <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 12, background: s.bg, border: `1px solid ${s.border}`, color: s.color }}>{children}</div>;
+  return <div style={{ padding: "10px 12px", borderRadius: theme.radius.sm, fontSize: 12, lineHeight: 1.45, background: s.bg, border: `1px solid ${s.border}`, color: s.color }}>{children}</div>;
 }
 
-// ─── Type colour coding ───────────────────────────────────────────────────────
+// Type colour coding
 const TYPE_COLORS: Partial<Record<TransactionType, string>> = {
   expense:              "#a31515",
   income:               "#1a7f3c",
@@ -126,7 +131,7 @@ const TYPE_COLORS: Partial<Record<TransactionType, string>> = {
   adjustment:           "#6b7280",
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component
 
 export function TransactionForm({ open, onClose, initial, scheduledAmount, lockType, title, onSaved }: Props) {
   const { accounts } = useAccounts();
@@ -259,7 +264,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       w.push(`Amount differs from scheduled ${fmtCAD(scheduledAmount)} by ${fmtCAD(toFixed2(Math.abs(amt - scheduledAmount)))}.`);
     }
     if (! (form.categoryId || autoDetectedCat) && amt > 0 && isExpenseReportable(form.type as TransactionType)) {
-      w.push("No category — this will appear as uncategorized in reports.");
+      w.push("No category - this will appear as uncategorized in reports.");
     }
     if (requiresSubType(form.type as TransactionType) && !form.subType) {
       w.push("Please select a sub-type for accurate reporting.");
@@ -381,8 +386,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
       ]
     : [
         { value: "", label: "-- Select destination --" },
-        ...accounts.filter((a) => a.id !== form.sourceId).map((a) => ({ value: a.id, label: `${a.primary ? "★ " : ""}${a.name} (${a.type})` })),
-        ...cards.filter((c) => c.id !== form.sourceId).map((c) => ({ value: c.id, label: `${c.primary ? "★ " : ""}${c.name} (Credit)` })),
+        ...accounts.filter((a) => a.id !== form.sourceId).map((a) => ({ value: a.id, label: `${a.primary ? "(Primary) " : ""}${a.name} (${a.type})` })),
+        ...cards.filter((c) => c.id !== form.sourceId).map((c) => ({ value: c.id, label: `${c.primary ? "(Primary) " : ""}${c.name} (Credit)` })),
       ];
 
   const typeColor = TYPE_COLORS[txType] ?? "#1a5fa8";
@@ -520,24 +525,24 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   if (!open) return null;
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 580, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,.3)" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+      <div className="finance-drawer" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: 620, maxHeight: "92vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
 
         {/* Header */}
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e4e8", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff", borderTop: `3px solid ${typeColor}` }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: typeColor }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surfaceAlt, borderTop: `3px solid ${typeColor}`, zIndex: 1 }}>
+          <div style={{ fontWeight: 900, fontSize: 16, color: typeColor }}>
             {title ?? (form.id ? "Edit Transaction" : "New Transaction")}
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
         </div>
 
-        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 13 }}>
 
           {/* Errors */}
-          {errors.length > 0 && <Alert type="error">{errors.map((e, i) => <div key={i}>• {e}</div>)}</Alert>}
+          {errors.length > 0 && <Alert type="error">{errors.map((e, i) => <div key={i}>- {e}</div>)}</Alert>}
 
           {/* Warnings */}
-          {warnings.map((w, i) => <Alert key={i} type="warning">⚠ {w}</Alert>)}
+          {warnings.map((w, i) => <Alert key={i} type="warning">Warning: {w}</Alert>)}
 
           {/* Amount + Date */}
           <Grid2>
@@ -576,7 +581,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                   ...(txType === "transfer" ? { categoryId: "", linkedVehicleId: "", linkedPropertyId: "", linkedHouseLoanId: "", linkedLiabilityId: "", odometer: "" } : {}),
                 }));
               }}
-                options={[{ value: "", label: "— Select sub-type —" }, ...subTypeOptions]}
+                options={[{ value: "", label: "-- Select sub-type --" }, ...subTypeOptions]}
                 required={requiresSubType(txType)} />
             )}
           </Grid2>
@@ -597,15 +602,15 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             <input value={form.description || generatedDescription} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="Transaction label"
              
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: "#fff" }} />
+              style={{ width: "100%", minHeight: 38, padding: "8px 11px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 13, boxSizing: "border-box" as const, background: theme.colors.surface, color: theme.colors.text }} />
             {!form.description && (
-              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4 }}>
                 Auto-generated from the selected type, category, accounts, and linked item. Edit it only if you want a custom label.
               </div>
             )}
             {autoDetectedCat && !form.categoryId && (
-              <div style={{ fontSize: 11, color: "#1a5fa8", marginTop: 3 }}>
-                🔍 Auto-detected: {categories.find((c) => c.id === autoDetectedCat)?.name ?? autoDetectedCat}
+              <div style={{ fontSize: 11, color: theme.colors.primary, marginTop: 3 }}>
+                Auto-detected: {categories.find((c) => c.id === autoDetectedCat)?.name ?? autoDetectedCat}
               </div>
             )}
           </div>
@@ -620,7 +625,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                       setForm((p) => ({ ...p, notes: "" }));
                       setShowNotes(false);
                     }}
-                    style={{ border: "none", background: "none", color: "#6b7280", fontSize: 11, cursor: "pointer", padding: 0 }}
+                    style={{ border: "none", background: "none", color: theme.colors.textSoft, fontSize: 11, cursor: "pointer", padding: 0 }}
                   >
                     Hide notes
                   </button>
@@ -629,7 +634,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
               <input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                 placeholder="Reference number, extra context, or something you want to remember later"
                
-                style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13, boxSizing: "border-box" as const, background: "#fff" }} />
+                style={{ width: "100%", minHeight: 38, padding: "8px 11px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 13, boxSizing: "border-box" as const, background: theme.colors.surface, color: theme.colors.text }} />
             </div>
           ) : (
             (
@@ -637,7 +642,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 <button
                   type="button"
                   onClick={() => setShowNotes(true)}
-                  style={{ border: "none", background: "none", color: "#1a5fa8", fontSize: 12, cursor: "pointer", padding: 0, fontWeight: 600 }}
+                  style={{ border: "none", background: "none", color: theme.colors.primary, fontSize: 12, cursor: "pointer", padding: 0, fontWeight: 800 }}
                 >
                   + Add note
                 </button>
@@ -661,8 +666,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                   }));
                 }}
                  
-                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${form.categoryId ? "#1a7f3c" : "#e2e4e8"}`, borderRadius: 8, background: "#fff", fontSize: 13 }}>
-                  <option value="">— Select category —</option>
+                  style={{ width: "100%", minHeight: 38, padding: "8px 11px", border: `1px solid ${form.categoryId ? theme.colors.success : theme.colors.border}`, borderRadius: theme.radius.sm, background: theme.colors.surface, fontSize: 13, color: theme.colors.text }}>
+                  <option value="">-- Select category --</option>
                   {catList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
@@ -676,7 +681,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             />
           </Grid2>
 
-          {/* Destination — for transfers, adjustments, loans */}
+          {/* Destination - for transfers, adjustments, loans */}
           {showDestination && (
             <Sel label="Destination Account / Card" value={form.destinationId} onChange={f("destinationId")}
               options={destinationOptions} required={requiresDestination(txType)} />
@@ -763,7 +768,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 }));
               }}
               options={[
-                { value: "", label: "— Select mortgage —" },
+                { value: "", label: "-- Select mortgage --" },
                 ...houseLoans.map((loan) => ({ value: loan.id, label: loan.name })),
               ]}
               required
@@ -773,7 +778,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           {/* Property link */}
           {showPropertyLink && (
             <Sel label="Property (optional)" value={form.linkedPropertyId} onChange={f("linkedPropertyId")}
-              options={[{ value: "", label: "— Select property —" }, ...properties.filter((property) => !property.archived).map((property) => ({ value: property.id, label: property.name }))]} />
+              options={[{ value: "", label: "-- Select property --" }, ...properties.filter((property) => !property.archived).map((property) => ({ value: property.id, label: property.name }))]} />
           )}
 
           {/* Balance preview */}
@@ -803,13 +808,13 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
                 )}
                 {dstAcct && (
                   <div style={{ fontSize: 12, color: "#1a7f3c" }}>
-                    → {dstAcct.name}: {fmtCAD(toFixed2(dstAcct.openingBalance + amt))} after
+                    To {dstAcct.name}: {fmtCAD(toFixed2(dstAcct.openingBalance + amt))} after
                     <span style={{ color: "#9ca3af" }}> (currently {fmtCAD(dstAcct.openingBalance)})</span>
                   </div>
                 )}
                 {dstCard && (
                   <div style={{ fontSize: 12, color: "#1a7f3c" }}>
-                    → {dstCard.name}: {fmtCAD(toFixed2(dstCard.openingBalance - amt))} owed after
+                    To {dstCard.name}: {fmtCAD(toFixed2(dstCard.openingBalance - amt))} owed after
                     <span style={{ color: "#9ca3af" }}> (currently {fmtCAD(dstCard.openingBalance)})</span>
                   </div>
                 )}
