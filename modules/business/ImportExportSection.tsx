@@ -31,6 +31,8 @@ import {
 } from "@/lib/supabase/cloudSnapshots";
 import { migratePropertyParents } from "@/utils/propertyMigration";
 import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
+import { ActionButton, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
+import { theme } from "@/lib/theme";
 
 type RawObject = Record<string, unknown>;
 type ImportResult = ImportPayload | MigrationResult;
@@ -54,29 +56,33 @@ function Btn({
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
 }) {
-  const c = {
-    primary: { bg: "#1a5fa8", color: "#fff" },
-    secondary: { bg: "#f3f4f6", color: "#374151" },
-    danger: { bg: "#fef2f2", color: "#a31515" },
-  }[variant];
+  return <ActionButton tone={variant} onClick={onClick} disabled={disabled}>{children}</ActionButton>;
+}
+
+function Notice({ type, children }: { type: "success" | "error" | "warning" | "info"; children: React.ReactNode }) {
+  const styleByType = {
+    success: { background: theme.colors.successSoft, color: theme.colors.success, border: "#bbf7d0" },
+    error: { background: theme.colors.dangerSoft, color: theme.colors.danger, border: "#fecaca" },
+    warning: { background: theme.colors.warningSoft, color: theme.colors.warning, border: "#fde68a" },
+    info: { background: "#f0f9ff", color: theme.colors.textSoft, border: "#bae6fd" },
+  }[type];
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        padding: "8px 20px",
-        fontSize: 13,
-        fontWeight: 600,
-        borderRadius: 8,
-        border: "none",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-        background: c.bg,
-        color: c.color,
-      }}
-    >
+    <div style={{ padding: "12px 16px", borderRadius: theme.radius.md, marginBottom: 16, fontSize: 13, background: styleByType.background, color: styleByType.color, border: `1px solid ${styleByType.border}` }}>
       {children}
-    </button>
+    </div>
+  );
+}
+
+function PreviewGrid({ preview }: { preview: Record<string, number> }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
+      {Object.entries(preview).map(([label, count]) => (
+        <div key={label} className="finance-card" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 10px", background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm }}>
+          <span style={{ color: theme.colors.textSoft }}>{label}</span>
+          <span style={{ fontWeight: 750, color: count > 0 ? theme.colors.primary : theme.colors.textMuted }}>{count}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -302,22 +308,22 @@ export function ImportExportSection() {
     const accountOptions = [...pendingData.accounts, ...pendingData.creditCards];
 
     return (
-      <div style={{ marginTop: 12, border: "1px solid #cbd5e1", borderRadius: 8, overflow: "hidden", background: "#fff" }}>
-        <div style={{ padding: "9px 12px", background: "#f8fafc", fontWeight: 700, fontSize: 12 }}>Transaction cleanup before import</div>
+      <SurfaceCard style={{ marginTop: 12, overflow: "hidden" }}>
+        <div style={{ padding: "11px 14px", background: theme.colors.surfaceAlt, borderBottom: `1px solid ${theme.colors.border}`, fontWeight: 750, fontSize: 12 }}>Transaction cleanup before import</div>
         {transactionIds.map((transactionId) => {
           const transaction = pendingData.transactions.find((item) => item.id === transactionId);
           if (!transaction) return null;
           const messages = issueMessages.filter((message) => transactionIdFromIssue(message) === transactionId);
           return (
-            <div key={transactionId} style={{ padding: 12, borderTop: "1px solid #e2e8f0" }}>
+            <div key={transactionId} style={{ padding: 12, borderTop: `1px solid ${theme.colors.border}` }}>
               <div style={{ fontSize: 12, fontWeight: 700 }}>{transaction.date} | {transaction.description} | ${transaction.amount.toFixed(2)}</div>
-              <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>{messages.join(" ")}</div>
+              <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 3 }}>{messages.join(" ")}</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 <select
                   aria-label={`Source for ${transaction.description}`}
                   value={transaction.sourceId}
                   onChange={(event) => updateImportTransaction(transaction.id, "sourceId", event.target.value)}
-                  style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12 }}
+                  style={{ padding: "6px 8px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 12 }}
                 >
                   <option value="">Select source...</option>
                   {accountOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -327,7 +333,7 @@ export function ImportExportSection() {
                     aria-label={`Destination for ${transaction.description}`}
                     value={transaction.destinationId}
                     onChange={(event) => updateImportTransaction(transaction.id, "destinationId", event.target.value)}
-                    style={{ padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12 }}
+                    style={{ padding: "6px 8px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 12 }}
                   >
                     <option value="">Select destination...</option>
                     {accountOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -338,7 +344,7 @@ export function ImportExportSection() {
             </div>
           );
         })}
-      </div>
+      </SurfaceCard>
     );
   }
 
@@ -529,63 +535,46 @@ export function ImportExportSection() {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Import / Export</div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
-        Import your existing FinanceOS prototype JSON, export your current data, or use Supabase cloud backup for safer persistence.
-      </div>
+      <PageHeader
+        title="Import / Export"
+        subtitle="Import FinanceOS JSON, export local backups, and manage guarded Supabase cloud snapshots."
+      />
 
       {status && (
-        <div
-          style={{
-            padding: "12px 16px",
-            borderRadius: 10,
-            marginBottom: 16,
-            fontSize: 13,
-            background: status.type === "success" ? "#f0fdf4" : status.type === "error" ? "#fef2f2" : "#fef3c7",
-            color: status.type === "success" ? "#1a7f3c" : status.type === "error" ? "#a31515" : "#a05c00",
-            border: `1px solid ${status.type === "success" ? "#bbf7d0" : status.type === "error" ? "#fecaca" : "#fde68a"}`,
-          }}
-        >
+        <Notice type={status.type}>
           {status.message}
-        </div>
+        </Notice>
       )}
 
       {preview && previewSource === "cloud" && (
-        <div style={{ background: "#fff", border: "1px solid #dbeafe", borderRadius: 10, padding: "20px", marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: "#1a5fa8" }}>Cloud Snapshot Preview</div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+        <SurfaceCard accent={theme.colors.primary} style={{ padding: 20, marginBottom: 16 }}>
+          <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8, color: theme.colors.primary }}>Cloud Snapshot Preview</div>
+          <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 12 }}>
             This snapshot was loaded from Supabase cloud backup. Confirm import only if you want to replace the current local browser data with this cloud copy.
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
-            {Object.entries(preview).map(([label, count]) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e2e4e8" }}>
-                <span style={{ color: "#6b7280" }}>{label}</span>
-                <span style={{ fontWeight: 700, color: count > 0 ? "#1a5fa8" : "#9ca3af" }}>{count}</span>
-              </div>
-            ))}
-          </div>
+          <PreviewGrid preview={preview} />
 
           {importValidation?.errors.length ? (
-            <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#a31515" }}>
+            <Notice type="error">
               <div style={{ fontWeight: 600, marginBottom: 6 }}>Import blocked due to unresolved reference errors:</div>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 {importValidation.errors.map((error, idx) => <li key={idx}>{error}</li>)}
               </ul>
-            </div>
+            </Notice>
           ) : null}
 
           {visibleImportWarnings.length ? (
-            <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fefce8", border: "1px solid #fde68a", color: "#92400e" }}>
+            <Notice type="warning">
               <div style={{ fontWeight: 600, marginBottom: 6 }}>Warnings:</div>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 {visibleImportWarnings.map((warning) => (
                   <li key={warning} style={{ marginBottom: 6 }}>
                     {warning}{" "}
-                    <button onClick={() => setAcceptedImportWarnings((current) => [...current, warning])} style={{ border: 0, background: "transparent", color: "#1a5fa8", cursor: "pointer", fontWeight: 700 }}>Accept cleanup</button>
+                    <button onClick={() => setAcceptedImportWarnings((current) => [...current, warning])} style={{ border: 0, background: "transparent", color: theme.colors.primary, cursor: "pointer", fontWeight: 700 }}>Accept cleanup</button>
                   </li>
                 ))}
               </ul>
-            </div>
+            </Notice>
           ) : null}
           {renderTransactionReview()}
 
@@ -606,33 +595,33 @@ export function ImportExportSection() {
               Cancel
             </Btn>
           </div>
-        </div>
+        </SurfaceCard>
       )}
 
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "20px", marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Guarded Cloud Snapshots (Supabase)</div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>
+      <SurfaceCard style={{ padding: 20, marginBottom: 16 }}>
+        <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8 }}>Guarded Cloud Snapshots (Supabase)</div>
+        <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 16 }}>
           Manual cloud save keeps revision history and blocks stale overwrites. Loading any current or historical snapshot always opens the normal import preview before local data changes.
         </div>
 
         {!isSupabaseConfigured() ? (
-          <div style={{ padding: "10px 12px", borderRadius: 8, background: "#fef3c7", color: "#a05c00", border: "1px solid #fde68a", fontSize: 12 }}>
+          <Notice type="warning">
             Supabase is not configured yet. Add the public URL and publishable key to .env.local to enable cloud backup.
-          </div>
+          </Notice>
         ) : !cloudSession ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input
               value={cloudEmail}
               onChange={(e) => setCloudEmail(e.target.value)}
               placeholder="Email"
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13 }}
+              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 13 }}
             />
             <input
               type="password"
               value={cloudPassword}
               onChange={(e) => setCloudPassword(e.target.value)}
               placeholder="Password"
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 13 }}
+              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 13 }}
             />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Btn onClick={handleCloudSignIn} disabled={cloudBusy || !cloudEmail || !cloudPassword}>Sign In</Btn>
@@ -641,11 +630,12 @@ export function ImportExportSection() {
           </div>
         ) : (
           <div>
-            <div style={{ fontSize: 12, color: "#1a7f3c", marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: theme.colors.success, marginBottom: 10 }}>
               Signed in as <strong>{cloudSession.user.email}</strong>
               {cloudUpdatedAt ? ` | revision ${cloudSnapshot?.revision ?? "?"} saved ${new Date(cloudUpdatedAt).toLocaleString()}` : " | no cloud snapshot saved yet"}
             </div>
-            <div style={{ padding: "8px 10px", borderRadius: 6, background: cloudState === "in-sync" ? "#ecfdf5" : cloudState === "cloud-newer" ? "#fef2f2" : "#fff7ed", color: cloudState === "in-sync" ? "#166534" : cloudState === "cloud-newer" ? "#991b1b" : "#9a3412", fontSize: 12, marginBottom: 10 }}>
+            <div style={{ padding: "8px 10px", borderRadius: theme.radius.sm, background: cloudState === "in-sync" ? theme.colors.successSoft : cloudState === "cloud-newer" ? theme.colors.dangerSoft : theme.colors.warningSoft, color: cloudState === "in-sync" ? theme.colors.success : cloudState === "cloud-newer" ? theme.colors.danger : theme.colors.warning, fontSize: 12, marginBottom: 10 }}>
+              <StatusChip tone={cloudState === "in-sync" ? "success" : cloudState === "cloud-newer" ? "danger" : "warning"}>{cloudState}</StatusChip>{" "}
               {cloudState === "in-sync" && "Local data matches the latest cloud revision."}
               {cloudState === "local-changes" && "Local data differs from the latest checked cloud revision."}
               {cloudState === "not-saved" && "No cloud revision exists yet."}
@@ -656,7 +646,7 @@ export function ImportExportSection() {
               value={cloudLabel}
               onChange={(event) => setCloudLabel(event.target.value)}
               placeholder="Optional restore-point label"
-              style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e4e8", borderRadius: 8, fontSize: 12, marginBottom: 10, boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 12, marginBottom: 10, boxSizing: "border-box" }}
             />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Btn onClick={handleSaveToCloud} disabled={cloudBusy || cloudState === "checking" || cloudState === "cloud-newer"}>Save New Revision</Btn>
@@ -665,11 +655,11 @@ export function ImportExportSection() {
               <Btn variant="danger" onClick={handleCloudSignOut} disabled={cloudBusy}>Sign Out</Btn>
             </div>
             {cloudHistory.length > 0 && (
-              <div style={{ marginTop: 14, borderTop: "1px solid #e2e4e8", paddingTop: 12 }}>
+              <div style={{ marginTop: 14, borderTop: `1px solid ${theme.colors.border}`, paddingTop: 12 }}>
                 <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Restore points</div>
                 <div style={{ display: "grid", gap: 6 }}>
                   {cloudHistory.map((snapshot) => (
-                    <div key={snapshot.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "7px 9px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 12 }}>
+                    <div key={snapshot.id} className="finance-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "7px 9px", background: theme.colors.surfaceAlt, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 12 }}>
                       <span>
                         <strong>Revision {snapshot.revision}</strong> | {new Date(snapshot.created_at).toLocaleString()}
                         {snapshot.label ? ` | ${snapshot.label}` : ""}
@@ -682,13 +672,13 @@ export function ImportExportSection() {
             )}
           </div>
         )}
-      </div>
+      </SurfaceCard>
 
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "20px", marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Import from FinanceOS JSON</div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16, background: "#f0f9ff", padding: "10px 14px", borderRadius: 8, border: "1px solid #bae6fd" }}>
+      <SurfaceCard style={{ padding: 20, marginBottom: 16 }}>
+        <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8 }}>Import from FinanceOS JSON</div>
+        <Notice type="info">
           Select your FinanceOS_YYYY-MM-DD.json export. Your existing local data here will be replaced after you confirm the preview.
-        </div>
+        </Notice>
         <input
           ref={fileRef}
           type="file"
@@ -698,38 +688,31 @@ export function ImportExportSection() {
         />
 
         {preview && previewSource === "file" && (
-          <div style={{ background: "#f9fafb", border: "1px solid #e2e4e8", borderRadius: 8, padding: "12px 16px", marginBottom: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Preview - data to be imported:</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
-              {Object.entries(preview).map(([label, count]) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e2e4e8" }}>
-                  <span style={{ color: "#6b7280" }}>{label}</span>
-                  <span style={{ fontWeight: 700, color: count > 0 ? "#1a5fa8" : "#9ca3af" }}>{count}</span>
-                </div>
-              ))}
-            </div>
+          <SurfaceCard style={{ background: theme.colors.surfaceAlt, padding: "12px 16px", marginBottom: 12 }}>
+            <div style={{ fontWeight: 750, fontSize: 13, marginBottom: 10 }}>Preview - data to be imported:</div>
+            <PreviewGrid preview={preview} />
 
             {importValidation?.errors.length ? (
-              <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#a31515" }}>
+              <Notice type="error">
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>Import blocked due to unresolved reference errors:</div>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {importValidation.errors.map((error, idx) => <li key={idx}>{error}</li>)}
                 </ul>
-              </div>
+              </Notice>
             ) : null}
 
             {visibleImportWarnings.length ? (
-              <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 8, background: "#fefce8", border: "1px solid #fde68a", color: "#92400e" }}>
+              <Notice type="warning">
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>Warnings:</div>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {visibleImportWarnings.map((warning) => (
                     <li key={warning} style={{ marginBottom: 6 }}>
                       {warning}{" "}
-                      <button onClick={() => setAcceptedImportWarnings((current) => [...current, warning])} style={{ border: 0, background: "transparent", color: "#1a5fa8", cursor: "pointer", fontWeight: 700 }}>Accept cleanup</button>
+                      <button onClick={() => setAcceptedImportWarnings((current) => [...current, warning])} style={{ border: 0, background: "transparent", color: theme.colors.primary, cursor: "pointer", fontWeight: 700 }}>Accept cleanup</button>
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Notice>
             ) : null}
             {renderTransactionReview()}
 
@@ -751,25 +734,25 @@ export function ImportExportSection() {
                 Cancel
               </Btn>
             </div>
-          </div>
+          </SurfaceCard>
         )}
-      </div>
+      </SurfaceCard>
 
-      <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, padding: "20px", marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Export Current Data</div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>
+      <SurfaceCard style={{ padding: 20, marginBottom: 16 }}>
+        <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8 }}>Export Current Data</div>
+        <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 16 }}>
           Download all your current local data as a JSON file. Keep this as a backup even after cloud save is enabled.
         </div>
         <Btn onClick={handleExport}>Export JSON</Btn>
-      </div>
+      </SurfaceCard>
 
-      <div style={{ background: "#fff", border: "1px solid #fecaca", borderRadius: 10, padding: "20px" }}>
-        <div style={{ fontWeight: 600, fontSize: 14, color: "#a31515", marginBottom: 8 }}>Danger Zone</div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>
+      <SurfaceCard accent={theme.colors.danger} style={{ padding: 20 }}>
+        <div style={{ fontWeight: 750, fontSize: 14, color: theme.colors.danger, marginBottom: 8 }}>Danger Zone</div>
+        <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 16 }}>
           Permanently delete all local app data from this browser. This cannot be undone.
         </div>
         <Btn variant="danger" onClick={handleClearAll}>Clear All Data</Btn>
-      </div>
+      </SurfaceCard>
     </div>
   );
 }
