@@ -188,20 +188,25 @@ we follow:
 
 ## Recommended Phase Direction
 
-The stabilization phase has materially landed: balance snapshots, ledger explanations, Health Report, canonical transaction purposes/effects, semantic duplicates, linked lender liabilities, refund treatment, and stronger Transaction History filters are operational.
+The stabilization phase has materially landed: balance snapshots, ledger explanations, Health Report, canonical transaction purposes/effects, semantic duplicates, linked lender liabilities, refund treatment, stronger Transaction History filters, and guarded cloud snapshot foundations are operational.
 
-The ordered path to production completion is now:
+Real-user testing now shows that the remaining path must be handled as controlled visible slices rather than broad autonomous batches. The ordered path to production completion is:
 
-1. Complete lender and debt-detail UX. (Landed)
-2. Consolidate recurring architecture. (Landed)
-3. Build the first-class Property parent model. (Landed)
-4. Improve optional detailed mortgage/vehicle debt reporting. (Landed)
-5. Expand findability, Data Health, and import review. (Landed)
-6. Build the secure AI Statement Scanner MVP. (Landed)
-7. Add guarded cloud history and conflict protection. (Landed)
-8. Add tax working papers and Excel/PDF reporting exports. (Landed)
+1. Finish lender UX and lender-balance clarity.
+2. Clean up Assets, Liabilities, House Loans, Properties, and Vehicles as one connected area.
+3. Finalize the mortgage principal/interest strategy around dynamic estimates and deliberate manual or statement-confirmed overrides.
+4. Improve projections so expected credit-card and LOC repayment pressure is visible.
+5. Consolidate recurring confirmations, backfills, Log Payment, and schedules around one write path.
+6. Polish Property ownership and reporting across mortgages, tax, insurance, and expenses.
+7. Expand Data Health repair, relinking, dismissal, duplicate, stale-reference, and classification checks.
+8. Improve import review correction controls before confirmation.
+9. Add or harden tax working papers plus Excel/PDF exports.
+10. Expand guarded cloud history, restore points, and conflict protection.
+11. Keep AI Statement Scanner work deferred until the core app is solid.
+12. Continue visual-system modernization across remaining older surfaces.
+13. Clarify Transaction History summary totals so Outflows are visibly broken down into expense, debt repayment, tax, and other cash-out categories.
 
-Every phase must preserve ledger-first behavior, remain backward-compatible with current JSON exports, use accounting `date` rather than `createdAt`, and finish with automated plus browser-level verification.
+Every slice must preserve ledger-first behavior, remain backward-compatible with current JSON exports, use accounting `date` rather than `createdAt`, pass automated checks, and stop for browser testing before the next slice begins.
 
 ## Current Implementation Status Summary
 As of this version:
@@ -249,12 +254,12 @@ As of this version:
 - Transaction History supports exact tag and recurring-origin filtering
 - Data Health supports canonical correction/relinking, safe deletion, reversible dismissal, and broader orphan/classification checks
 - import preview supports transaction relinking, exclusion, normalization acceptance, and semantic-duplicate review before writes
-- AI statement images flow through a server-only provider adapter into an editable, explicitly confirmed canonical transaction batch
-- scanner account selection, duplicate review, privacy consent, no-storage behavior, and provider retention messaging are live
+- AI statement images flow through a server-only provider adapter into an editable, explicitly confirmed canonical transaction batch, but scanner expansion remains deferred until core ledger, debt, projection, and UX stability are stronger
+- scanner account selection, duplicate review, privacy consent, no-storage behavior, and provider retention messaging are live as the current foundation
 - guarded Supabase saves use optimistic revisions, append-only restore points, conflict blocking, and visible local-versus-cloud state
 - all cloud restores use import preview, while manual JSON backup remains independent
 - CRA working papers separate bookkeeping totals, confidence, and user-confirmed tax treatment
 - genuine Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries
 - the June 29 fixture replays all stored account/card balances without drift
 
-All eight production-completion phases are implemented and locally verified, including browser acceptance. Remaining external work is limited to live AI OCR verification after a server-side provider credential and an explicitly approved statement image are available.
+Production completion is no longer treated as one fully landed block. Remaining work is tracked in `docs/10_DEFERRED_ITEMS.md` and should proceed one visible slice at a time with user testing between slices.

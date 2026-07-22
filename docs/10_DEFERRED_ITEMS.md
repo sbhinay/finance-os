@@ -1,117 +1,130 @@
 # Deferred Items
 
-This file records work that remains after the eight-phase production-completion program. Landed behavior belongs in the technical documents; this file must not describe shipped features as future work.
+This file tracks work that still needs product hardening after real-user testing. Landed behavior belongs in the technical documents; unfinished or confusing behavior stays here until it is verified from the browser and user workflow.
 
-## Landed Production Phases
+## Delivery Discipline
 
-### Phase 1: Lender and debt UX
-- Lender create/edit, notes, archive/restore, safe deletion, snapshots, canonical relinking, Borrow, and Repay are implemented.
-- Lender detail reports borrowed, principal repaid, interest paid, current owing, and a running principal ledger.
+Work must proceed in controlled visible slices:
 
-### Phase 2: Recurring architecture
-- Pending generation, confirmation, Log Payment, and backfill use shared canonical transaction rules.
-- Recurring definitions have stable ownership and origin links.
-- Subscriptions, planned transfers, fees, insurance, property tax, vehicle payments, mortgages, and tax obligations use the canonical write path.
+- Do one visible slice at a time.
+- Keep the app usable at the end of every slice.
+- After each slice, stop and report exactly what changed.
+- Tell the user what to test in the browser.
+- Do not continue to the next slice until the user confirms.
+- Commit and sync `main` and `codex/phase-next` only after the slice is verified.
 
-### Phase 3: Property parent model
-- First-class primary, rental, and commercial Property records are implemented.
-- Properties link mortgages, property tax, insurance, expenses, carrying costs, equity, and transaction history.
-- Only unambiguous legacy relationships migrate automatically.
+## Recently Landed Foundations
 
-### Phase 4: Detailed debt reporting
-- Mortgage details separate cash paid, principal, interest, and unallocated payments.
-- Mortgage principal/interest is calculated dynamically when rate/snapshot data is available, with rows labeled Estimated versus Manual.
-- Stored split fields remain only for backward-compatible manual overrides, imports, or statement-confirmed exception rows.
-- Full payments remain in cash planning; manual or dynamically estimated principal reduces derived mortgage liability.
-- Regular mode remains valid when a split is unavailable.
-- Normal mortgage entry and backfill do not store app-generated estimated split fields.
-- Legacy FinanceOS-generated split fields are treated as generated data, not manual truth.
+These items are implemented enough to serve as foundations, but some still need polish in the remaining slices below:
 
-### Phase 5: Findability and Data Health
-- Transaction History supports account/card, subtype, linked entity, tag, and recurring-origin filters.
-- Data Health checks stale references, classifications, debt splits, recurring ownership, and semantic duplicates.
-- Users can correct, relink, delete, or dismiss findings safely.
-- Import preview supports relinking, row exclusion, cleanup acceptance, and duplicate review.
+- Canonical transaction persistence through `services/transactionPipeline.ts`.
+- Shared transaction purposes and financial-effect semantics.
+- Refund treatment that reduces card owing and reverses expense reporting.
+- Balance snapshots on accounts, cards, and debt-like records.
+- Account/card ledger explanation views.
+- Lender liability tracking foundation with Borrow and Repay workflows.
+- Semantic duplicate detection.
+- First-class Property records and linked mortgage/property-tax relationships.
+- Data Health repair actions and import-preview cleanup controls.
+- Guarded Supabase snapshot foundation.
+- Incremental modern UI passes across the shell, Daily Log, Transaction History, Dashboard, Accounts & Cards, Business, Data & Health, Categories, Hours & Contracts, Scan Statement, and Properties.
 
-### Phase 6: AI Statement Scanner MVP
-- The scanner uses a server-only, replaceable provider adapter.
-- Images produce editable candidates and require explicit account/card selection.
-- Nothing is written before confirmation; confirmed rows use canonical batch persistence.
-- Privacy, retention, request limits, and duplicate review are visible to the user.
+## Remaining Controlled Slices
 
-### Phase 7: Guarded cloud persistence
-- Cloud saves use optimistic revision checks and append-only restore history.
-- Stale overwrites are blocked and local-versus-cloud state is visible.
-- Restores enter import preview; JSON export/import remains independent.
-- Required Supabase migration and deployment documentation is included.
+### 1. Lender UX Completion
 
-### Phase 8: Tax and reporting exports
-- CRA working papers keep bookkeeping totals separate from proposed or user-confirmed tax treatment.
-- Missing-information and accountant-review states remain explicit.
-- Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries.
+- Polish lender create/edit/detail workflows.
+- Confirm archive, restore, and safe deletion behavior from the browser.
+- Improve lender detail layout, notes, snapshots, relinking, and running ledger clarity.
+- Make borrowed, principal repaid, interest paid, and current owing easy to trust.
 
-### Modern design foundation
-- Shared theme tokens, reusable card/button/chip primitives, global focus states, subtle motion classes, responsive shell styling, and finance-table styling are in place.
-- Modern UI Pass 1 applies those primitives to the app shell, Accounts & Cards, Dashboard / Projection, Transaction History, and Health Report.
-- Modern UI Pass 2 applies the same visual language to Daily Log, pending/recurring quick-add modals, and the shared Transaction Form drawer without changing ledger behavior.
-- Modern UI Pass 3 makes the visual direction materially visible with a light navigation rail, teal primary accent, warmer page background, and a simplified Daily Log activity surface without duplicate new-transaction entry points.
-- Modern UI Pass 4 standardizes typography weight, removes negative letter spacing from application UI, prefers a native Windows-friendly font stack, and aligns shared/local button, panel, metric, and modal primitives across the major finance pages.
-- Modern UI Pass 5 applies the shared Business-page visual language to Tax Obligations, Corporation Income, and Tax & Rate Settings, including display-side cleanup for rate-setting notes that contain legacy mojibake.
-- Modern UI Pass 6 applies the shared shell to Import / Export, including guarded-cloud status panels, JSON preview grids, import warning cleanup, restore points, export, and danger-zone surfaces.
-- Modern UI Pass 7 applies the shared shell to Categories, including metric cards, themed filters, linked-category chips, archive confirmation, and category edit modal cleanup without changing user-managed category data.
-- Modern UI Pass 8 applies the shared shell to Hours & Contracts, including invoice metrics, fiscal-hour allocation metrics, contract cards, modal chrome, and ASCII-only visible invoice/contract labels.
-- Modern UI Pass 9 applies the shared shell to Scan Statement, including privacy/provider panels, upload controls, extraction status, editable candidate preview, duplicate/confidence chips, and confirm/discard actions without changing the server-only scanner boundary.
-- Modern UI Pass 10 applies the shared shell to Properties, including page actions, property summary cards, linked type/archive chips, property metrics, and modal metric summaries without changing Property migration, ledgers, or save behavior.
-- Visual modernization remains incremental so dense finance workflows stay readable and stable.
+### 2. Assets, Liabilities, House Loans, and Vehicles Cleanup
 
-## Remaining External Acceptance Work
+- Make Assets & Liabilities, House Loans, Properties, and Vehicles feel like one connected area.
+- Reduce confusing duplicate entry points without hiding needed links.
+- Clarify which records are parents, which records are ledger transactions, and which views are reports.
+- Keep mortgage and vehicle actions discoverable from the unified hub.
 
-These are environment or external-service checks, not missing local implementations:
+### 3. Mortgage Principal and Interest Strategy
 
-- Run `npm run validate:production` for the full repeatable local production gate.
-- `npm run validate:production` includes `npm run validate:mojibake`, so encoding regressions fail the local gate.
-- Run one live AI extraction with `npm run validate:scanner:live -- --image C:\path\to\approved-statement-image.png` after a server-side provider credential and explicitly approved statement image are supplied.
+- Avoid fragile app-generated stored principal/interest fields.
+- Prefer dynamic estimated splits in detail/report views when rate, balance, cadence, and snapshot data are available.
+- Preserve statement-confirmed or deliberately entered manual splits only when clearly intentional.
+- Support lump-sum principal payments without corrupting future calculations.
+- Keep full payments in cash planning while reducing debt only by principal.
 
-Browser acceptance is complete at desktop and mobile breakpoints for lender, Property, recurring, Data Health, scanner, cloud, and tax/report surfaces. No browser console errors were observed.
+### 4. Projection Logic for CC and LOC Repayments
 
-The guarded Supabase migration is deployed. Read-only verification confirmed the upgraded `app_snapshots` table, append-only `app_snapshot_history` table, and an authentication-protected `save_app_snapshot_guarded` RPC.
+- Include expected credit-card repayment pressure.
+- Include expected LOC repayment pressure.
+- Separate planned payments already logged from unplanned repayment exposure.
+- Keep projections realistic instead of falsely positive when card/LOC obligations are unpaid.
 
-## Deferred Product Enhancements
+### 5. Recurring Architecture Consolidation
 
-### Finance depth
-- Add optional amortization schedule generation and statement-assisted principal/interest allocation.
-- Add richer LOC and HELOC facilities beyond the current credit-card-like liability representation.
-- Add lender statements, payoff projections, and multi-currency debt support.
-- Add rental-property income, occupancy, tenant, and capital-improvement workflows.
+- Ensure confirmations, backfills, Log Payment, schedules, and parent-owned recurring flows use one shared write path.
+- Preserve canonical transaction purposes and semantic duplicate detection.
+- Standardize ownership links and recurring-origin links.
+- Remove redundant transaction-writing paths only where safe and well-tested.
 
-### Recurring intelligence
-- Add renewal/cancellation metadata and merchant insights for subscriptions.
-- Add richer expected-income sources and scenario-aware planned transfers.
-- Add optional matching assistance for schedule rows that differ from posted bank dates or amounts.
+### 6. Property Model Polish
 
-### Scanner evolution
-- Add provider benchmarking, account auto-detection, PDF statement support, and correction learning.
-- Add optional user-controlled archival only after privacy, encryption, and retention design is approved.
+- Unify Properties, House Loans, property tax, insurance, mortgages, and property expenses in the user flow.
+- Make ownership and reporting clear for primary, rental, and commercial properties.
+- Improve property carrying-cost, equity, and linked transaction explanations.
 
-### Cloud evolution
-- Consider cloud-first repositories only after guarded snapshots have been deployed and observed safely.
-- Add multi-device merge support only with an explicit, testable conflict policy.
+### 7. Data Health Expansion
 
-### Tax evolution
-- Expand CRA mappings only where current guidance and required taxpayer context support them.
-- Add accountant handoff packages and year-end comparative working papers.
-- Do not present bookkeeping classifications as filing advice.
+- Improve cleanup, relink, delete, correct, and dismiss controls.
+- Expand duplicate, stale-reference, orphan, and classification checks.
+- Make legitimate duplicates dismissible without hiding future real issues.
 
-### Product and QA
-- Continue accessibility, responsive-layout, performance, and browser-compatibility testing.
-- Add broader end-to-end coverage when the browser automation runtime is restored.
-- Continue applying the shared design primitives to older inline-heavy screens without weakening dense operational workflows.
+### 8. Import Review Improvements
+
+- Improve warning language and cleanup previews.
+- Make relinking, exclusion, duplicate review, and normalization acceptance easier before import confirmation.
+- Preserve backward-compatible JSON import/export.
+
+### 9. Tax Working Papers and Exports
+
+- Add or harden Excel and PDF exports for useful reports.
+- Keep CRA mapping cautious and confidence-based.
+- Separate bookkeeping totals from user-confirmed tax treatment.
+- Include lender, debt, property, vehicle, business, and ledger summaries.
+
+### 10. Guarded Cloud History and Conflict Protection
+
+- Expand snapshot history and restore points.
+- Improve overwrite protection and conflict/version checks.
+- Make local-versus-cloud state clear.
+- Preserve manual JSON export/import as the independent safety path.
+
+### 11. AI Statement Scanner Deferred
+
+- Keep the scanner documented but deferred until the core app is solid.
+- Do not prioritize OCR/provider work ahead of ledger, projection, debt, and UI stability.
+
+### 12. Larger Visual System Modernization
+
+- Continue improving typography, spacing, modal structure, page consistency, and subtle motion.
+- Make dense finance pages feel modern without reducing scanability.
+- Continue removing older inline-heavy styling from remaining screens.
+
+### 13. Transaction History Summary Clarity
+
+Observed July 2026: Transaction History showed `Outflows` above 10K while the `Expense` filter showed about 7K. This is confusing because the summary includes non-expense cash outflows such as debt, tax, card, LOC, or principal repayment rows, while the `Expense` filter only shows rows typed as expenses.
+
+- Break down Outflows into Expense, Debt Repayment, Tax, and other cash-out categories.
+- When a type filter is active, make it clear that summary cards are filtered totals.
+- Add drilldown, chips, or clearer labels so the user can identify which non-expense rows make up the difference.
+- Ensure principal repayments remain cash outflows but are not mislabeled as expenses.
 
 ## Non-Negotiable Architecture Rules
 
 - Transaction `date` is the accounting date; `createdAt` is metadata and a same-day tie-breaker only.
 - All transaction persistence goes through `services/transactionPipeline.ts`.
-- Balance snapshots are stored on the account/card/debt record; no reconciliation adjustment rows are created.
+- Balance snapshots are stored on the account, card, or debt record; no reconciliation adjustment rows are created.
 - Shared transaction semantics determine balances, signs, colors, ledgers, and reports.
-- Imports remain backward compatible and migrate only unambiguous meaning.
+- Imports remain backward-compatible and migrate only unambiguous meaning.
 - Custom descriptions and user-managed categories are preserved.
+- Touched files must pass mojibake validation before commit.

@@ -80,14 +80,14 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Debt details separate cash paid, principal, interest, unallocated payments, and current owing; dashboard, Property equity, and net-worth views consume the same calculation.
 - Mortgage details calculate estimated principal/interest dynamically when possible; stored split fields remain manual/import/statement-confirmed overrides.
 - Normal mortgage entry and backfill do not store app-generated split estimates; legacy FinanceOS-generated split rows are recalculated for display instead of trusted as manual truth.
-- Projection views include card/LOC repayment pressure or unplanned exposure without changing ledger balances.
+- Projection views have the foundation for card/LOC repayment pressure, but repayment planning still needs browser-verified polish so future cash views do not look falsely positive.
 - The design refresh has shared theme tokens plus reusable surface, button, and chip primitives for incremental modernization.
 - `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
 - Transaction History now filters by tag and exact recurring origin.
 - Data Health can open the canonical transaction editor for correction/relinking, delete rows safely, and reversibly dismiss legitimate warnings.
 - Import preview supports source/destination relinking, row exclusion, semantic-duplicate review, and explicit normalization acceptance without touching active data before confirmation.
-- AI Statement Scanner uses a server-only provider adapter, editable candidate preview, explicit account/card selection, semantic duplicate review, and canonical batch confirmation.
-- Scanner images are request-memory only in FinanceOS; privacy consent and provider-retention messaging are shown before extraction.
+- AI Statement Scanner uses a server-only provider adapter, editable candidate preview, explicit account/card selection, semantic duplicate review, and canonical batch confirmation as a foundation.
+- Scanner images are request-memory only in FinanceOS; privacy consent and provider-retention messaging are shown before extraction. Further scanner work is deferred until the core ledger, debt, projection, and UX surfaces are stable.
 - Supabase cloud saves now use optimistic revision checks, append-only restore history, conflict blocking, and visible local-versus-cloud comparison.
 - Cloud snapshot tables are client-read-only; every restore enters import preview and manual JSON backup remains available.
 - CRA Review persists explicit proposed/confirmed/excluded/accountant-review tax decisions separately from bookkeeping totals.
@@ -95,7 +95,8 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Production Phases 1 through 8 are landed and locally/browser verified. The only remaining external acceptance item is live statement extraction with an approved provider credential and approved statement image.
+- Transaction History still needs clearer Outflow breakdowns because current summary cards can include non-expense cash-out rows while the Expense filter only shows true expense rows.
+- Production completion is now tracked as controlled visible slices in `10_DEFERRED_ITEMS.md`; the app should no longer be documented as fully complete until those slices are browser verified.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.
 - The sidebar has been simplified around seven hubs:
@@ -109,7 +110,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Secondary pages remain available, but they are increasingly treated as subviews under those stronger destinations.
 - The current UX modernization uses a shared theme/token layer in `lib/theme.ts` rather than a UI framework migration.
 - Mobile navigation now uses an off-canvas drawer so narrow screens are not dominated by the sidebar.
-- Dashboard, Daily Log, Transaction History, Assets, Recurring, Business tax, Import / Export, Categories, Hours & Contracts, Scan Statement, and Properties surfaces are in active visual refresh so desktop and phone layouts stay usable from the same code path.
+- Dashboard, Daily Log, Transaction History, Assets, Recurring, Business tax, Import / Export, Categories, Hours & Contracts, Scan Statement, and Properties surfaces are in active visual refresh so desktop and phone layouts stay usable from the same code path. Remaining older surfaces should be modernized one visible slice at a time.
 - The `Business` hub now separates:
   - operational business tracking
   - corporation income snapshots
