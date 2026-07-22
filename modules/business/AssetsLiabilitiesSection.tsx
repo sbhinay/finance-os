@@ -141,6 +141,26 @@ function EmptyNote({ children }: { children: ReactNode }) {
   );
 }
 
+function WorkflowTile({
+  title,
+  body,
+  action,
+  accent,
+}: {
+  title: string;
+  body: string;
+  action?: ReactNode;
+  accent: string;
+}) {
+  return (
+    <div style={{ border: `1px solid ${theme.colors.border}`, borderTop: `3px solid ${accent}`, borderRadius: theme.radius.lg, background: "rgba(255,255,255,0.88)", padding: "12px 14px", boxShadow: "0 10px 26px rgba(15, 23, 42, 0.04)" }}>
+      <div style={{ fontSize: 12, fontWeight: 850, color: theme.colors.text, marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 11, lineHeight: 1.45, color: theme.colors.textSoft }}>{body}</div>
+      {action && <div style={{ marginTop: 10 }}>{action}</div>}
+    </div>
+  );
+}
+
 function amountBySchedule(amount: number, schedule: PaymentSchedule) {
   return toMonthly(amount, schedule);
 }
@@ -466,6 +486,48 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <StatBox label="Next 30 Days" value={fmtCAD(upcomingTotal30)} color="#a05c00" sub="upcoming obligations from this page" />
       </div>
 
+      <div style={{ ...theme.cardStyle(theme.colors.primary), padding: "14px 16px", marginBottom: 14, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 850, fontSize: 15, color: theme.colors.text }}>How This Hub Is Organized</div>
+            <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 3 }}>
+              Parent records own setup and schedules. Transactions remain the ledger. Reports connect both without duplicating debt.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <ActionBtn onClick={() => onNavigate("properties")}>Properties</ActionBtn>
+            <ActionBtn onClick={() => onNavigate("houseloans")}>Mortgages</ActionBtn>
+            <ActionBtn onClick={() => onNavigate("vehicles")}>Vehicles</ActionBtn>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
+          <WorkflowTile
+            title="Properties"
+            body="Identity, value, taxes, insurance, carrying costs, and linked transaction history."
+            accent="#b45309"
+            action={<ActionBtn onClick={() => onNavigate("properties")}>Open Properties</ActionBtn>}
+          />
+          <WorkflowTile
+            title="House Loans"
+            body="Mortgage schedules, cash payments, dynamic principal/interest detail, and current owing."
+            accent="#991b1b"
+            action={<ActionBtn onClick={() => onNavigate("houseloans")}>Open Mortgages</ActionBtn>}
+          />
+          <WorkflowTile
+            title="Vehicles"
+            body="Lease or finance setup, linked gas/maintenance/lease expenses, backfill, and history."
+            accent="#1d4ed8"
+            action={<ActionBtn onClick={() => onNavigate("vehicles")}>Open Vehicles</ActionBtn>}
+          />
+          <WorkflowTile
+            title="Lenders"
+            body="Personal, bank, and shareholder loans. Mortgages stay with Properties and House Loans."
+            accent="#047857"
+            action={<ActionBtn onClick={() => setShowLenderForm((value) => !value)}>{showLenderForm ? "Close Lender Form" : "Add Lender"}</ActionBtn>}
+          />
+        </div>
+      </div>
+
       <div style={{ marginBottom: 14 }}>
         <SectionCard
           title="Upcoming Obligations"
@@ -513,7 +575,12 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
         <SectionCard
           title="Real Estate"
           accent="#b45309"
-          actions={<ActionBtn onClick={() => onNavigate("properties")}>Properties</ActionBtn>}
+          actions={
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <ActionBtn onClick={() => onNavigate("properties")}>Properties</ActionBtn>
+              <ActionBtn onClick={() => onNavigate("houseloans")}>Mortgages</ActionBtn>
+            </div>
+          }
         >
           {properties.filter((property) => !property.archived).length === 0 ? (
             <EmptyNote>No properties yet.</EmptyNote>
@@ -539,7 +606,7 @@ export function AssetsLiabilitiesSection({ onNavigate }: { onNavigate: (target: 
                 {houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length} property tax schedule{houseLoans.filter((loan) => (loan.propertyTaxAmount ?? 0) > 0).length + propertyTaxes.length === 1 ? "" : "s"} | unpaid planned tax {fmtCAD(unpaidPropertyTax)}
               </div>
               <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                Mortgage details remain available in House Loans; property identity and carrying costs live in Properties.
+                Property identity and carrying costs live in Properties. Mortgage schedules and debt detail live in House Loans.
               </div>
             </div>
           )}

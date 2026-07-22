@@ -40,6 +40,7 @@ These items are implemented enough to serve as foundations, but some still need 
 
 ### 2. Assets, Liabilities, House Loans, and Vehicles Cleanup
 
+- Initial hub slice landed: Assets & Liabilities now has a visible organization strip that explains Properties, House Loans, Vehicles, and Lenders, with direct navigation to the relevant detail areas.
 - Make Assets & Liabilities, House Loans, Properties, and Vehicles feel like one connected area.
 - Reduce confusing duplicate entry points without hiding needed links.
 - Clarify which records are parents, which records are ledger transactions, and which views are reports.
