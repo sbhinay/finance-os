@@ -142,12 +142,15 @@ export function buildDebtRepaymentProjection({
       }
 
       if (!card.linkedAccountId) {
+        const target = estimateCardRepaymentAmount(card);
+        const unplannedAmount = toFixed2(Math.max(0, target - existingAmount));
+        unplannedExposure = toFixed2(unplannedExposure + unplannedAmount);
         warnings.push({
           cardId: card.id,
           name: card.name,
           owing: toFixed2(card.openingBalance),
           plannedAmount: existingAmount,
-          unplannedAmount: toFixed2(card.openingBalance),
+          unplannedAmount,
           reason: "missing_pay_from",
         });
         return;

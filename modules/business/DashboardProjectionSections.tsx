@@ -580,6 +580,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   }, [events30, totalBankNow, threshold, today]);
 
   const projected30 = days30[29]?.balance ?? totalBankNow;
+  const conservativeProjected30 = toFixed2(projected30 - debtProjection30.unplannedExposure);
   const lowDays = days30.filter((d) => d.warning).length;
 
   // ── Monthly view ──────────────────────────────────────────────────────────
@@ -688,15 +689,19 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       {/* Summary stats */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <StatBox label="Current Balance" value={fmtCAD(totalBankNow)} color="#1a7f3c" />
-        <StatBox label="30-Day Projected" value={fmtCAD(projected30)} color={projected30 >= threshold ? "#1a7f3c" : "#a31515"} />
+        <StatBox label="30-Day Scheduled" value={fmtCAD(projected30)} color={projected30 >= threshold ? "#1a7f3c" : "#a31515"} sub="dated income and payments" />
+        <StatBox label="After Debt Exposure" value={fmtCAD(conservativeProjected30)} color={conservativeProjected30 >= threshold ? "#1a7f3c" : "#a31515"} sub="scheduled less unresolved card/LOC owing" />
         <StatBox label="Low Balance Days" value={String(lowDays)} color={lowDays > 0 ? "#a31515" : "#1a7f3c"} sub="next 30 days" />
-        <StatBox label="Debt Pressure" value={fmtCAD(debtProjection30.repaymentPressure)} color={debtProjection30.repaymentPressure > 0 ? "#a31515" : "#1a7f3c"} sub="planned-only card/LOC event" />
-        <StatBox label="Unplanned Exposure" value={fmtCAD(debtProjection30.unplannedExposure)} color={debtProjection30.unplannedExposure > 0 ? "#a05c00" : "#1a7f3c"} sub="owing without strategy" />
+        <StatBox label="Dated Debt Pressure" value={fmtCAD(debtProjection30.repaymentPressure)} color={debtProjection30.repaymentPressure > 0 ? "#a31515" : "#1a7f3c"} sub="configured card/LOC repayment events" />
+        <StatBox label="Unresolved Debt Exposure" value={fmtCAD(debtProjection30.unplannedExposure)} color={debtProjection30.unplannedExposure > 0 ? "#a05c00" : "#1a7f3c"} sub="not yet covered by a repayment plan" />
       </div>
 
       {debtProjection30.warnings.length > 0 && (
         <Card accent="#a05c00">
-          <div style={{ fontWeight: 750, fontSize: 14, color: theme.colors.warning, marginBottom: 8 }}>Card / LOC repayment planning gaps</div>
+          <div style={{ fontWeight: 750, fontSize: 14, color: theme.colors.warning, marginBottom: 4 }}>Card / LOC repayment planning gaps</div>
+          <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 8 }}>
+            These amounts are excluded from dated events but deducted in After Debt Exposure so the forecast does not look falsely available.
+          </div>
           {debtProjection30.warnings.map((warning) => (
             <div key={`${warning.cardId}-${warning.reason}`} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontSize: 12, padding: "5px 0", borderBottom: "1px solid #fed7aa" }}>
               <span>{warning.name}: {warning.reason === "missing_pay_from" ? "projection enabled but no linked pay-from account" : "owing balance has no repayment strategy"}</span>

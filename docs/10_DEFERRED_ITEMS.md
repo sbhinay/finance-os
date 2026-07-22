@@ -4,13 +4,12 @@ This file tracks work that still needs product hardening after real-user testing
 
 ## Delivery Discipline
 
-Work must proceed in controlled visible slices:
+Work normally proceeds in controlled visible slices. On July 22, 2026 the user explicitly authorized a compact continuous stability pass to make efficient use of limited remaining tool usage:
 
 - Do one visible slice at a time.
 - Keep the app usable at the end of every slice.
-- After each slice, stop and report exactly what changed.
-- Tell the user what to test in the browser.
-- Do not continue to the next slice until the user confirms.
+- Report exactly what changed and what should be tested.
+- During the authorized compact pass, combine tightly related correctness and workflow fixes, then provide one verification handoff.
 - Commit and sync `main` and `codex/phase-next` only after the slice is verified.
 
 ## Recently Landed Foundations
@@ -41,6 +40,7 @@ These items are implemented enough to serve as foundations, but some still need 
 ### 2. Assets, Liabilities, House Loans, and Vehicles Cleanup
 
 - Initial hub slice landed: Assets & Liabilities now has a visible organization strip that explains Properties, House Loans, Vehicles, and Lenders, with direct navigation to the relevant detail areas.
+- Action-hierarchy pass landed: explanatory tiles no longer repeat navigation buttons, vehicle payment posting lives in Upcoming Obligations, and card/LOC navigation is clearly named.
 - Make Assets & Liabilities, House Loans, Properties, and Vehicles feel like one connected area.
 - Reduce confusing duplicate entry points without hiding needed links.
 - Clarify which records are parents, which records are ledger transactions, and which views are reports.
@@ -56,6 +56,7 @@ These items are implemented enough to serve as foundations, but some still need 
 
 ### 4. Projection Logic for CC and LOC Repayments
 
+- Projection hardening landed: configured strategies create dated repayment events, while unresolved card/LOC owing is deducted in a separate conservative `After Debt Exposure` balance instead of being hidden behind a warning.
 - Include expected credit-card repayment pressure.
 - Include expected LOC repayment pressure.
 - Separate planned payments already logged from unplanned repayment exposure.

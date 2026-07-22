@@ -57,7 +57,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - `recalculateBalances.ts` bases replay on the latest balance snapshot when present and avoids compound drift.
 - Legacy reconciliation adjustment rows are ignored by balance replay and should be treated as old cleanup/audit data, not the current balance workflow.
 - The new `Assets & Liabilities` area is now in active transition, not just planned. It already surfaces upcoming obligations and launches selected actions through the canonical `TransactionForm`.
-- The Assets & Liabilities hub now explains where Properties, House Loans, Vehicles, and Lenders are managed, with direct navigation so users can move between parent records and ledger-facing detail views.
+- The Assets & Liabilities hub explains where Properties, House Loans, Vehicles, and Lenders are managed. Its explanatory tiles no longer repeat navigation actions; distinct operational actions remain in the relevant summary cards and Upcoming Obligations list.
 - Legacy `House Loans / Mortgages` now supports direct mortgage logging and backfill for missed historical scheduled payments.
 - Recurring payments now use one canonical engine for pending generation, confirmation, Log Payment, fixed/vehicle/mortgage backfill, semantic duplicate handling, origin links, and safe archive behavior.
 - Recurring definitions separate stable historical `startDate` from advancing next-due `date`, and calendar cadence preserves month-end and annual dates.
@@ -81,7 +81,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Debt details separate cash paid, principal, interest, unallocated payments, and current owing; dashboard, Property equity, and net-worth views consume the same calculation.
 - Mortgage details calculate estimated principal/interest dynamically when possible; stored split fields remain manual/import/statement-confirmed overrides.
 - Normal mortgage entry and backfill do not store app-generated split estimates; legacy FinanceOS-generated split rows are recalculated for display instead of trusted as manual truth.
-- Projection views have the foundation for card/LOC repayment pressure, but repayment planning still needs browser-verified polish so future cash views do not look falsely positive.
+- Projection views create dated cash-out events for configured card/LOC repayment strategies and offset those events by matching planned transfer schedules. Owing without a complete strategy remains an unresolved exposure and is deducted from the separate `After Debt Exposure` balance, so the scheduled forecast remains auditable without presenting unresolved debt as available cash.
 - The design refresh has shared theme tokens plus reusable surface, button, and chip primitives for incremental modernization.
 - `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
 - Transaction History now filters by tag and exact recurring origin.

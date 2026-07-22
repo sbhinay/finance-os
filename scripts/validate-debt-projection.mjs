@@ -76,6 +76,22 @@ if (missingStrategy.unplannedExposure !== 1000 || missingStrategy.warnings[0]?.r
   throw new Error(`Card owing without a strategy should become unplanned exposure; received ${JSON.stringify(missingStrategy)}.`);
 }
 
+const missingPayFrom = buildDebtRepaymentProjection({
+  cards: [{
+    ...baseCard,
+    linkedAccountId: undefined,
+    repaymentProjectionEnabled: true,
+    repaymentStrategy: "minimum",
+    repaymentMinimumPercent: 3,
+  }],
+  fixedPayments: [],
+  today,
+  days: 30,
+});
+if (missingPayFrom.unplannedExposure !== 30 || missingPayFrom.warnings[0]?.reason !== "missing_pay_from") {
+  throw new Error(`Configured repayment without a pay-from account should remain visible as unresolved exposure; received ${JSON.stringify(missingPayFrom)}.`);
+}
+
 const loc = buildDebtRepaymentProjection({
   cards: [{
     ...baseCard,
@@ -96,4 +112,4 @@ if (loc.repaymentPressure !== 500 || !loc.events[0]?.label.includes("LOC repayme
   throw new Error(`LOC fixed repayment should produce LOC pressure event; received ${JSON.stringify(loc)}.`);
 }
 
-console.log("Debt projection validated: card payoff, LOC repayment, minimum estimate, planned-payment offset, and no-strategy warnings.");
+console.log("Debt projection validated: card payoff, LOC repayment, minimum estimate, planned-payment offset, and unresolved exposure warnings.");
