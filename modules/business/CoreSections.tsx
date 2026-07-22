@@ -972,7 +972,7 @@ export function TransactionHistorySection() {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
   const [dateTo, setDateTo] = useState(now.toISOString().split("T")[0]);
-  const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer" | "loan_payment">("all");
+  const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer" | "loan_payment" | "tax_payment">("all");
   const [search, setSearch] = useState("");
   const [accountFilter, setAccountFilter] = useState("");
   const [catFilter, setCatFilter] = useState("");
@@ -1088,6 +1088,43 @@ export function TransactionHistorySection() {
   const totalIn = activityEffects.reduce((sum, effect) => sum + Math.max(0, effect), 0);
   const totalOut = activityEffects.reduce((sum, effect) => sum + Math.max(0, -effect), 0);
   const totalTransfers = filtered.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
+  const outflowBreakdown = filtered.reduce(
+    (summary, transaction) => {
+      const effect = getTransactionListEffect(transaction);
+      if (effect == null || effect >= 0) return summary;
+      const amount = Math.abs(effect);
+      if (transaction.type === "expense") {
+        summary.expense += amount;
+        summary.expenseCount += 1;
+      } else if (transaction.type === "loan_payment") {
+        summary.debt += amount;
+        summary.debtCount += 1;
+      } else if (transaction.type === "tax_payment") {
+        summary.tax += amount;
+        summary.taxCount += 1;
+      } else {
+        summary.other += amount;
+        summary.otherCount += 1;
+      }
+      return summary;
+    },
+    {
+      expense: 0,
+      expenseCount: 0,
+      debt: 0,
+      debtCount: 0,
+      tax: 0,
+      taxCount: 0,
+      other: 0,
+      otherCount: 0,
+    }
+  );
+  const outflowRows = [
+    { key: "expense", label: "Expenses", amount: outflowBreakdown.expense, count: outflowBreakdown.expenseCount, filter: "expense" as const },
+    { key: "debt", label: "Debt repayments", amount: outflowBreakdown.debt, count: outflowBreakdown.debtCount, filter: "loan_payment" as const },
+    { key: "tax", label: "Tax payments", amount: outflowBreakdown.tax, count: outflowBreakdown.taxCount, filter: "tax_payment" as const },
+    { key: "other", label: "Other cash out", amount: outflowBreakdown.other, count: outflowBreakdown.otherCount, filter: null },
+  ].filter((row) => row.amount > 0);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * pageSize;
@@ -1149,9 +1186,9 @@ export function TransactionHistorySection() {
           <Inp label="To Date" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
         </Grid2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
-          {(["all", "income", "expense", "transfer", "loan_payment"] as const).map((v) => (
+          {(["all", "income", "expense", "transfer", "loan_payment", "tax_payment"] as const).map((v) => (
             <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => { setFilter(v); setPage(1); }}>
-              {v === "all" ? "All" : v === "loan_payment" ? "Debt" : v.charAt(0).toUpperCase() + v.slice(1)}
+              {v === "all" ? "All" : v === "loan_payment" ? "Debt" : v === "tax_payment" ? "Tax" : v.charAt(0).toUpperCase() + v.slice(1)}
             </Btn>
           ))}
           <select value={accountFilter} onChange={(e) => { setAccountFilter(e.target.value); setPage(1); }}
@@ -1197,11 +1234,61 @@ export function TransactionHistorySection() {
       {/* Stats */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
         <StatBox label="Inflows" value={fmtCAD(totalIn)} color="#1a7f3c" sub="income + refunds + borrowing" />
-        <StatBox label="Outflows" value={fmtCAD(totalOut)} color="#a31515" sub="expenses + debt + tax" />
+        <StatBox label={filter === "all" ? "Outflows" : "Filtered Outflows"} value={fmtCAD(totalOut)} color="#a31515" sub="cash out, excluding transfers" />
         <StatBox label="Transfers" value={fmtCAD(totalTransfers)} color="#6b7280" sub="not counted in net" />
         <StatBox label="Net Activity" value={fmtCAD(totalIn - totalOut)} color={totalIn - totalOut >= 0 ? "#1a7f3c" : "#a31515"} />
         <StatBox label="Entries" value={String(filtered.length)} />
       </div>
+
+      {outflowRows.length > 0 && (
+        <div style={{ ...theme.cardStyle(), padding: "14px 16px", marginBottom: 14, background: theme.colors.surface }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: theme.colors.text }}>Outflow Breakdown</div>
+              <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 3 }}>
+                Outflows are cash leaving the filtered ledger. Expense is only one outflow type; debt principal and tax payments are cash out but not normal expenses.
+              </div>
+            </div>
+            {filter !== "all" && (
+              <StatusChip tone="secondary">Filtered totals</StatusChip>
+            )}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+            {outflowRows.map((row) => (
+              <button
+                key={row.key}
+                type="button"
+                onClick={() => {
+                  if (!row.filter) return;
+                  setFilter(row.filter);
+                  setPage(1);
+                }}
+                disabled={!row.filter}
+                style={{
+                  textAlign: "left",
+                  border: "1px solid #d8e3ee",
+                  borderRadius: 12,
+                  background: row.filter ? "#ffffff" : theme.colors.surfaceAlt,
+                  padding: "10px 12px",
+                  cursor: row.filter ? "pointer" : "default",
+                  boxShadow: "0 8px 22px rgba(15, 23, 42, 0.04)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: theme.colors.text }}>{row.label}</span>
+                  <span style={{ fontSize: 11, color: theme.colors.textSoft }}>{row.count} row{row.count === 1 ? "" : "s"}</span>
+                </div>
+                <div style={{ marginTop: 6, fontSize: 18, fontWeight: 850, color: "#a31515" }}>{fmtCAD(row.amount)}</div>
+                {totalOut > 0 && (
+                  <div style={{ marginTop: 8, height: 4, borderRadius: 99, background: "#edf2f7", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${Math.min(100, (row.amount / totalOut) * 100)}%`, background: "#a31515", borderRadius: 99 }} />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Category chart */}
       {topCats.length > 0 && (

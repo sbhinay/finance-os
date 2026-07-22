@@ -95,7 +95,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.
 - Paid invoices now create linked `invoice_deposit` ledger rows; legacy virtual deposits remain compatible during migration.
 - Transaction History financial summaries distinguish general inflows from taxable income, so borrowing is visible without inflating income reporting.
-- Transaction History still needs clearer Outflow breakdowns because current summary cards can include non-expense cash-out rows while the Expense filter only shows true expense rows.
+- Transaction History now labels filtered outflows, includes a Tax filter, and shows an Outflow Breakdown panel so expense, debt repayment, tax payment, and other cash-out rows can be distinguished.
 - Production completion is now tracked as controlled visible slices in `10_DEFERRED_ITEMS.md`; the app should no longer be documented as fully complete until those slices are browser verified.
 - Categories now support `vehicleLinked` and `propertyLinked` flags from the Categories UI so new vehicle/property categories can reveal the correct transaction fields.
 - Vehicle and mortgage backfill uses `nextPaymentDate` as the schedule anchor when available, so historical backfill follows the real payment weekday/cadence instead of blindly anchoring to the start date.

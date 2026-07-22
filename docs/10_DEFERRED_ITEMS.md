@@ -114,6 +114,7 @@ These items are implemented enough to serve as foundations, but some still need 
 
 Observed July 2026: Transaction History showed `Outflows` above 10K while the `Expense` filter showed about 7K. This is confusing because the summary includes non-expense cash outflows such as debt, tax, card, LOC, or principal repayment rows, while the `Expense` filter only shows rows typed as expenses.
 
+- Initial slice landed: Transaction History now labels filtered outflows, adds a Tax filter, and shows an Outflow Breakdown panel for expense, debt repayment, tax payment, and other cash-out rows.
 - Break down Outflows into Expense, Debt Repayment, Tax, and other cash-out categories.
 - When a type filter is active, make it clear that summary cards are filtered totals.
 - Add drilldown, chips, or clearer labels so the user can identify which non-expense rows make up the difference.
