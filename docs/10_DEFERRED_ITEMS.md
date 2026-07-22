@@ -57,6 +57,7 @@ These items are implemented enough to serve as foundations, but some still need 
 ### 4. Projection Logic for CC and LOC Repayments
 
 - Projection hardening landed: configured strategies create dated repayment events, while unresolved card/LOC owing is deducted in a separate conservative `After Debt Exposure` balance instead of being hidden behind a warning.
+- Multi-condition what-if scenarios support dated extra income, extra expense, and LOC withdrawals. LOC draws improve scheduled liquidity while increasing conservative debt exposure by the same amount.
 - Include expected credit-card repayment pressure.
 - Include expected LOC repayment pressure.
 - Separate planned payments already logged from unplanned repayment exposure.

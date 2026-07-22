@@ -56,8 +56,18 @@ interface ProjectionEvent {
   date: Date;
   label: string;
   amount: number; // positive = income, negative = expense
-  type: "vehicle" | "loan" | "fixed" | "cra" | "income" | "invoice" | "debt";
+  type: "vehicle" | "loan" | "fixed" | "cra" | "income" | "invoice" | "debt" | "scenario";
   account?: string;
+}
+
+type WhatIfType = "income" | "expense" | "loc_draw";
+
+interface WhatIfScenario {
+  id: string;
+  type: WhatIfType;
+  amount: number;
+  date: string;
+  locId: string;
 }
 
 function buildEvents(
@@ -282,6 +292,7 @@ const TYPE_COLORS: Record<string, string> = {
   vehicle: "#a05c00", loan: "#a31515", fixed: "#6b7280",
   cra: "#4a3ab5", income: "#1a7f3c", invoice: "#1a7f3c",
   debt: "#b91c1c",
+  scenario: "#0f766e",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -530,9 +541,13 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const [view, setView] = useState<"30day" | "monthly">("30day");
   const [threshold, setThreshold] = useState(0);
   const [whatIf, setWhatIf] = useState(false);
-  const [wiAmount, setWiAmount] = useState(0);
-  const [wiDate, setWiDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]);
-  const [wiType, setWiType] = useState<"income" | "expense">("income");
+  const [whatIfScenarios, setWhatIfScenarios] = useState<WhatIfScenario[]>(() => [{
+    id: "scenario-1",
+    type: "income",
+    amount: 0,
+    date: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
+    locId: "",
+  }]);
 
   // Monthly view state — past 6 / future 6
   const now = useMemo(() => new Date(), []);
@@ -542,20 +557,58 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const totalBankNow = toFixed2(accounts.reduce((s, a) => s + a.openingBalance, 0));
 
   const incomes = useMemo(() => [], []); // will be populated when income module is built
+  const locCards = useMemo(() => cards.filter((card) => card.active !== false && card.type === "loc"), [cards]);
+
+  const scenarioEvents = useMemo<ProjectionEvent[]>(() => {
+    if (!whatIf) return [];
+    return whatIfScenarios
+      .filter((scenario) => scenario.amount > 0 && scenario.date)
+      .map((scenario) => {
+        const loc = scenario.type === "loc_draw"
+          ? locCards.find((card) => card.id === scenario.locId)
+          : undefined;
+        return {
+          date: new Date(`${scenario.date}T12:00:00`),
+          label: scenario.type === "income"
+            ? "What-if: Extra income"
+            : scenario.type === "expense"
+              ? "What-if: Extra expense"
+              : `What-if: LOC draw${loc ? ` - ${loc.name}` : ""}`,
+          amount: scenario.type === "expense" ? -scenario.amount : scenario.amount,
+          type: "scenario" as const,
+          account: scenario.type === "loc_draw" ? loc?.linkedAccountId : undefined,
+        };
+      });
+  }, [whatIf, whatIfScenarios, locCards]);
+
+  function updateScenario(id: string, changes: Partial<WhatIfScenario>) {
+    setWhatIfScenarios((current) => current.map((scenario) => scenario.id === id ? { ...scenario, ...changes } : scenario));
+  }
+
+  function addScenario() {
+    setWhatIfScenarios((current) => [...current, {
+      id: `scenario-${Date.now()}`,
+      type: "expense",
+      amount: 0,
+      date: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
+      locId: "",
+    }]);
+  }
+
+  function removeScenario(id: string) {
+    setWhatIfScenarios((current) => current.length === 1
+      ? current.map((scenario) => scenario.id === id ? { ...scenario, amount: 0 } : scenario)
+      : current.filter((scenario) => scenario.id !== id));
+  }
 
   // 30-day events
   const events30 = useMemo(() => {
-    let evts = buildEvents(30, vehicles, houseLoans, cards, fixedPayments, business, incomes, today);
-    if (whatIf && wiAmount > 0) {
-      evts = [...evts, {
-        date: new Date(wiDate + "T12:00:00"),
-        label: `What-if: ${wiType === "income" ? "Extra Income" : "Extra Expense"}`,
-        amount: wiType === "income" ? Number(wiAmount) : -Number(wiAmount),
-        type: (wiType === "income" ? "income" : "fixed") as ProjectionEvent["type"],
-      }].sort((a, b) => a.date.getTime() - b.date.getTime());
-    }
-    return evts;
-  }, [vehicles, houseLoans, cards, fixedPayments, business, incomes, today, whatIf, wiAmount, wiDate, wiType]);
+    const end = new Date(today.getTime() + 30 * 86400000);
+    return [
+      ...buildEvents(30, vehicles, houseLoans, cards, fixedPayments, business, incomes, today),
+      ...scenarioEvents.filter((event) => event.date >= today && event.date <= end),
+    ].sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [vehicles, houseLoans, cards, fixedPayments, business, incomes, today, scenarioEvents]);
   const debtProjection30 = useMemo(
     () => buildDebtRepaymentProjection({ cards, fixedPayments, today, days: 30 }),
     [cards, fixedPayments, today]
@@ -580,7 +633,14 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   }, [events30, totalBankNow, threshold, today]);
 
   const projected30 = days30[29]?.balance ?? totalBankNow;
-  const conservativeProjected30 = toFixed2(projected30 - debtProjection30.unplannedExposure);
+  const scenarioLocDebt30 = toFixed2(whatIfScenarios
+    .filter((scenario) => whatIf && scenario.type === "loc_draw" && scenario.amount > 0 && scenario.date)
+    .filter((scenario) => {
+      const date = new Date(`${scenario.date}T12:00:00`);
+      return date >= today && date <= new Date(today.getTime() + 30 * 86400000);
+    })
+    .reduce((sum, scenario) => sum + scenario.amount, 0));
+  const conservativeProjected30 = toFixed2(projected30 - debtProjection30.unplannedExposure - scenarioLocDebt30);
   const lowDays = days30.filter((d) => d.warning).length;
 
   // ── Monthly view ──────────────────────────────────────────────────────────
@@ -619,8 +679,12 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
     });
 
     // Future/current: projected events
+    const allFutureEvents = [
+      ...buildEvents(365, vehicles, houseLoans, cards, fixedPayments, business, incomes, today),
+      ...scenarioEvents,
+    ].sort((a, b) => a.date.getTime() - b.date.getTime());
     const projEvents = isFuture || !isPast
-      ? buildEvents(365, vehicles, houseLoans, cards, fixedPayments, business, incomes, today)
+      ? allFutureEvents
           .filter((e) => {
             const d = e.date.toISOString().slice(0, 7);
             return d === selectedMonth;
@@ -665,13 +729,13 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
     // Running balance for future months
     let runBal = totalBankNow;
     if (isFuture) {
-      const eventsBeforeMonth = buildEvents(365, vehicles, houseLoans, cards, fixedPayments, business, incomes, today)
+      const eventsBeforeMonth = allFutureEvents
         .filter((e) => e.date < monthStart);
       runBal = toFixed2(totalBankNow + eventsBeforeMonth.reduce((s, e) => s + e.amount, 0));
     }
 
     return { isPast, isFuture, totalIn, totalOut, projIn, projOut, craTx, topCats, allDays, runBal };
-  }, [selectedMonth, transactions, vehicles, houseLoans, cards, fixedPayments, business, incomes, today, totalBankNow]);
+  }, [selectedMonth, transactions, vehicles, houseLoans, cards, fixedPayments, business, incomes, today, totalBankNow, scenarioEvents]);
 
   const catName = (id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "";
 
@@ -722,26 +786,45 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       </Card>
 
       <Card accent={whatIf ? "#1a5fa8" : undefined}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
             <input type="checkbox" checked={whatIf} onChange={(e) => setWhatIf(e.target.checked)} />
             What-if scenario
           </label>
-          {whatIf && (
-            <>
-              <select value={wiType} onChange={(e) => setWiType(e.target.value as "income" | "expense")}
-                style={{ padding: "5px 8px", border: "1px solid #e2e4e8", borderRadius: 6, fontSize: 12, background: "#fff" }}>
-                <option value="income">Extra Income</option>
-                <option value="expense">Extra Expense</option>
-              </select>
-              <input type="number" value={wiAmount} onChange={(e) => setWiAmount(Number(e.target.value))} placeholder="Amount"
-                style={{ width: 110, padding: "5px 8px", border: "1px solid #1a5fa8", borderRadius: 6, fontSize: 12 }} />
-              <span style={{ fontSize: 12, color: "#6b7280" }}>on</span>
-              <input type="date" value={wiDate} onChange={(e) => setWiDate(e.target.value)}
-                style={{ padding: "5px 8px", border: "1px solid #1a5fa8", borderRadius: 6, fontSize: 12, background: "#fff" }} />
-            </>
-          )}
+          {whatIf && <Btn variant="secondary" small onClick={addScenario}>Add Condition</Btn>}
         </div>
+        {whatIf && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            {whatIfScenarios.map((scenario, index) => (
+              <div key={scenario.id} style={{ display: "grid", gridTemplateColumns: "minmax(145px, 1fr) minmax(100px, 130px) minmax(145px, 170px) minmax(150px, 1fr) auto", gap: 8, alignItems: "center", padding: "9px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: 8, background: theme.colors.surfaceAlt }}>
+                <select value={scenario.type} onChange={(e) => updateScenario(scenario.id, { type: e.target.value as WhatIfType })}
+                  aria-label={`Condition ${index + 1} type`} style={{ padding: "7px 9px", border: `1px solid ${theme.colors.border}`, borderRadius: 7, fontSize: 12, background: "#fff" }}>
+                  <option value="income">Extra Income</option>
+                  <option value="expense">Extra Expense</option>
+                  <option value="loc_draw">LOC Withdrawal</option>
+                </select>
+                <input type="number" min="0" value={scenario.amount || ""} onChange={(e) => updateScenario(scenario.id, { amount: Math.max(0, Number(e.target.value) || 0) })} placeholder="Amount"
+                  aria-label={`Condition ${index + 1} amount`} style={{ padding: "7px 9px", border: `1px solid ${theme.colors.border}`, borderRadius: 7, fontSize: 12 }} />
+                <input type="date" value={scenario.date} onChange={(e) => updateScenario(scenario.id, { date: e.target.value })}
+                  aria-label={`Condition ${index + 1} date`} style={{ padding: "7px 9px", border: `1px solid ${theme.colors.border}`, borderRadius: 7, fontSize: 12, background: "#fff" }} />
+                {scenario.type === "loc_draw" ? (
+                  <select value={scenario.locId} onChange={(e) => updateScenario(scenario.id, { locId: e.target.value })}
+                    aria-label={`Condition ${index + 1} LOC`} style={{ padding: "7px 9px", border: `1px solid ${theme.colors.border}`, borderRadius: 7, fontSize: 12, background: "#fff" }}>
+                    <option value="">Select LOC</option>
+                    {locCards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                  </select>
+                ) : <span style={{ fontSize: 11, color: theme.colors.textSoft }}>Projection only</span>}
+                <button type="button" onClick={() => removeScenario(scenario.id)} aria-label={`Remove condition ${index + 1}`}
+                  style={{ width: 30, height: 30, borderRadius: 99, border: "1px solid #fecaca", background: "#fff", color: theme.colors.danger, cursor: "pointer", fontWeight: 800 }}>×</button>
+              </div>
+            ))}
+            {scenarioLocDebt30 > 0 && (
+              <div style={{ fontSize: 11, color: theme.colors.textSoft }}>
+                LOC withdrawals add cash to the scheduled projection and add the same amount to debt exposure.
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* View tabs */}
