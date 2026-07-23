@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { getStatementScannerProvider, getStatementScannerStatus } from "@/lib/statementScanner";
 import type { ScannerAccountHint, ScannerImage } from "@/lib/statementScanner/provider";
 import type { Category } from "@/types/category";
+import { takeRateLimitToken } from "@/lib/server/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 20 * 1024 * 1024;
 const ALLOWED_TYPES = new Set<ScannerImage["mediaType"]>([
   "image/jpeg",
   "image/png",
@@ -31,6 +33,26 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const clientKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    const rateLimit = takeRateLimitToken(`statement-scanner:${clientKey}`, {
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many statement scans. Try again shortly." },
+        {
+          status: 429,
+          headers: {
+            "cache-control": "no-store",
+            "retry-after": String(rateLimit.retryAfterSeconds),
+          },
+        }
+      );
+    }
+    if (!request.headers.get("content-type")?.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json({ error: "Expected a multipart image upload." }, { status: 415 });
+    }
     const scannerStatus = getStatementScannerStatus();
     if (!scannerStatus.configured) {
       return NextResponse.json({ error: scannerStatus.message }, { status: 503 });
@@ -39,6 +61,9 @@ export async function POST(request: Request) {
     const files = formData.getAll("images").filter((value): value is File => value instanceof File);
     if (files.length < 1 || files.length > MAX_IMAGES) {
       return NextResponse.json({ error: `Select between 1 and ${MAX_IMAGES} images.` }, { status: 400 });
+    }
+    if (files.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_IMAGE_BYTES) {
+      return NextResponse.json({ error: "Combined images exceed the 20 MB request limit." }, { status: 400 });
     }
 
     const images: ScannerImage[] = [];

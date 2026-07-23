@@ -1,0 +1,25 @@
+name: Security baseline
+
+on:
+  pull_request:
+  push:
+    branches: [main, codex/phase-next]
+  schedule:
+    - cron: "17 7 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:security
+      - run: npm audit --audit-level=high
+      - run: npm run build

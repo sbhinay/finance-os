@@ -14,6 +14,7 @@
     "validate:scanner": "node --no-warnings --experimental-strip-types scripts/validate-statement-scanner.mjs",
     "validate:scanner:live": "node --no-warnings --experimental-strip-types scripts/validate-live-statement-scanner.mjs",
     "validate:cloud": "node scripts/validate-cloud-guards.mjs",
+    "validate:security": "node scripts/validate-security-baseline.mjs",
     "validate:reports": "node --no-warnings --experimental-strip-types scripts/validate-report-exports.mjs",
     "validate:architecture": "node scripts/validate-canonical-architecture.mjs",
     "validate:import-export": "node scripts/validate-import-export-contract.mjs",
