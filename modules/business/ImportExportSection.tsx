@@ -34,6 +34,7 @@ import { migratePropertyParents } from "@/utils/propertyMigration";
 import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
 import { ActionButton, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
 import { theme } from "@/lib/theme";
+import { clearLocalFinanceData } from "@/utils/localFinanceData";
 
 type RawObject = Record<string, unknown>;
 type ImportResult = ImportPayload | MigrationResult;
@@ -459,13 +460,33 @@ export function ImportExportSection() {
     URL.revokeObjectURL(url);
   }
 
-  function handleClearAll() {
+  async function handleClearAll() {
     if (!confirm("This will delete ALL data from this app. Are you sure?")) return;
     if (!confirm("Really delete everything? This cannot be undone.")) return;
 
-    localStorage.clear();
-    notifyDataChanged("clear");
-    setStatus({ type: "warning", message: "All local data cleared." });
+    setCloudBusy(true);
+    try {
+      if (cloudSession) {
+        const restorePoint = await saveCloudSnapshot({
+          expectedRevision: cloudSnapshot?.revision ?? 0,
+          label: "Before clearing local data",
+        });
+        setCloudSnapshot(restorePoint);
+        setCloudUpdatedAt(restorePoint.updated_at);
+        setCloudHistory(await listCloudSnapshotHistory());
+      }
+      const removed = clearLocalFinanceData();
+      notifyDataChanged("clear");
+      setStatus({ type: "warning", message: `${removed} FinanceOS local data record(s) cleared. Cloud authentication and the browser device identity were preserved.` });
+    } catch (err) {
+      if (err instanceof CloudSnapshotConflictError) {
+        await refreshCloudState();
+        setStatus({ type: "warning", message: "Clear stopped before changing local data because the cloud snapshot changed. Review the cloud state, then retry." });
+      } else {
+        setStatus({ type: "error", message: `Clear stopped before local data was changed: ${String(err)}` });
+      }
+    }
+    setCloudBusy(false);
   }
 
   async function handleCloudSignIn() {

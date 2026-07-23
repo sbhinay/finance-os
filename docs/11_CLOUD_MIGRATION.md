@@ -11,6 +11,7 @@
 - Manual Supabase cloud save now uses guarded revisions, append-only restore history, conflict detection, and visible local-versus-cloud state.
 - Current and historical cloud revisions always enter the existing import preview before replacing local data.
 - Signed-in imports create a guarded cloud restore point before replacing local data.
+- Signed-in Clear All creates a guarded restore point first and clears only FinanceOS-owned local keys, preserving authentication and device identity.
 - Cloud status distinguishes local-only, synced, pending-upload, cloud-newer, and true two-sided conflict states.
 - Signed-in pages recheck cloud revision on focus, visibility return, and a short polling interval to catch stale tabs.
 - Automatic cloud write-back remains intentionally disabled.

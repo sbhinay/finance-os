@@ -3,6 +3,7 @@ import fs from "node:fs";
 const sql = fs.readFileSync("supabase/02_guarded_snapshots.sql", "utf8");
 const cloudState = fs.readFileSync("lib/supabase/cloudState.ts", "utf8");
 const importExport = fs.readFileSync("modules/business/ImportExportSection.tsx", "utf8");
+const localFinanceData = fs.readFileSync("utils/localFinanceData.ts", "utf8");
 const required = [
   "app_snapshot_history",
   "save_app_snapshot_guarded",
@@ -45,4 +46,16 @@ if (!importExport.includes("window.setInterval(checkForNewRevision")) {
   throw new Error("Cloud UI does not periodically check for newer revisions.");
 }
 
-console.log("Cloud guards validated: revision lock, append-only history, pre-import restore points, stale-tab checks, read-only client tables, and guarded RPC.");
+if (importExport.includes("localStorage.clear()")) {
+  throw new Error("Clear All still erases the entire browser storage area.");
+}
+
+if (!importExport.includes('label: "Before clearing local data"')) {
+  throw new Error("Clear All does not create a guarded pre-operation restore point.");
+}
+
+if (!localFinanceData.includes('PRESERVED_KEYS = new Set(["finance_os_cloud_device_id"])')) {
+  throw new Error("Scoped local cleanup does not preserve the cloud device identity.");
+}
+
+console.log("Cloud guards validated: revision lock, append-only history, pre-operation restore points, scoped local cleanup, stale-tab checks, read-only client tables, and guarded RPC.");
