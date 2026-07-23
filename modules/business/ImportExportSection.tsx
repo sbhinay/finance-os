@@ -7,7 +7,6 @@ import type { Transaction } from "@/types/transaction";
 import type { Category } from "@/types/category";
 import type { Business } from "@/types/business";
 import { useEffect, useRef, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { migrateFromPrototype, MigrationResult } from "@/utils/migrationService";
 import { accountRepository } from "@/repositories/accountRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
@@ -17,7 +16,6 @@ import { ImportPayload, validateImportPayload } from "@/utils/referenceIntegrity
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
 import { vehicleRepository, propertyRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { DATA_CHANGED_EVENT, notifyDataChanged } from "@/utils/events";
-import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   buildCloudExportPayload,
   CloudSnapshotConflictError,
@@ -35,6 +33,7 @@ import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
 import { ActionButton, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
 import { theme } from "@/lib/theme";
 import { clearLocalFinanceData } from "@/utils/localFinanceData";
+import { useAuthSession } from "@/components/AuthGate";
 
 type RawObject = Record<string, unknown>;
 type ImportResult = ImportPayload | MigrationResult;
@@ -140,6 +139,7 @@ function normalizeImportResult(result: ImportResult): ImportPayload {
 }
 
 export function ImportExportSection() {
+  const { email, observeCloudSnapshot } = useAuthSession();
   const [status, setStatus] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<Record<string, number> | null>(null);
@@ -147,37 +147,12 @@ export function ImportExportSection() {
   const [pendingData, setPendingData] = useState<ImportPayload | null>(null);
   const [importValidation, setImportValidation] = useState<{ errors: string[]; warnings: string[] } | null>(null);
   const [acceptedImportWarnings, setAcceptedImportWarnings] = useState<string[]>([]);
-  const [cloudSession, setCloudSession] = useState<Session | null>(null);
-  const [cloudEmail, setCloudEmail] = useState("");
-  const [cloudPassword, setCloudPassword] = useState("");
   const [cloudBusy, setCloudBusy] = useState(false);
   const [cloudUpdatedAt, setCloudUpdatedAt] = useState<string | null>(null);
   const [cloudSnapshot, setCloudSnapshot] = useState<CloudSnapshot | null>(null);
   const [cloudHistory, setCloudHistory] = useState<CloudSnapshotHistoryItem[]>([]);
   const [cloudState, setCloudState] = useState<CloudSyncState>("checking");
-  const [cloudLabel, setCloudLabel] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-    const supabase = getSupabaseBrowserClient();
-    let active = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setCloudSession(data.session);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-      setCloudSession(session);
-    });
-
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
 
   async function compareLocalToCloud(
     snapshot: CloudSnapshot | null,
@@ -194,7 +169,6 @@ export function ImportExportSection() {
   }
 
   async function refreshCloudState() {
-    if (!cloudSession) return;
     const observedSnapshot = cloudSnapshot;
     const [snapshot, history] = await Promise.all([
       loadCloudSnapshot(),
@@ -207,13 +181,6 @@ export function ImportExportSection() {
   }
 
   useEffect(() => {
-    if (!cloudSession) {
-      setCloudUpdatedAt(null);
-      setCloudSnapshot(null);
-      setCloudHistory([]);
-      setCloudState("checking");
-      return;
-    }
     refreshCloudState().catch((error) => {
       setCloudUpdatedAt(null);
       setCloudState("checking");
@@ -221,10 +188,9 @@ export function ImportExportSection() {
     });
     // Cloud functions are stable module imports; session identity is the intended trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloudSession]);
+  }, []);
 
   useEffect(() => {
-    if (!cloudSession) return;
     const checkForNewRevision = () => {
       refreshCloudState().catch(() => setCloudState("checking"));
     };
@@ -241,10 +207,9 @@ export function ImportExportSection() {
     };
     // The current revision is intentionally captured for stale-tab comparison.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloudSession, cloudSnapshot?.revision]);
+  }, [cloudSnapshot?.revision]);
 
   useEffect(() => {
-    if (!cloudSession) return;
     const handleDataChanged = () => {
       compareLocalToCloud(cloudSnapshot).catch(() => setCloudState("checking"));
     };
@@ -252,7 +217,7 @@ export function ImportExportSection() {
     return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
     // The listener is rebound whenever the observed snapshot changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloudSession, cloudSnapshot]);
+  }, [cloudSnapshot]);
 
   function previewImport(result: ImportPayload, source: "file" | "cloud") {
     const propertyMigration = migratePropertyParents(
@@ -403,15 +368,14 @@ export function ImportExportSection() {
     }
     setImporting(true);
     try {
-      if (cloudSession) {
-        const restorePoint = await saveCloudSnapshot({
-          expectedRevision: cloudSnapshot?.revision ?? 0,
-          label: `Before ${previewSource === "cloud" ? "cloud restore" : "JSON import"}`,
-        });
-        setCloudSnapshot(restorePoint);
-        setCloudUpdatedAt(restorePoint.updated_at);
-        setCloudHistory(await listCloudSnapshotHistory());
-      }
+      const restorePoint = await saveCloudSnapshot({
+        expectedRevision: cloudSnapshot?.revision ?? 0,
+        label: `Before ${previewSource === "cloud" ? "cloud restore" : "JSON import"}`,
+      });
+      observeCloudSnapshot(restorePoint);
+      setCloudSnapshot(restorePoint);
+      setCloudUpdatedAt(restorePoint.updated_at);
+      setCloudHistory(await listCloudSnapshotHistory());
       const result = pendingData;
 
       accountRepository.saveAll(result.accounts);
@@ -466,15 +430,14 @@ export function ImportExportSection() {
 
     setCloudBusy(true);
     try {
-      if (cloudSession) {
-        const restorePoint = await saveCloudSnapshot({
-          expectedRevision: cloudSnapshot?.revision ?? 0,
-          label: "Before clearing local data",
-        });
-        setCloudSnapshot(restorePoint);
-        setCloudUpdatedAt(restorePoint.updated_at);
-        setCloudHistory(await listCloudSnapshotHistory());
-      }
+      const restorePoint = await saveCloudSnapshot({
+        expectedRevision: cloudSnapshot?.revision ?? 0,
+        label: "Before clearing local data",
+      });
+      observeCloudSnapshot(restorePoint);
+      setCloudSnapshot(restorePoint);
+      setCloudUpdatedAt(restorePoint.updated_at);
+      setCloudHistory(await listCloudSnapshotHistory());
       const removed = clearLocalFinanceData();
       notifyDataChanged("clear");
       setStatus({ type: "warning", message: `${removed} FinanceOS local data record(s) cleared. Cloud authentication and the browser device identity were preserved.` });
@@ -484,78 +447,6 @@ export function ImportExportSection() {
         setStatus({ type: "warning", message: "Clear stopped before changing local data because the cloud snapshot changed. Review the cloud state, then retry." });
       } else {
         setStatus({ type: "error", message: `Clear stopped before local data was changed: ${String(err)}` });
-      }
-    }
-    setCloudBusy(false);
-  }
-
-  async function handleCloudSignIn() {
-    if (!isSupabaseConfigured()) return;
-    setCloudBusy(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: cloudEmail,
-        password: cloudPassword,
-      });
-      if (error) throw error;
-      setStatus({ type: "success", message: "Signed in to Supabase cloud backup." });
-    } catch (err) {
-      setStatus({ type: "error", message: `Cloud sign-in failed: ${String(err)}` });
-    }
-    setCloudBusy(false);
-  }
-
-  async function handleCloudSignUp() {
-    if (!isSupabaseConfigured()) return;
-    setCloudBusy(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signUp({
-        email: cloudEmail,
-        password: cloudPassword,
-      });
-      if (error) throw error;
-      setStatus({ type: "success", message: "Cloud account created. If email confirmation is enabled, verify your email before signing in." });
-    } catch (err) {
-      setStatus({ type: "error", message: `Cloud sign-up failed: ${String(err)}` });
-    }
-    setCloudBusy(false);
-  }
-
-  async function handleCloudSignOut() {
-    if (!isSupabaseConfigured()) return;
-    setCloudBusy(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setStatus({ type: "success", message: "Signed out of cloud backup." });
-    } catch (err) {
-      setStatus({ type: "error", message: `Cloud sign-out failed: ${String(err)}` });
-    }
-    setCloudBusy(false);
-  }
-
-  async function handleSaveToCloud() {
-    setCloudBusy(true);
-    try {
-      const saved = await saveCloudSnapshot({
-        expectedRevision: cloudSnapshot?.revision ?? 0,
-        label: cloudLabel,
-      });
-      setCloudSnapshot(saved);
-      setCloudUpdatedAt(saved.updated_at);
-      setCloudLabel("");
-      setCloudState("synced");
-      setCloudHistory(await listCloudSnapshotHistory());
-      setStatus({ type: "success", message: `Current FinanceOS data saved as guarded cloud revision ${saved.revision}.` });
-    } catch (err) {
-      if (err instanceof CloudSnapshotConflictError) {
-        await refreshCloudState();
-        setStatus({ type: "warning", message: "Cloud save blocked because a newer revision exists. Review or load the newer cloud snapshot before trying again." });
-      } else {
-        setStatus({ type: "error", message: `Cloud save failed: ${String(err)}` });
       }
     }
     setCloudBusy(false);
@@ -664,37 +555,11 @@ export function ImportExportSection() {
       <SurfaceCard style={{ padding: 20, marginBottom: 16 }}>
         <div style={{ fontWeight: 750, fontSize: 14, marginBottom: 8 }}>Guarded Cloud Snapshots (Supabase)</div>
         <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 16 }}>
-          Manual cloud save keeps revision history and blocks stale overwrites. Loading any current or historical snapshot always opens the normal import preview before local data changes.
+          FinanceOS saves committed changes automatically. Loading any current or historical snapshot opens the normal import preview before local data changes.
         </div>
-
-        {!isSupabaseConfigured() ? (
-          <Notice type="warning">
-            Supabase is not configured yet. Add the public URL and publishable key to .env.local to enable cloud backup.
-          </Notice>
-        ) : !cloudSession ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <input
-              value={cloudEmail}
-              onChange={(e) => setCloudEmail(e.target.value)}
-              placeholder="Email"
-              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 13 }}
-            />
-            <input
-              type="password"
-              value={cloudPassword}
-              onChange={(e) => setCloudPassword(e.target.value)}
-              placeholder="Password"
-              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 13 }}
-            />
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Btn onClick={handleCloudSignIn} disabled={cloudBusy || !cloudEmail || !cloudPassword}>Sign In</Btn>
-              <Btn variant="secondary" onClick={handleCloudSignUp} disabled={cloudBusy || !cloudEmail || !cloudPassword}>Create Account</Btn>
-            </div>
-          </div>
-        ) : (
-          <div>
+        <div>
             <div style={{ fontSize: 12, color: theme.colors.success, marginBottom: 10 }}>
-              Signed in as <strong>{cloudSession.user.email}</strong>
+              Signed in as <strong>{email}</strong>
               {cloudUpdatedAt ? ` | revision ${cloudSnapshot?.revision ?? "?"} saved ${new Date(cloudUpdatedAt).toLocaleString()}` : " | no cloud snapshot saved yet"}
             </div>
             <div style={{ padding: "8px 10px", borderRadius: theme.radius.sm, background: cloudState === "synced" ? theme.colors.successSoft : cloudState === "cloud-newer" || cloudState === "conflict" ? theme.colors.dangerSoft : theme.colors.warningSoft, color: cloudState === "synced" ? theme.colors.success : cloudState === "cloud-newer" || cloudState === "conflict" ? theme.colors.danger : theme.colors.warning, fontSize: 12, marginBottom: 10 }}>
@@ -706,17 +571,9 @@ export function ImportExportSection() {
               {cloudState === "conflict" && "Both local data and the cloud changed since this page last synced. Review the cloud snapshot before saving or importing."}
               {cloudState === "checking" && "Cloud state has not been verified yet."}
             </div>
-            <input
-              value={cloudLabel}
-              onChange={(event) => setCloudLabel(event.target.value)}
-              placeholder="Optional restore-point label"
-              style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 12, marginBottom: 10, boxSizing: "border-box" }}
-            />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Btn onClick={handleSaveToCloud} disabled={cloudBusy || cloudState === "checking" || cloudState === "cloud-newer" || cloudState === "conflict"}>Save New Revision</Btn>
               <Btn variant="secondary" onClick={handleRestoreFromCloud} disabled={cloudBusy}>Load Cloud Snapshot</Btn>
               <Btn variant="secondary" onClick={() => refreshCloudState().catch((error) => setStatus({ type: "error", message: `Cloud refresh failed: ${String(error)}` }))} disabled={cloudBusy}>Refresh Cloud State</Btn>
-              <Btn variant="danger" onClick={handleCloudSignOut} disabled={cloudBusy}>Sign Out</Btn>
             </div>
             {cloudHistory.length > 0 && (
               <div style={{ marginTop: 14, borderTop: `1px solid ${theme.colors.border}`, paddingTop: 12 }}>
@@ -734,8 +591,7 @@ export function ImportExportSection() {
                 </div>
               </div>
             )}
-          </div>
-        )}
+        </div>
       </SurfaceCard>
 
       <SurfaceCard style={{ padding: 20, marginBottom: 16 }}>

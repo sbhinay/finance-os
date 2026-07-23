@@ -23,6 +23,7 @@ type AuthSessionValue = {
   email: string;
   hasGoogleIdentity: boolean;
   linkGoogleIdentity: () => Promise<void>;
+  observeCloudSnapshot: (snapshot: CloudSnapshot) => void;
   signOut: () => Promise<void>;
 };
 
@@ -337,6 +338,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         email: session.user.email ?? "Signed-in user",
         hasGoogleIdentity: Boolean(session.user.identities?.some((identity) => identity.provider === "google")),
         linkGoogleIdentity,
+        observeCloudSnapshot: (snapshot) => {
+          observedSnapshot.current = snapshot;
+          setCloudState("saved");
+          setCloudMessage(`Saved as revision ${snapshot.revision}`);
+        },
         signOut,
       }}>
         {children}
