@@ -27,8 +27,11 @@ User action (add/edit/delete transaction)
 ### Repository Layer
 - All storage access is centralized in repository files.
 - This cleanly separates UI and domain logic from persistence.
-- The primary app remains local-first through repository-backed localStorage.
-- Supabase is used for guarded backup/restore snapshots with revision checks, not as an automatic live write path.
+- Repository-backed localStorage is the authenticated session working cache.
+- Supabase is the durable cloud source at login and receives debounced guarded
+  automatic saves after committed repository writes.
+- Revision checks block stale overwrites; cloud bootstrap finishes before financial
+  hooks or UI mount.
 
 ### TransactionForm
 - `TransactionForm.tsx` is the universal entry point for all transaction creates and edits.

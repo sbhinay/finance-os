@@ -70,7 +70,8 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - First-class Properties now own linked mortgages, property tax, insurance, expenses, carrying-cost history, equity, and transaction drill-down.
 - Legacy house loans and standalone property-tax records migrate only through unambiguous matches; current JSON and cloud payloads preserve Property relationships.
 - Import validation now checks stale references more strictly and falls back to `Other` for ambiguous category mappings instead of guessing.
-- Automatic Supabase write-back was rolled back; cloud behavior is currently safe manual save + safe manual restore preview.
+- Authenticated cloud bootstrap and guarded automatic Supabase write-back are active;
+  restore operations still use explicit preview and confirmation.
 - Projection logic already uses full scheduled vehicle and house-loan payment amounts for cash planning rather than relying only on generic expense rows.
 - Transaction descriptions are now system-first and notes are secondary/collapsed instead of equally prominent.
 - Transaction History is no longer category-only for findability; it now supports richer debt-oriented lookup and subtype-aware display.
@@ -158,7 +159,9 @@ The docs are organized into the following cross-linked files:
 - Where implementation is not fully complete, deferred items are explicitly listed.
 - This set is a v3 refresh of the repo docs.
 - Some documents have been refreshed after the June 2026 balance snapshot and category-linking work; older references to reconciliation baselines should be considered obsolete.
-- Cloud save is implemented as guarded Supabase backup/restore snapshots while FinanceOS remains local-first for normal ledger work.
+- FinanceOS is cloud-first at authentication and session boundaries. Local repositories
+  remain the responsive working cache, with guarded automatic snapshot saves after
+  committed writes and final sync before sign-out.
 - FinanceOS is moving toward a two-level product model: regular cash-first workflows first, detailed finance and tax workflows only when the user opts in.
 - The current navigation now deliberately emphasizes a reduced hub set while still preserving older detail pages behind sub-navigation during transition.
 

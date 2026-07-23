@@ -102,6 +102,9 @@ These items are implemented enough to serve as foundations, but some still need 
   stale-tab checks, pre-import/pre-clear restore points, and explicit local-only,
   synced, pending-upload, cloud-newer, and conflict states.
 - Landed: scoped Clear All preserves cloud authentication and device identity.
+- Landed: pre-render auth gate, Google/email entry, recovery, deliberate Google
+  linking, cloud-first bootstrap, guarded autosave, visible sync state, 15-minute
+  inactivity logout, and final-save sign-out.
 - Still external/operational: production monitoring, retention/deletion policy,
   distributed audit events, and independent restore drills.
 - Manual JSON export/import remains the independent safety path.
