@@ -12,7 +12,8 @@ import { fmtCAD, fmtDate, toFixed2, toMonthly } from "@/utils/finance";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
 import { useEffect } from "react";
 import { theme } from "@/lib/theme";
-import { getExpenseReportEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
+import type { Transaction } from "@/types/transaction";
+import { getExpenseReportEffect, getTransactionListEffect, inferTransactionPurpose } from "@/utils/transactionSemantics";
 import { calculateDebtSummary, matchesMortgagePayment, matchesVehicleFinancePayment } from "@/utils/debtReporting";
 import { buildDebtRepaymentProjection } from "@/utils/debtProjection";
 import { ActionButton, DataPanel, MetricCard, PageHeader } from "@/components/ui";
@@ -68,6 +69,16 @@ function projectionVisibility(event: ProjectionEvent): ProjectionVisibility {
   if (event.type === "loan" || event.type === "debt") return "debt";
   if (event.type === "cra") return "tax";
   if (event.type === "transfer") return "transfer";
+  return "expense";
+}
+
+function transactionProjectionVisibility(transaction: Transaction): ProjectionVisibility {
+  const purpose = inferTransactionPurpose(transaction);
+  if (transaction.type === "tax_payment") return "tax";
+  if (transaction.type === "loan_payment" || transaction.type === "loan_receipt") return "debt";
+  if (purpose === "credit_card_payment" || purpose === "loc_payment" || purpose === "loc_draw") return "debt";
+  if (transaction.type === "transfer") return "transfer";
+  if (transaction.type === "income" || transaction.type === "dividend" || transaction.type === "refund") return "income";
   return "expense";
 }
 
@@ -698,9 +709,13 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       return da > db ? 1 : -1;
     });
 
-    // Group transactions by date
-    const txByDay: Record<string, typeof monthTx> = {};
-    monthTx.forEach((t) => {
+    // Current-month posted rows share visibility controls with projections.
+    // Past controls are hidden, so historical month lists remain complete.
+    const visibleMonthTx = isPast
+      ? monthTx
+      : monthTx.filter((transaction) => monthlyVisibility[transactionProjectionVisibility(transaction)]);
+    const txByDay: Record<string, typeof visibleMonthTx> = {};
+    visibleMonthTx.forEach((t) => {
       const d = t.date;
       (txByDay[d] = txByDay[d] ?? []).push(t);
     });

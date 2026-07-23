@@ -15,6 +15,7 @@ const steps = [
   ["Cloud", process.execPath, ["scripts/validate-cloud-guards.mjs"]],
   ["Security baseline", process.execPath, ["scripts/validate-security-baseline.mjs"]],
   ["Authentication gate", process.execPath, ["scripts/validate-auth-gate.mjs"]],
+  ["Projection visibility", process.execPath, ["scripts/validate-projection-visibility.mjs"]],
   ["Import/export contract", process.execPath, ["scripts/validate-import-export-contract.mjs", fixturePath]],
   ["Scanner", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-statement-scanner.mjs"]],
   ["Debt reporting", process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/validate-debt-reporting.mjs"]],

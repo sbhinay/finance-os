@@ -122,6 +122,16 @@ These items are implemented enough to serve as foundations, but some still need 
 - Make dense finance pages feel modern without reducing scanability.
 - Continue removing older inline-heavy styling from remaining screens.
 
+### 15. Profile And Account Settings
+
+- Priority UX follow-up: replace the exposed sidebar `Link Google` and `Sign Out`
+  buttons with one compact user-profile entry.
+- Add a conventional Profile / Account Settings surface for display name, email,
+  avatar, connected authentication methods, password recovery, cloud sync status,
+  session/security details, and sign-out.
+- Keep identity linking deliberate and place destructive account actions in a
+  clearly separated danger area.
+
 ### 14. Security Operations Beyond The Baseline
 
 - Landed baseline: security headers, server-only provider secrets, scanner request
