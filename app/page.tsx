@@ -36,6 +36,7 @@ import { theme } from "@/lib/theme";
 import { useProperties } from "@/modules/business/useAssets";
 import { StatementScannerSection } from "@/modules/business/StatementScannerSection";
 import { DataPanel, EmptyState, MetricCard, MetricGrid, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
+import { AuthGate } from "@/components/AuthGate";
 
 type SectionId =
   | "accounts"
@@ -311,7 +312,7 @@ function AccountsCardsSection() {
 }
 
 // Main App
-export default function Home() {
+function FinanceApp() {
   const [section, setSection] = useState<SectionId>("dailylog");
   const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
   const [editHouseLoanId, setEditHouseLoanId] = useState<string | null>(null);
@@ -565,6 +566,14 @@ export default function Home() {
         {section === "categories"     && wrap(<CategoriesSection />)}
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <AuthGate>
+      <FinanceApp />
+    </AuthGate>
   );
 }
 
