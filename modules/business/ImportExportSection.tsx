@@ -29,6 +29,7 @@ import {
   type CloudSnapshot,
   type CloudSnapshotHistoryItem,
 } from "@/lib/supabase/cloudSnapshots";
+import { deriveCloudSyncState, type CloudSyncState } from "@/lib/supabase/cloudState";
 import { migratePropertyParents } from "@/utils/propertyMigration";
 import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
 import { ActionButton, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
@@ -152,7 +153,7 @@ export function ImportExportSection() {
   const [cloudUpdatedAt, setCloudUpdatedAt] = useState<string | null>(null);
   const [cloudSnapshot, setCloudSnapshot] = useState<CloudSnapshot | null>(null);
   const [cloudHistory, setCloudHistory] = useState<CloudSnapshotHistoryItem[]>([]);
-  const [cloudState, setCloudState] = useState<"checking" | "not-saved" | "in-sync" | "local-changes" | "cloud-newer">("checking");
+  const [cloudState, setCloudState] = useState<CloudSyncState>("checking");
   const [cloudLabel, setCloudLabel] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -177,17 +178,23 @@ export function ImportExportSection() {
     };
   }, []);
 
-  async function compareLocalToCloud(snapshot: CloudSnapshot | null) {
-    if (!snapshot) {
-      setCloudState("not-saved");
-      return;
-    }
+  async function compareLocalToCloud(
+    snapshot: CloudSnapshot | null,
+    observedSnapshot: CloudSnapshot | null = cloudSnapshot
+  ) {
     const localHash = await hashCloudPayload(buildCloudExportPayload());
-    setCloudState(localHash === snapshot.payload_hash ? "in-sync" : "local-changes");
+    setCloudState(deriveCloudSyncState({
+      localHash,
+      latestCloudHash: snapshot?.payload_hash,
+      latestCloudRevision: snapshot?.revision,
+      observedCloudHash: observedSnapshot?.payload_hash,
+      observedCloudRevision: observedSnapshot?.revision,
+    }));
   }
 
-  async function refreshCloudState(markNewer = false) {
+  async function refreshCloudState() {
     if (!cloudSession) return;
+    const observedSnapshot = cloudSnapshot;
     const [snapshot, history] = await Promise.all([
       loadCloudSnapshot(),
       listCloudSnapshotHistory(),
@@ -195,8 +202,7 @@ export function ImportExportSection() {
     setCloudSnapshot(snapshot);
     setCloudUpdatedAt(snapshot?.updated_at ?? null);
     setCloudHistory(history);
-    if (markNewer && snapshot) setCloudState("cloud-newer");
-    else await compareLocalToCloud(snapshot);
+    await compareLocalToCloud(snapshot, observedSnapshot);
   }
 
   useEffect(() => {
@@ -218,11 +224,33 @@ export function ImportExportSection() {
 
   useEffect(() => {
     if (!cloudSession) return;
+    const checkForNewRevision = () => {
+      refreshCloudState().catch(() => setCloudState("checking"));
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") checkForNewRevision();
+    };
+    const interval = window.setInterval(checkForNewRevision, 30_000);
+    window.addEventListener("focus", checkForNewRevision);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", checkForNewRevision);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+    // The current revision is intentionally captured for stale-tab comparison.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSession, cloudSnapshot?.revision]);
+
+  useEffect(() => {
+    if (!cloudSession) return;
     const handleDataChanged = () => {
       compareLocalToCloud(cloudSnapshot).catch(() => setCloudState("checking"));
     };
     window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
     return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    // The listener is rebound whenever the observed snapshot changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudSession, cloudSnapshot]);
 
   function previewImport(result: ImportPayload, source: "file" | "cloud") {
@@ -366,7 +394,7 @@ export function ImportExportSection() {
     reader.readAsText(file);
   }
 
-  function confirmImport() {
+  async function confirmImport() {
     if (!pendingData) return;
     if (importValidation?.errors.length) {
       setStatus({ type: "error", message: `Import blocked: ${importValidation.errors.length} issue(s) must be resolved first.` });
@@ -374,6 +402,15 @@ export function ImportExportSection() {
     }
     setImporting(true);
     try {
+      if (cloudSession) {
+        const restorePoint = await saveCloudSnapshot({
+          expectedRevision: cloudSnapshot?.revision ?? 0,
+          label: `Before ${previewSource === "cloud" ? "cloud restore" : "JSON import"}`,
+        });
+        setCloudSnapshot(restorePoint);
+        setCloudUpdatedAt(restorePoint.updated_at);
+        setCloudHistory(await listCloudSnapshotHistory());
+      }
       const result = pendingData;
 
       accountRepository.saveAll(result.accounts);
@@ -401,7 +438,12 @@ export function ImportExportSection() {
       setAcceptedImportWarnings([]);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
-      setStatus({ type: "error", message: `Import failed: ${String(err)}` });
+      if (err instanceof CloudSnapshotConflictError) {
+        await refreshCloudState();
+        setStatus({ type: "warning", message: "Import stopped before changing local data because the cloud snapshot changed. Review the cloud conflict, then retry." });
+      } else {
+        setStatus({ type: "error", message: `Import failed before local data was replaced: ${String(err)}` });
+      }
     }
     setImporting(false);
   }
@@ -484,12 +526,12 @@ export function ImportExportSection() {
       setCloudSnapshot(saved);
       setCloudUpdatedAt(saved.updated_at);
       setCloudLabel("");
-      setCloudState("in-sync");
+      setCloudState("synced");
       setCloudHistory(await listCloudSnapshotHistory());
       setStatus({ type: "success", message: `Current FinanceOS data saved as guarded cloud revision ${saved.revision}.` });
     } catch (err) {
       if (err instanceof CloudSnapshotConflictError) {
-        await refreshCloudState(true);
+        await refreshCloudState();
         setStatus({ type: "warning", message: "Cloud save blocked because a newer revision exists. Review or load the newer cloud snapshot before trying again." });
       } else {
         setStatus({ type: "error", message: `Cloud save failed: ${String(err)}` });
@@ -634,12 +676,13 @@ export function ImportExportSection() {
               Signed in as <strong>{cloudSession.user.email}</strong>
               {cloudUpdatedAt ? ` | revision ${cloudSnapshot?.revision ?? "?"} saved ${new Date(cloudUpdatedAt).toLocaleString()}` : " | no cloud snapshot saved yet"}
             </div>
-            <div style={{ padding: "8px 10px", borderRadius: theme.radius.sm, background: cloudState === "in-sync" ? theme.colors.successSoft : cloudState === "cloud-newer" ? theme.colors.dangerSoft : theme.colors.warningSoft, color: cloudState === "in-sync" ? theme.colors.success : cloudState === "cloud-newer" ? theme.colors.danger : theme.colors.warning, fontSize: 12, marginBottom: 10 }}>
-              <StatusChip tone={cloudState === "in-sync" ? "success" : cloudState === "cloud-newer" ? "danger" : "warning"}>{cloudState}</StatusChip>{" "}
-              {cloudState === "in-sync" && "Local data matches the latest cloud revision."}
-              {cloudState === "local-changes" && "Local data differs from the latest checked cloud revision."}
-              {cloudState === "not-saved" && "No cloud revision exists yet."}
+            <div style={{ padding: "8px 10px", borderRadius: theme.radius.sm, background: cloudState === "synced" ? theme.colors.successSoft : cloudState === "cloud-newer" || cloudState === "conflict" ? theme.colors.dangerSoft : theme.colors.warningSoft, color: cloudState === "synced" ? theme.colors.success : cloudState === "cloud-newer" || cloudState === "conflict" ? theme.colors.danger : theme.colors.warning, fontSize: 12, marginBottom: 10 }}>
+              <StatusChip tone={cloudState === "synced" ? "success" : cloudState === "cloud-newer" || cloudState === "conflict" ? "danger" : "warning"}>{cloudState}</StatusChip>{" "}
+              {cloudState === "synced" && "Local data matches the latest cloud revision."}
+              {cloudState === "pending-upload" && "Local changes have not been saved as a cloud revision."}
+              {cloudState === "local-only" && "No cloud revision exists yet. Your data is currently local only."}
               {cloudState === "cloud-newer" && "A newer cloud revision was detected. Saving is blocked until you review it."}
+              {cloudState === "conflict" && "Both local data and the cloud changed since this page last synced. Review the cloud snapshot before saving or importing."}
               {cloudState === "checking" && "Cloud state has not been verified yet."}
             </div>
             <input
@@ -649,7 +692,7 @@ export function ImportExportSection() {
               style={{ width: "100%", padding: "8px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm, fontSize: 12, marginBottom: 10, boxSizing: "border-box" }}
             />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Btn onClick={handleSaveToCloud} disabled={cloudBusy || cloudState === "checking" || cloudState === "cloud-newer"}>Save New Revision</Btn>
+              <Btn onClick={handleSaveToCloud} disabled={cloudBusy || cloudState === "checking" || cloudState === "cloud-newer" || cloudState === "conflict"}>Save New Revision</Btn>
               <Btn variant="secondary" onClick={handleRestoreFromCloud} disabled={cloudBusy}>Load Cloud Snapshot</Btn>
               <Btn variant="secondary" onClick={() => refreshCloudState().catch((error) => setStatus({ type: "error", message: `Cloud refresh failed: ${String(error)}` }))} disabled={cloudBusy}>Refresh Cloud State</Btn>
               <Btn variant="danger" onClick={handleCloudSignOut} disabled={cloudBusy}>Sign Out</Btn>

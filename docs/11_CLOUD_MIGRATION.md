@@ -10,6 +10,9 @@
 - Manual JSON export/import remains available as the safest portable backup path.
 - Manual Supabase cloud save now uses guarded revisions, append-only restore history, conflict detection, and visible local-versus-cloud state.
 - Current and historical cloud revisions always enter the existing import preview before replacing local data.
+- Signed-in imports create a guarded cloud restore point before replacing local data.
+- Cloud status distinguishes local-only, synced, pending-upload, cloud-newer, and true two-sided conflict states.
+- Signed-in pages recheck cloud revision on focus, visibility return, and a short polling interval to catch stale tabs.
 - Automatic cloud write-back remains intentionally disabled.
 
 ### Future Target
@@ -60,5 +63,6 @@
 - Successful saves append a new immutable restore point and advance the current revision atomically.
 - Local payload hashes ignore only `meta.exportedAt`, allowing the UI to distinguish in-sync and locally changed data.
 - A detected newer cloud revision blocks saving until the user refreshes and reviews it.
+- A confirmed JSON import or historical restore is blocked before local replacement if its automatic pre-operation restore point encounters a cloud conflict.
 - Restore points never overwrite local data directly; they load into import preview first.
 - Manual JSON export/import remains available and independent of Supabase.
