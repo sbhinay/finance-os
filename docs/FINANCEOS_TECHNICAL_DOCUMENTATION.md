@@ -83,6 +83,7 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Normal mortgage entry and backfill do not store app-generated split estimates; legacy FinanceOS-generated split rows are recalculated for display instead of trusted as manual truth.
 - Projection views create dated cash-out events for configured card/LOC repayment strategies and offset those events by matching planned transfer schedules. Owing without a complete strategy remains an unresolved exposure and is deducted from the separate `After Debt Exposure` balance, so the scheduled forecast remains auditable without presenting unresolved debt as available cash.
 - Projection what-if analysis supports multiple independent dated conditions. Extra income and expenses affect cash on their chosen dates; hypothetical LOC draws add cash while adding an equal conservative debt exposure and never write transactions or mutate stored balances.
+- Monthly projection visibility is independently filterable for income, expense, debt, tax, and internal-transfer rows. Filters affect list noise only. Bank-to-bank schedules have zero aggregate cash effect, card/LOC payments remain negative cash events, and LOC draws are positive cash events with corresponding liability exposure.
 - The design refresh has shared theme tokens plus reusable surface, button, and chip primitives for incremental modernization.
 - `linkedHouseLoanId` provides exact mortgage ownership, with only unambiguous legacy linkage migrated.
 - Transaction History now filters by tag and exact recurring origin.

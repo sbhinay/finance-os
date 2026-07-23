@@ -56,8 +56,19 @@ interface ProjectionEvent {
   date: Date;
   label: string;
   amount: number; // positive = income, negative = expense
-  type: "vehicle" | "loan" | "fixed" | "cra" | "income" | "invoice" | "debt" | "scenario";
+  type: "vehicle" | "loan" | "fixed" | "cra" | "income" | "invoice" | "debt" | "scenario" | "transfer";
   account?: string;
+  displayAmount?: number;
+}
+
+type ProjectionVisibility = "income" | "expense" | "debt" | "tax" | "transfer";
+
+function projectionVisibility(event: ProjectionEvent): ProjectionVisibility {
+  if (event.type === "income" || event.type === "invoice") return "income";
+  if (event.type === "loan" || event.type === "debt") return "debt";
+  if (event.type === "cra") return "tax";
+  if (event.type === "transfer") return "transfer";
+  return "expense";
 }
 
 type WhatIfType = "income" | "expense" | "loc_draw";
@@ -144,16 +155,30 @@ function buildEvents(
     if (!p.amount) return;
     if (p.endDate && new Date(p.endDate + "T12:00:00") < today) return;
 
+    const isTransfer = p.transactionType === "transfer";
+    const isLocDraw = p.subType === "loc_draw" || p.purpose === "loc_draw";
+    const isDebtPayment = p.subType === "cc_payment" || p.subType === "loc_payment"
+      || p.purpose === "credit_card_payment" || p.purpose === "loc_payment";
+    const isNeutralTransfer = p.subType === "bank_to_bank" || p.purpose === "bank_transfer";
+    const projectedAmount = isLocDraw ? p.amount : isNeutralTransfer ? 0 : -p.amount;
+    const projectedType: ProjectionEvent["type"] = isDebtPayment || isLocDraw
+      ? "debt"
+      : isTransfer
+        ? "transfer"
+        : "fixed";
+    const addFixedEvent = (date: Date) => events.push({
+      date,
+      label: p.name,
+      amount: projectedAmount,
+      displayAmount: isNeutralTransfer ? p.amount : undefined,
+      type: projectedType,
+      account: isLocDraw ? p.destinationId : p.source,
+    });
+
     if (p.schedule === "One-time") {
       const d = new Date(p.date + "T12:00:00");
       if (d >= today && d <= end) {
-        events.push({
-          date: d,
-          label: p.name,
-          amount: -p.amount,
-          type: "fixed",
-          account: p.source,
-        });
+        addFixedEvent(d);
       }
       return;
     }
@@ -163,13 +188,7 @@ function buildEvents(
 
     while (d <= end) {
       if (d >= today && (!p.endDate || new Date(p.endDate + "T12:00:00") >= d)) {
-        events.push({
-          date: new Date(d),
-          label: p.name,
-          amount: -p.amount,
-          type: "fixed",
-          account: p.source,
-        });
+        addFixedEvent(new Date(d));
       }
       d = new Date(d.getTime() + interval * 86400000);
     }
@@ -293,6 +312,7 @@ const TYPE_COLORS: Record<string, string> = {
   cra: "#4a3ab5", income: "#1a7f3c", invoice: "#1a7f3c",
   debt: "#b91c1c",
   scenario: "#0f766e",
+  transfer: "#64748b",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -552,6 +572,13 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   // Monthly view state — past 6 / future 6
   const now = useMemo(() => new Date(), []);
   const [selectedMonth, setSelectedMonth] = useState(() => now.toISOString().slice(0, 7));
+  const [monthlyVisibility, setMonthlyVisibility] = useState<Record<ProjectionVisibility, boolean>>({
+    income: true,
+    expense: true,
+    debt: true,
+    tax: false,
+    transfer: false,
+  });
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const totalBankNow = toFixed2(accounts.reduce((s, a) => s + a.openingBalance, 0));
@@ -692,8 +719,9 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       : [];
 
     // Group projected events by day
-    const projByDay: Record<string, typeof projEvents> = {};
-    projEvents.forEach((e) => {
+    const visibleProjEvents = projEvents.filter((event) => monthlyVisibility[projectionVisibility(event)]);
+    const projByDay: Record<string, typeof visibleProjEvents> = {};
+    visibleProjEvents.forEach((e) => {
       const d = e.date.toISOString().split("T")[0];
       (projByDay[d] = projByDay[d] ?? []).push(e);
     });
@@ -735,7 +763,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
     }
 
     return { isPast, isFuture, totalIn, totalOut, projIn, projOut, craTx, topCats, allDays, runBal };
-  }, [selectedMonth, transactions, vehicles, houseLoans, cards, fixedPayments, business, incomes, today, totalBankNow, scenarioEvents]);
+  }, [selectedMonth, transactions, vehicles, houseLoans, cards, fixedPayments, business, incomes, today, totalBankNow, scenarioEvents, monthlyVisibility]);
 
   const catName = (id?: string) => categories.find((c) => c.id === id)?.name ?? id ?? "";
 
@@ -861,7 +889,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
                 </div>
                 {d.events.map((e, j) => (
                   <div key={j} style={{ fontSize: 11, color: TYPE_COLORS[e.type] ?? "#6b7280", marginLeft: 8 }}>
-                    {e.amount > 0 ? "↑" : "↓"} {e.label}: <strong>{fmtCAD(Math.abs(e.amount))}</strong>
+                    {e.type === "transfer" ? "↔" : e.amount > 0 ? "↑" : "↓"} {e.label}: <strong>{fmtCAD(e.displayAmount ?? Math.abs(e.amount))}</strong>
                     {e.account && (() => {
                       // Resolve ID to name if possible
                       const acct = [...accounts, ...cards].find((x) => x.id === e.account);
@@ -912,6 +940,27 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
               </>
             )}
           </div>
+
+          {!monthlyData.isPast && (
+            <Card>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: theme.colors.textSoft }}>Show in monthly event list</span>
+                {([
+                  ["income", "Income"],
+                  ["expense", "Expenses"],
+                  ["debt", "Debt / CC / LOC"],
+                  ["tax", "Tax"],
+                  ["transfer", "Internal Transfers"],
+                ] as Array<[ProjectionVisibility, string]>).map(([key, label]) => (
+                  <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer" }}>
+                    <input type="checkbox" checked={monthlyVisibility[key]} onChange={(event) => setMonthlyVisibility((current) => ({ ...current, [key]: event.target.checked }))} />
+                    {label}
+                  </label>
+                ))}
+                <span style={{ fontSize: 11, color: theme.colors.textSoft }}>Visibility does not change projected totals.</span>
+              </div>
+            </Card>
+          )}
 
           {/* Category breakdown (past months) */}
           {monthlyData.isPast && monthlyData.topCats.length > 0 && (
@@ -972,7 +1021,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
                 {/* Projected events */}
                 {day.projEvents.map((e, i) => (
                   <div key={i} style={{ fontSize: 12, color: TYPE_COLORS[e.type] ?? "#6b7280", marginLeft: 8, marginBottom: 2 }}>
-                    {e.amount > 0 ? "↑" : "↓"} {e.label}: <strong>{fmtCAD(Math.abs(e.amount))}</strong>
+                    {e.type === "transfer" ? "↔" : e.amount > 0 ? "↑" : "↓"} {e.label}: <strong>{fmtCAD(e.displayAmount ?? Math.abs(e.amount))}</strong>
                     {e.account && (() => {
                       const acct = [...accounts, ...cards].find((x) => x.id === e.account);
                       const name = acct ? acct.name : e.account;

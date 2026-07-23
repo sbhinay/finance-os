@@ -58,6 +58,7 @@ These items are implemented enough to serve as foundations, but some still need 
 
 - Projection hardening landed: configured strategies create dated repayment events, while unresolved card/LOC owing is deducted in a separate conservative `After Debt Exposure` balance instead of being hidden behind a warning.
 - Multi-condition what-if scenarios support dated extra income, extra expense, and LOC withdrawals. LOC draws improve scheduled liquidity while increasing conservative debt exposure by the same amount.
+- Monthly projection filters default to Income, Expenses, and Debt. Tax and internal transfers are opt-in display layers; hiding rows never changes projected totals. Bank-to-bank transfers are aggregate cash-neutral, while CC/LOC payments and LOC draws retain their correct cash direction.
 - Include expected credit-card repayment pressure.
 - Include expected LOC repayment pressure.
 - Separate planned payments already logged from unplanned repayment exposure.
