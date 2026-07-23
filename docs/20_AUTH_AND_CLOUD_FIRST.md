@@ -29,6 +29,20 @@ The local cache is scoped operationally by this bootstrap and is cleared between
 users. JSON import remains available after authentication as a recovery and
 portability tool; it is not part of first-login onboarding.
 
+## Guarded Autosave
+
+- Committed repository writes publish `financeOS:dataChanged`.
+- The authenticated gate debounces those events for 1.5 seconds and saves through
+  `save_app_snapshot_guarded`.
+- Every write supplies the last observed cloud revision. A stale tab is blocked
+  rather than overwriting newer data.
+- The global status pill shows saved, pending, saving, offline, newer-cloud,
+  conflict, and failure states.
+- Bootstrap replacement events are ignored, so loading cloud data is not treated
+  as a new user edit.
+- Focus and 30-second checks detect revisions created by another device or tab.
+- Offline edits stay local and retry after the browser reconnects.
+
 ## External Configuration Still Required
 
 - Enable Google as a Supabase Auth provider.

@@ -456,6 +456,53 @@ button:focus-visible {
   cursor: pointer;
 }
 
+.finance-cloud-status {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #334155;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.13);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.finance-cloud-status > span {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.finance-cloud-status-saved > span {
+  background: #16845b;
+}
+
+.finance-cloud-status-working > span {
+  background: #c27803;
+}
+
+.finance-cloud-status-attention {
+  color: #a51d2d;
+  border-color: rgba(165, 29, 45, 0.25);
+}
+
+.finance-cloud-status-attention > span {
+  background: #c5263e;
+}
+
 @media (max-width: 520px) {
   .finance-auth-shell {
     align-items: stretch;
@@ -468,6 +515,12 @@ button:focus-visible {
     padding: 28px 20px;
     border: 0;
     border-radius: 0;
+  }
+
+  .finance-cloud-status {
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100vw - 24px);
   }
 }
 

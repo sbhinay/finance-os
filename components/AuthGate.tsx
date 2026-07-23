@@ -4,11 +4,20 @@ import type { Session } from "@supabase/supabase-js";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { loadCloudSnapshot } from "@/lib/supabase/cloudSnapshots";
+import {
+  buildCloudExportPayload,
+  CloudSnapshotConflictError,
+  hashCloudPayload,
+  loadCloudSnapshot,
+  saveCloudSnapshot,
+  type CloudSnapshot,
+} from "@/lib/supabase/cloudSnapshots";
 import { applyCloudPayloadToLocal, initializeEmptyLocalProfile } from "@/services/cloudLocalBridge";
+import { DATA_CHANGED_EVENT } from "@/utils/events";
 
 type GateState = "checking" | "signed-out" | "loading-data" | "ready" | "error";
 type AuthMode = "sign-in" | "create";
+type CloudRuntimeState = "checking" | "saved" | "saving" | "pending" | "cloud-newer" | "conflict" | "offline" | "error";
 
 function friendlyAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -26,7 +35,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [cloudState, setCloudState] = useState<CloudRuntimeState>("checking");
+  const [cloudMessage, setCloudMessage] = useState("Checking cloud state");
   const initializingUser = useRef<string | null>(null);
+  const observedSnapshot = useRef<CloudSnapshot | null>(null);
+  const saveTimer = useRef<number | null>(null);
+  const saving = useRef(false);
+  const dirty = useRef(false);
 
   const initializeSession = useCallback(async (nextSession: Session) => {
     if (initializingUser.current === nextSession.user.id) return;
@@ -38,6 +53,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       const snapshot = await loadCloudSnapshot();
       if (snapshot) applyCloudPayloadToLocal(snapshot.payload);
       else initializeEmptyLocalProfile();
+      observedSnapshot.current = snapshot;
+      setCloudState(snapshot ? "saved" : "pending");
+      setCloudMessage(snapshot ? `Saved as revision ${snapshot.revision}` : "No cloud data yet");
       setState("ready");
     } catch (error) {
       initializingUser.current = null;
@@ -45,6 +63,51 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       setState("error");
     }
   }, []);
+
+  const saveLocalChanges = useCallback(async () => {
+    if (saving.current || !dirty.current) return;
+    if (!navigator.onLine) {
+      setCloudState("offline");
+      setCloudMessage("Offline - changes are pending");
+      return;
+    }
+
+    saving.current = true;
+    dirty.current = false;
+    setCloudState("saving");
+    setCloudMessage("Saving changes");
+    try {
+      const saved = await saveCloudSnapshot({
+        expectedRevision: observedSnapshot.current?.revision ?? 0,
+        label: "Automatic save",
+      });
+      observedSnapshot.current = saved;
+      setCloudState("saved");
+      setCloudMessage(`Saved as revision ${saved.revision}`);
+    } catch (error) {
+      dirty.current = true;
+      if (error instanceof CloudSnapshotConflictError) {
+        setCloudState("conflict");
+        setCloudMessage("Cloud changed elsewhere - review required");
+      } else if (!navigator.onLine || /failed to fetch/i.test(String(error))) {
+        setCloudState("offline");
+        setCloudMessage("Offline - changes are pending");
+      } else {
+        setCloudState("error");
+        setCloudMessage("Save failed - retry");
+      }
+    } finally {
+      saving.current = false;
+    }
+  }, []);
+
+  const scheduleSave = useCallback(() => {
+    dirty.current = true;
+    setCloudState("pending");
+    setCloudMessage("Changes pending");
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => void saveLocalChanges(), 1_500);
+  }, [saveLocalChanges]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -79,6 +142,52 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       listener.subscription.unsubscribe();
     };
   }, [initializeSession]);
+
+  useEffect(() => {
+    if (state !== "ready" || !session) return;
+
+    const handleDataChanged = (event: Event) => {
+      const domain = (event as CustomEvent<{ domain?: string }>).detail?.domain;
+      if (domain === "cloud-bootstrap" || domain === "cloud-empty-profile") return;
+      scheduleSave();
+    };
+    const checkCloudRevision = async () => {
+      if (!navigator.onLine || saving.current) return;
+      try {
+        const latest = await loadCloudSnapshot();
+        const observed = observedSnapshot.current;
+        if (!latest || !observed || latest.revision <= observed.revision) return;
+        const localHash = await hashCloudPayload(buildCloudExportPayload());
+        const localChanged = localHash !== observed.payload_hash;
+        setCloudState(localChanged ? "conflict" : "cloud-newer");
+        setCloudMessage(localChanged
+          ? "Local and cloud data both changed"
+          : "Newer cloud data is available");
+      } catch {
+        if (!navigator.onLine) {
+          setCloudState("offline");
+          setCloudMessage("Offline");
+        }
+      }
+    };
+    const handleOnline = () => {
+      if (dirty.current) scheduleSave();
+      else void checkCloudRevision();
+    };
+    const handleFocus = () => void checkCloudRevision();
+    const interval = window.setInterval(checkCloudRevision, 30_000);
+
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(interval);
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    };
+  }, [scheduleSave, session, state]);
 
   async function submitEmailAuth(event: React.FormEvent) {
     event.preventDefault();
@@ -136,7 +245,37 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (state === "ready" && session) return <>{children}</>;
+  if (state === "ready" && session) {
+    const tone = cloudState === "saved" ? "saved"
+      : cloudState === "conflict" || cloudState === "cloud-newer" || cloudState === "error" ? "attention"
+        : "working";
+    return (
+      <>
+        {children}
+        <button
+          type="button"
+          className={`finance-cloud-status finance-cloud-status-${tone}`}
+          onClick={() => {
+            if (cloudState === "cloud-newer") {
+              window.location.reload();
+            } else if (cloudState === "pending" || cloudState === "offline" || cloudState === "error") {
+              scheduleSave();
+            }
+          }}
+          title={cloudState === "cloud-newer"
+            ? "Reload the newer cloud revision"
+            : cloudState === "conflict"
+              ? "Open Import / Export to review the conflict without overwriting either copy"
+              : cloudState === "pending" || cloudState === "offline" || cloudState === "error"
+                ? "Retry cloud save"
+                : "Cloud save status"}
+        >
+          <span aria-hidden="true" />
+          {cloudMessage}
+        </button>
+      </>
+    );
+  }
 
   const loading = state === "checking" || state === "loading-data";
   return (
