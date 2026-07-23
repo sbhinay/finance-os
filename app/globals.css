@@ -503,6 +503,100 @@ button:focus-visible {
   background: #c5263e;
 }
 
+.finance-account-footer {
+  display: grid;
+  gap: 10px;
+  margin: 12px;
+  padding: 12px;
+  border: 1px solid var(--finance-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.finance-account-footer > div {
+  display: grid;
+  min-width: 0;
+}
+
+.finance-account-footer strong {
+  color: var(--foreground);
+  font-size: 11px;
+}
+
+.finance-account-footer span {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-account-footer .finance-identity-connected {
+  color: #16845b;
+  font-weight: 700;
+}
+
+.finance-account-footer button {
+  min-height: 34px;
+  border: 1px solid var(--finance-border);
+  border-radius: 8px;
+  background: #fff;
+  color: #9f1239;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.finance-session-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(4px);
+}
+
+.finance-session-dialog {
+  width: min(100%, 430px);
+  padding: 24px;
+  border: 1px solid var(--finance-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.finance-session-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.finance-session-dialog p {
+  margin: 0 0 18px;
+  color: #526277;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.finance-session-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.finance-signout-progress {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 750;
+}
+
 @media (max-width: 520px) {
   .finance-auth-shell {
     align-items: stretch;

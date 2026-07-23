@@ -36,7 +36,7 @@ import { theme } from "@/lib/theme";
 import { useProperties } from "@/modules/business/useAssets";
 import { StatementScannerSection } from "@/modules/business/StatementScannerSection";
 import { DataPanel, EmptyState, MetricCard, MetricGrid, PageHeader, StatusChip, SurfaceCard } from "@/components/ui";
-import { AuthGate } from "@/components/AuthGate";
+import { AuthGate, useAuthSession } from "@/components/AuthGate";
 
 type SectionId =
   | "accounts"
@@ -313,6 +313,7 @@ function AccountsCardsSection() {
 
 // Main App
 function FinanceApp() {
+  const { email, hasGoogleIdentity, linkGoogleIdentity, signOut } = useAuthSession();
   const [section, setSection] = useState<SectionId>("dailylog");
   const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
   const [editHouseLoanId, setEditHouseLoanId] = useState<string | null>(null);
@@ -456,6 +457,18 @@ function FinanceApp() {
               })}
             </div>
           ))}
+        </div>
+        <div className="finance-account-footer">
+          <div>
+            <strong>Signed in</strong>
+            <span title={email}>{email}</span>
+          </div>
+          {hasGoogleIdentity ? (
+            <span className="finance-identity-connected">Google connected</span>
+          ) : (
+            <button type="button" onClick={() => void linkGoogleIdentity()}>Link Google</button>
+          )}
+          <button type="button" onClick={() => void signOut()}>Sign Out</button>
         </div>
       </aside>
 

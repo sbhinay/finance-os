@@ -43,6 +43,26 @@ portability tool; it is not part of first-login onboarding.
 - Focus and 30-second checks detect revisions created by another device or tab.
 - Offline edits stay local and retry after the browser reconnects.
 
+## Session Lifecycle
+
+- Activity resets a 15-minute inactivity clock.
+- A warning appears after 14 minutes and allows the user to continue.
+- At 15 minutes, FinanceOS attempts a final guarded save and signs out.
+- Manual sign-out follows the same final-save path.
+- If the final save fails, FinanceOS keeps the session and local cache active and
+  offers retry or stay-signed-in actions. It never claims sign-out succeeded while
+  silently dropping local work.
+- Successful sign-out clears the active financial cache before returning to the
+  authentication screen.
+
+## Identity Linking
+
+- FinanceOS does not merge identities by comparing email text.
+- A signed-in email/password user may explicitly choose `Link Google`.
+- The link uses Supabase `linkIdentity` and requires manual identity linking to be
+  enabled in the Supabase Auth configuration.
+- Existing Google identities are displayed as connected and are not linked again.
+
 ## External Configuration Still Required
 
 - Enable Google as a Supabase Auth provider.

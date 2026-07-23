@@ -2,7 +2,7 @@
 
 import type { Session } from "@supabase/supabase-js";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   buildCloudExportPayload,
@@ -14,10 +14,25 @@ import {
 } from "@/lib/supabase/cloudSnapshots";
 import { applyCloudPayloadToLocal, initializeEmptyLocalProfile } from "@/services/cloudLocalBridge";
 import { DATA_CHANGED_EVENT } from "@/utils/events";
+import { clearLocalFinanceData } from "@/utils/localFinanceData";
 
 type GateState = "checking" | "signed-out" | "loading-data" | "ready" | "error";
 type AuthMode = "sign-in" | "create";
 type CloudRuntimeState = "checking" | "saved" | "saving" | "pending" | "cloud-newer" | "conflict" | "offline" | "error";
+type AuthSessionValue = {
+  email: string;
+  hasGoogleIdentity: boolean;
+  linkGoogleIdentity: () => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
+const AuthSessionContext = createContext<AuthSessionValue | null>(null);
+
+export function useAuthSession() {
+  const value = useContext(AuthSessionContext);
+  if (!value) throw new Error("useAuthSession must be used inside AuthGate.");
+  return value;
+}
 
 function friendlyAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -37,6 +52,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
   const [cloudState, setCloudState] = useState<CloudRuntimeState>("checking");
   const [cloudMessage, setCloudMessage] = useState("Checking cloud state");
+  const [idleWarning, setIdleWarning] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const initializingUser = useRef<string | null>(null);
   const observedSnapshot = useRef<CloudSnapshot | null>(null);
   const saveTimer = useRef<number | null>(null);
@@ -64,12 +83,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const saveLocalChanges = useCallback(async () => {
-    if (saving.current || !dirty.current) return;
+  const saveLocalChanges = useCallback(async (): Promise<boolean> => {
+    if (saving.current) return false;
+    if (!dirty.current) return true;
     if (!navigator.onLine) {
       setCloudState("offline");
       setCloudMessage("Offline - changes are pending");
-      return;
+      return false;
     }
 
     saving.current = true;
@@ -84,6 +104,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       observedSnapshot.current = saved;
       setCloudState("saved");
       setCloudMessage(`Saved as revision ${saved.revision}`);
+      return true;
     } catch (error) {
       dirty.current = true;
       if (error instanceof CloudSnapshotConflictError) {
@@ -96,6 +117,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         setCloudState("error");
         setCloudMessage("Save failed - retry");
       }
+      return false;
     } finally {
       saving.current = false;
     }
@@ -189,6 +211,67 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     };
   }, [scheduleSave, session, state]);
 
+  const signOut = useCallback(async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError(null);
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    dirty.current = true;
+    const saved = await saveLocalChanges();
+    if (!saved) {
+      setSignOutError("FinanceOS could not complete the final cloud save. You remain signed in so no local work is discarded.");
+      setSigningOut(false);
+      return;
+    }
+
+    try {
+      const { error } = await getSupabaseBrowserClient().auth.signOut();
+      if (error) throw error;
+      clearLocalFinanceData();
+      observedSnapshot.current = null;
+      dirty.current = false;
+    } catch (error) {
+      setSignOutError(friendlyAuthError(error));
+    } finally {
+      setSigningOut(false);
+    }
+  }, [saveLocalChanges, signingOut]);
+
+  const linkGoogleIdentity = useCallback(async () => {
+    setAccountMessage(null);
+    try {
+      const { error } = await getSupabaseBrowserClient().auth.linkIdentity({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
+    } catch (error) {
+      setAccountMessage(`Google identity linking failed: ${friendlyAuthError(error)}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (state !== "ready" || !session) return;
+    let warningTimer: number;
+    let logoutTimer: number;
+
+    const resetIdleClock = () => {
+      window.clearTimeout(warningTimer);
+      window.clearTimeout(logoutTimer);
+      setIdleWarning(false);
+      warningTimer = window.setTimeout(() => setIdleWarning(true), 14 * 60 * 1_000);
+      logoutTimer = window.setTimeout(() => void signOut(), 15 * 60 * 1_000);
+    };
+    const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart", "scroll"];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetIdleClock, { passive: true }));
+    resetIdleClock();
+    return () => {
+      window.clearTimeout(warningTimer);
+      window.clearTimeout(logoutTimer);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleClock));
+    };
+  }, [session, signOut, state]);
+
   async function submitEmailAuth(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -250,7 +333,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       : cloudState === "conflict" || cloudState === "cloud-newer" || cloudState === "error" ? "attention"
         : "working";
     return (
-      <>
+      <AuthSessionContext.Provider value={{
+        email: session.user.email ?? "Signed-in user",
+        hasGoogleIdentity: Boolean(session.user.identities?.some((identity) => identity.provider === "google")),
+        linkGoogleIdentity,
+        signOut,
+      }}>
         {children}
         <button
           type="button"
@@ -273,7 +361,42 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <span aria-hidden="true" />
           {cloudMessage}
         </button>
-      </>
+        {idleWarning && (
+          <div className="finance-session-overlay" role="dialog" aria-modal="true" aria-labelledby="idle-warning-title">
+            <div className="finance-session-dialog">
+              <h2 id="idle-warning-title">Still working?</h2>
+              <p>For your security, FinanceOS will save and sign out after 15 minutes of inactivity.</p>
+              <button type="button" className="finance-button finance-auth-primary" onClick={() => setIdleWarning(false)}>
+                Continue Session
+              </button>
+            </div>
+          </div>
+        )}
+        {signOutError && (
+          <div className="finance-session-overlay" role="dialog" aria-modal="true" aria-labelledby="signout-error-title">
+            <div className="finance-session-dialog">
+              <h2 id="signout-error-title">Cloud save needs attention</h2>
+              <p>{signOutError}</p>
+              <div className="finance-session-actions">
+                <button type="button" className="finance-button finance-auth-primary" onClick={() => void signOut()}>
+                  Retry Save &amp; Sign Out
+                </button>
+                <button type="button" className="finance-button" onClick={() => setSignOutError(null)}>Stay Signed In</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {accountMessage && (
+          <div className="finance-session-overlay" role="dialog" aria-modal="true" aria-labelledby="account-message-title">
+            <div className="finance-session-dialog">
+              <h2 id="account-message-title">Account connection</h2>
+              <p>{accountMessage}</p>
+              <button type="button" className="finance-button finance-auth-primary" onClick={() => setAccountMessage(null)}>Close</button>
+            </div>
+          </div>
+        )}
+        {signingOut && <div className="finance-signout-progress" role="status">Saving and signing out...</div>}
+      </AuthSessionContext.Provider>
     );
   }
 

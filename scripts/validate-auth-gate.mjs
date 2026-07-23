@@ -26,6 +26,13 @@ const client = fs.readFileSync("lib/supabase/client.ts", "utf8");
   "Automatic save",
   "cloud-newer",
   "Offline - changes are pending",
+  "14 * 60 * 1_000",
+  "15 * 60 * 1_000",
+  "Saving and signing out",
+  "clearLocalFinanceData",
+  "Retry Save &amp; Sign Out",
+  "linkIdentity",
+  "hasGoogleIdentity",
 ].forEach((fragment) => {
   if (!gate.includes(fragment)) throw new Error(`Auth gate is missing required behavior: ${fragment}`);
 });
