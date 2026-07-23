@@ -201,7 +201,7 @@ Real-user testing now shows that the remaining path must be handled as controlle
 7. Expand Data Health repair, relinking, dismissal, duplicate, stale-reference, and classification checks.
 8. Improve import review correction controls before confirmation.
 9. Add or harden tax working papers plus Excel/PDF exports.
-10. Expand guarded cloud history, restore points, and conflict protection.
+10. Guarded cloud history, restore points, stale-tab checks, and conflict protection have landed; production operations remain.
 11. Keep AI Statement Scanner work deferred until the core app is solid.
 12. Continue visual-system modernization across remaining older surfaces.
 13. Clarify Transaction History summary totals so Outflows are visibly broken down into expense, debt repayment, tax, and other cash-out categories.
@@ -258,6 +258,10 @@ As of this version:
 - scanner account selection, duplicate review, privacy consent, no-storage behavior, and provider retention messaging are live as the current foundation
 - guarded Supabase saves use optimistic revisions, append-only restore points, conflict blocking, and visible local-versus-cloud state
 - all cloud restores use import preview, while manual JSON backup remains independent
+- signed-in imports and Clear All create guarded restore points before changing local data
+- cloud state distinguishes local-only, synced, pending upload, cloud newer, and true two-sided conflict
+- an OWASP-ASVS-informed security-readiness baseline adds security headers, scanner request controls, secret checks, and CI without claiming certification
+- the responsive/PWA foundation provides an installable manifest, mobile navigation, shared responsive primitives, viewport-correct transaction sheets, and verified primary-hub fit at 390 px
 - CRA working papers separate bookkeeping totals, confidence, and user-confirmed tax treatment
 - genuine Excel and PDF exports cover tax, business, lender, debt, Property, vehicle, and ledger summaries
 - the June 29 fixture replays all stored account/card balances without drift

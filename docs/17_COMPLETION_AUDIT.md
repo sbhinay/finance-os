@@ -30,6 +30,7 @@ npm run validate:mojibake
 npm run validate:architecture
 npm run validate:reports
 npm run validate:cloud
+npm run validate:security
 npm run validate:import-export
 npm run validate:scanner
 npm run validate:debt
@@ -38,8 +39,6 @@ npm run validate:properties
 npm run validate:fixture
 npm run lint
 npm run build
-npm audit
-npm audit --omit=dev
 ```
 
 At completion:
@@ -47,7 +46,8 @@ At completion:
 - all account and card balances in the June 29 fixture matched snapshot-based replay with zero difference
 - Property migration, principal-only debt replay, card/LOC debt projection pressure, scanner parsing, cloud guards, and binary report exports passed
 - lint and the production build passed
-- the full and production dependency audits reported zero vulnerabilities
+- dependency auditing is enforced in the GitHub security workflow; local registry
+  audit requires explicit approval because it transmits dependency metadata
 - source, script, and documentation files are scanned for mojibake by `npm run validate:mojibake`
 - durable JSON/cloud domains are checked for symmetric export, import-preview mapping, and fixture presence by `npm run validate:import-export`
 
@@ -59,7 +59,9 @@ The supported in-app browser acceptance pass completed after the browser runtime
 - the June 29 fixture imported through the normal Import / Export preview, then rendered realistic dashboard, account/card, transaction history, scanner, recurring, business, Data Health, property, and liability surfaces
 - projection showed card/LOC repayment gaps as unplanned exposure instead of hiding owed balances from cash-flow planning
 - scanner local-fixture acceptance ran through a temporary production server, selected a real account, uploaded an image, returned an editable candidate from `/api/statement-scanner`, and confirmed it through the canonical import path with `Added 1, skipped 0`
-- the mobile navigation drawer and responsive Daily Log and Data Health layouts passed at a 390 by 844 viewport
+- the mobile navigation drawer, transaction bottom sheet, and every primary hub
+  passed width checks at a 390 by 844 viewport; desktop shell behavior passed at
+  1440 by 900
 - no browser console errors were observed
 
 The browser session used isolated local browser data and did not mutate the user's financial dataset.
@@ -87,3 +89,8 @@ Schema, guarded RPC, revision checks, history, and client access restrictions ar
 ## Result
 
 All eight phases are implemented and locally verified, including browser acceptance. Guarded cloud persistence is deployed and its security boundary is verified. No known local code or data blocker remains. Live AI provider verification still requires a server-side provider credential.
+
+The later hardening pass added guarded pre-operation restore points, scoped local
+cleanup, five-state cloud conflict UX, an OWASP-ASVS-informed security baseline,
+security CI, and a responsive/PWA foundation. This remains readiness work, not a
+formal security certification or native mobile release.

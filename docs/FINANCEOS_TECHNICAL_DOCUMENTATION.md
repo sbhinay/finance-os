@@ -1,6 +1,6 @@
 # FinanceOS - Technical Documentation
 **Version:** 3.0
-**Last Updated:** June 2026
+**Last Updated:** July 2026
 **Status:** Active Development
 
 ---
@@ -24,6 +24,8 @@
 16. [AI Statement Scanner](15_AI_STATEMENT_SCANNER.md)
 17. [Tax Working Papers And Exports](16_TAX_WORKING_PAPERS_AND_EXPORTS.md)
 18. [Production Completion Audit](17_COMPLETION_AUDIT.md)
+19. [Security Readiness](18_SECURITY_READINESS.md)
+20. [Mobile And PWA](19_MOBILE_AND_PWA.md)
 
 ---
 
@@ -93,6 +95,16 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
 - Scanner images are request-memory only in FinanceOS; privacy consent and provider-retention messaging are shown before extraction. Further scanner work is deferred until the core ledger, debt, projection, and UX surfaces are stable.
 - Supabase cloud saves now use optimistic revision checks, append-only restore history, conflict blocking, and visible local-versus-cloud comparison.
 - Cloud snapshot tables are client-read-only; every restore enters import preview and manual JSON backup remains available.
+- Signed-in import and Clear All operations create guarded cloud restore points
+  first; scoped local cleanup preserves the Supabase session and device identity.
+- Cloud state distinguishes local-only, synced, pending upload, cloud newer, and
+  two-sided conflict, with focus/visibility/polling checks for stale tabs.
+- Security readiness includes application headers, scanner request/rate limits,
+  tracked-secret validation, CI gates, and an OWASP-ASVS-informed checklist. This
+  is not a certification.
+- The responsive/PWA foundation includes an installable manifest, mobile shell,
+  shared responsive controls, and viewport-correct transaction sheets. Offline
+  writes remain disabled until conflict-safe queued persistence is proven.
 - CRA Review persists explicit proposed/confirmed/excluded/accountant-review tax decisions separately from bookkeeping totals.
 - Multi-sheet Excel and tabular PDF exports include tax, business, lender, mortgage, Property, vehicle, and tax-ledger summaries.
 - Refunds reverse expense reporting and reduce credit-card owing without being treated as income.

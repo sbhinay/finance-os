@@ -98,10 +98,13 @@ These items are implemented enough to serve as foundations, but some still need 
 
 ### 10. Guarded Cloud History and Conflict Protection
 
-- Expand snapshot history and restore points.
-- Improve overwrite protection and conflict/version checks.
-- Make local-versus-cloud state clear.
-- Preserve manual JSON export/import as the independent safety path.
+- Landed: append-only snapshot history, restore preview, optimistic revisions,
+  stale-tab checks, pre-import/pre-clear restore points, and explicit local-only,
+  synced, pending-upload, cloud-newer, and conflict states.
+- Landed: scoped Clear All preserves cloud authentication and device identity.
+- Still external/operational: production monitoring, retention/deletion policy,
+  distributed audit events, and independent restore drills.
+- Manual JSON export/import remains the independent safety path.
 
 ### 11. AI Statement Scanner Deferred
 
@@ -110,9 +113,20 @@ These items are implemented enough to serve as foundations, but some still need 
 
 ### 12. Larger Visual System Modernization
 
+- Landed foundation: installable manifest, responsive shell, shared mobile metrics
+  and form rules, viewport-correct transaction sheet, and primary-hub 390 px fit.
 - Continue improving typography, spacing, modal structure, page consistency, and subtle motion.
 - Make dense finance pages feel modern without reducing scanability.
 - Continue removing older inline-heavy styling from remaining screens.
+
+### 14. Security Operations Beyond The Baseline
+
+- Landed baseline: security headers, server-only provider secrets, scanner request
+  limits, basic rate limiting, secret-pattern validation, security CI, and an
+  OWASP-ASVS-informed readiness checklist.
+- Still deferred: distributed authenticated rate limiting, production monitoring,
+  incident ownership, legal retention/privacy review, independent penetration
+  testing, and any formal certification.
 
 ### 13. Transaction History Summary Clarity
 
