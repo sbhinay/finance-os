@@ -58,6 +58,7 @@ export function PageHeader({
 }) {
   return (
     <div
+      className="finance-page-header"
       style={{
         display: "flex",
         alignItems: "flex-start",
@@ -93,6 +94,7 @@ export function PageHeader({
 export function MetricGrid({ children }: { children: ReactNode }) {
   return (
     <div
+      className="finance-metric-grid"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",

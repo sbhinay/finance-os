@@ -44,7 +44,6 @@ export const theme = {
       borderTop: accentColor ? `3px solid ${accentColor}` : `1px solid ${theme.colors.border}`,
       borderRadius: theme.radius.md,
       boxShadow: theme.shadow.card,
-      backdropFilter: "saturate(1.1)",
     };
   },
 };

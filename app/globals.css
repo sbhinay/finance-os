@@ -30,6 +30,7 @@ body {
   margin: 0;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 * {
@@ -119,11 +120,9 @@ button:focus-visible {
 @keyframes financeFadeUp {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -176,6 +175,111 @@ button:focus-visible {
 .finance-table th {
   border-bottom: 1px solid var(--finance-border);
   padding: 10px 12px;
+}
+
+.finance-app-shell {
+  min-width: 0;
+}
+
+.finance-main {
+  width: 100%;
+  max-width: 1920px;
+  margin-inline: auto;
+}
+
+.finance-grid-2 {
+  min-width: 0;
+}
+
+.finance-sidebar {
+  overflow-x: hidden;
+}
+
+@media (max-width: 760px) {
+  .finance-main {
+    padding: 18px 12px 28px !important;
+  }
+
+  .finance-page-header {
+    margin-bottom: 14px !important;
+  }
+
+  .finance-page-header > div:first-child > div:first-child {
+    font-size: 22px !important;
+  }
+
+  .finance-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .finance-metric-grid .finance-card {
+    min-width: 0 !important;
+    padding: 13px 12px !important;
+  }
+
+  .finance-grid-2 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .finance-pending-header,
+  .finance-pending-row {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .finance-pending-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .finance-button {
+    min-height: 42px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+    max-width: 100%;
+  }
+
+  .finance-modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .finance-modal-panel,
+  .finance-drawer {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 94dvh !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+
+  .finance-modal-content {
+    padding: 16px !important;
+  }
+
+  .finance-card:hover,
+  button:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .finance-table {
+    min-width: 640px;
+  }
+}
+
+@media (max-width: 430px) {
+  .finance-metric-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .finance-page-header > div:last-child {
+    width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -107,7 +107,7 @@ function Btn({ children, onClick, variant = "primary", disabled }: {
   }[variant];
   return <button onClick={onClick} disabled={disabled} className="finance-button" style={{ padding: "9px 16px", fontSize: 13, fontWeight: 700, borderRadius: theme.radius.pill, border: `1px solid ${c.border}`, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, background: c.bg, color: c.color }}>{children}</button>;
 }
-function Grid2({ children }: { children: React.ReactNode }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
+function Grid2({ children }: { children: React.ReactNode }) { return <div className="finance-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{children}</div>; }
 function Alert({ type, children }: { type: "warning" | "error" | "info"; children: React.ReactNode }) {
   const s = {
     warning: { bg: theme.colors.warningSoft, border: "#f4d37b", color: theme.colors.warning },
@@ -525,8 +525,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   if (!open) return null;
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
-      <div className="finance-drawer" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: 620, maxHeight: "92vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
+    <div className="finance-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+      <div className="finance-drawer finance-modal-panel" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: 620, maxHeight: "92vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
 
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surfaceAlt, borderTop: `3px solid ${typeColor}`, zIndex: 1 }}>
@@ -536,7 +536,7 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
         </div>
 
-        <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 13 }}>
+        <div className="finance-modal-content" style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 13 }}>
 
           {/* Errors */}
           {errors.length > 0 && <Alert type="error">{errors.map((e, i) => <div key={i}>- {e}</div>)}</Alert>}

@@ -370,7 +370,7 @@ export default function Home() {
       style={{
         padding: "clamp(18px, 2vw, 26px)",
         background: "rgba(255,255,255,0.88)",
-        animation: "financeFadeUp 180ms ease both",
+        animation: "financeFadeUp 180ms ease",
       }}
     >
       {children}
@@ -378,7 +378,7 @@ export default function Home() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", color: theme.colors.text, display: "flex", background: theme.colors.pageGlow }}>
+    <div className="finance-app-shell" style={{ minHeight: "100vh", color: theme.colors.text, display: "flex", background: theme.colors.pageGlow }}>
       {isMobileNav && sidebarOpen && (
         <button
           aria-label="Close navigation"
@@ -394,7 +394,7 @@ export default function Home() {
         />
       )}
       {/* Sidebar */}
-      <aside style={{
+      <aside className="finance-sidebar" style={{
         width: isMobileNav ? 276 : 244,
         flexShrink: 0,
         background: `linear-gradient(180deg, ${theme.colors.sidebar} 0%, ${theme.colors.sidebarAlt} 100%)`,
@@ -425,7 +425,7 @@ export default function Home() {
                 const active = PRIMARY_SECTION_BY_SECTION[section] === item.id;
                 return (
                   <button key={item.id} onClick={() => { setSection(item.id); if (isMobileNav) setSidebarOpen(false); }} style={{
-                    width: "100%", textAlign: "left",
+                    width: "calc(100% - 20px)", textAlign: "left",
                     padding: "10px 16px", margin: "0 10px 4px", display: "flex", alignItems: "center", gap: 10,
                     background: active ? "linear-gradient(90deg, rgba(15,118,110,0.16), rgba(245,158,11,0.08))" : "transparent",
                     border: "none",
@@ -459,7 +459,7 @@ export default function Home() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, minWidth: 0, padding: "30px clamp(18px, 3vw, 38px)" }}>
+      <main className="finance-main" style={{ flex: 1, minWidth: 0, padding: "30px clamp(18px, 3vw, 38px)" }}>
         {isMobileNav && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
             <button

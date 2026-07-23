@@ -156,8 +156,8 @@ export function PendingBanner({
 
   return (
     <div style={{ background: theme.colors.warningSoft, border: `1px solid #f5d59d`, borderRadius: theme.radius.lg, marginBottom: 18, overflow: "hidden", boxShadow: theme.shadow.soft }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f5d59d", background: "#fdf1d3" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="finance-pending-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f5d59d", background: "#fdf1d3" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           <span style={{ fontSize: 16 }}>Pending</span>
           <span style={{ fontWeight: 700, fontSize: 13, color: theme.colors.warning }}>
             {pending.length} Pending {pending.length === 1 ? "Transaction" : "Transactions"} - Confirm or Dismiss
@@ -200,8 +200,8 @@ export function PendingBanner({
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
+            <div className="finance-pending-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#1c1c1e" }}>
                   {typeIcon[p.sourceType] ?? "Recurring"} {p.name}
                 </div>
@@ -215,7 +215,7 @@ export function PendingBanner({
                   </div>
                 )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="finance-pending-actions" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontWeight: 700, color: "#a31515", fontSize: 14 }}>{fmtCAD(p.amount)}</span>
                 {!isCRA(p) && (
                   <>
