@@ -715,8 +715,8 @@ function InvoiceLog({
         <StatBox label="Total Hours" value={`${totalHours}h`} />
       </MetricGrid>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="finance-toolbar-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div className="finance-toolbar-fields" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280" }}>Fiscal Year:</span>
           <select
             value={selectedFY === "all" ? "all" : selectedFY || currentFY}

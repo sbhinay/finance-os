@@ -234,6 +234,17 @@ button:focus-visible {
     width: 100%;
   }
 
+  .finance-toolbar-row {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .finance-toolbar-fields {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
   .finance-button {
     min-height: 42px;
   }
