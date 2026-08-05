@@ -13,6 +13,7 @@ import { theme } from "@/lib/theme";
 import { buildCanonicalTransaction, persistCanonicalTransactions } from "@/services/transactionPipeline";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
 import { buildHouseLoanSplitEstimates } from "@/utils/debtAllocation";
+import { Modal } from "@/components/Modal";
 import {
   calculateDebtSummary,
   matchesMortgagePayment,
@@ -68,19 +69,6 @@ function Btn({ children, onClick, variant = "primary", small, style }: {
     green: { bg: theme.colors.success, color: "#fff", border: theme.colors.success },
   }[variant];
   return <button onClick={onClick} style={{ padding: small ? "6px 12px" : "10px 16px", fontSize: small ? 12 : 13, fontWeight: 700, borderRadius: 999, border: `1px solid ${c.border}`, cursor: "pointer", background: c.bg, color: c.color, boxShadow: variant === "secondary" ? "none" : theme.shadow.soft, ...style }}>{children}</button>;
-}
-function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: theme.radius.lg, width: "100%", maxWidth: wide ? 720 : 520, maxHeight: "90vh", overflowY: "auto", boxShadow: theme.shadow.shell, border: `1px solid ${theme.colors.border}` }}>
-        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-          <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>Close</button>
-        </div>
-        <div style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
-      </div>
-    </div>
-  );
 }
 function Grid2({ children }: { children: React.ReactNode }) {
   return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>{children}</div>;
