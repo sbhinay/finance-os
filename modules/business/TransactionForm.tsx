@@ -12,7 +12,6 @@ import { deleteCanonicalTransaction, persistCanonicalTransaction } from "@/servi
 import { inferTransactionPurpose } from "@/utils/transactionSemantics";
 import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
 import { theme } from "@/lib/theme";
-import { Modal } from "@/components/Modal";
 import {
   Transaction, TransactionType, TransactionSubType, TransactionMode,
   TYPE_LABELS, SUB_TYPE_OPTIONS, USER_FACING_TYPES, getSubTypeLabel,
@@ -526,8 +525,18 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
   if (!open) return null;
 
   return (
-    <Modal title={title ?? (form.id ? "Edit Transaction" : "New Transaction")} onClose={onClose} maxWidth={620}>
-        <div style={{ height: 3, background: typeColor, margin: "-20px -20px 2px" }} />
+    <div className="finance-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+      <div className="finance-drawer finance-modal-panel" style={{ background: theme.colors.surface, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, width: "100%", maxWidth: 620, maxHeight: "92vh", overflowY: "auto", boxShadow: theme.shadow.shell }}>
+
+        {/* Header */}
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: theme.colors.surfaceAlt, borderTop: `3px solid ${typeColor}`, zIndex: 1 }}>
+          <div style={{ fontWeight: 750, fontSize: 16, color: typeColor }}>
+            {title ?? (form.id ? "Edit Transaction" : "New Transaction")}
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: 0, textTransform: "uppercase", cursor: "pointer", color: theme.colors.textSoft }}>Close</button>
+        </div>
+
+        <div className="finance-modal-content" style={{ padding: "22px", display: "flex", flexDirection: "column", gap: 13 }}>
 
           {/* Errors */}
           {errors.length > 0 && <Alert type="error">{errors.map((e, i) => <div key={i}>- {e}</div>)}</Alert>}
@@ -827,6 +836,8 @@ export function TransactionForm({ open, onClose, initial, scheduledAmount, lockT
             </div>
           </div>
 
-    </Modal>
+        </div>
+      </div>
+    </div>
   );
 }
