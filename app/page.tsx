@@ -535,6 +535,7 @@ function FinanceApp() {
         {section === "dailylog"       && wrap(<DailyLogSection />)}
         {section === "healthreport"   && wrap(
           <HealthReportSection
+            onOpenCRAReview={() => setSection("crareview")}
             onOpenVehicle={(id) => {
               setEditVehicleId(id);
               setSection("vehicles");

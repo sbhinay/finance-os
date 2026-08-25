@@ -12,7 +12,23 @@ import { useLiabilities, getLiabilitySummary } from "./useLiabilities";
 import { useHouseLoans, useProperties, useVehicles } from "./useAssets";
 import { calculateDebtSummary, matchesMortgagePayment, matchesVehicleFinancePayment } from "@/utils/debtReporting";
 import { exportReportsExcel, exportReportsPdf, type ReportSheet } from "@/utils/reportExports";
-import type { TaxTreatmentDecision, TaxTreatmentStatus } from "@/types/business";
+import type {
+  CorporateWithdrawalClassification,
+  CorporateWithdrawalReview,
+  TaxTreatmentDecision,
+  TaxTreatmentStatus,
+} from "@/types/business";
+import { getCorporateWithdrawalCandidates, isCorporateWithdrawalResolved } from "@/utils/corporateWithdrawals";
+
+const WITHDRAWAL_CLASSIFICATIONS: Array<{ value: CorporateWithdrawalClassification | ""; label: string }> = [
+  { value: "", label: "Select classification" },
+  { value: "salary_payroll", label: "Salary / payroll" },
+  { value: "dividend", label: "Dividend" },
+  { value: "shareholder_loan", label: "Shareholder loan / advance" },
+  { value: "expense_reimbursement", label: "Expense reimbursement" },
+  { value: "internal_transfer", label: "Legitimate internal transfer" },
+  { value: "accountant_review", label: "Accountant review required" },
+];
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -215,6 +231,7 @@ export function CRAReviewSection({
     homeOfficeUsePct: business.craReviewProfile?.homeOfficeUsePct ?? 0,
     notes: business.craReviewProfile?.notes ?? "",
     taxTreatments: business.craReviewProfile?.taxTreatments ?? {},
+    corporateWithdrawalReviews: business.craReviewProfile?.corporateWithdrawalReviews ?? {},
   });
 
   const categoryName = useMemo(() => {
@@ -227,6 +244,12 @@ export function CRAReviewSection({
     () => transactions.filter((t) => t.tag === "Business").sort(byDateDesc),
     [transactions]
   );
+
+  const corporateWithdrawals = useMemo(
+    () => getCorporateWithdrawalCandidates(transactions, accounts, draft.corporateWithdrawalReviews),
+    [transactions, accounts, draft.corporateWithdrawalReviews]
+  );
+  const unresolvedCorporateWithdrawals = corporateWithdrawals.filter((candidate) => !isCorporateWithdrawalResolved(candidate.review));
 
   const likelyBusinessIncomeTx = useMemo(
     () => businessTagged.filter((t) => t.type === "income" || t.type === "dividend"),
@@ -412,6 +435,43 @@ export function CRAReviewSection({
     });
   }
 
+  function updateCorporateWithdrawalReview(transactionId: string, patch: Partial<CorporateWithdrawalReview>) {
+    setDraft((current) => {
+      const existing = current.corporateWithdrawalReviews[transactionId];
+      return {
+        ...current,
+        corporateWithdrawalReviews: {
+          ...current.corporateWithdrawalReviews,
+          [transactionId]: {
+            ...existing,
+            ...patch,
+            transactionId,
+            status: patch.status ?? existing?.status ?? "pending",
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+    });
+  }
+
+  function saveCRAProfile() {
+    hooks.updateCRAReviewProfile({
+      province: draft.province,
+      filingProfile: draft.filingProfile,
+      gstRegistered: draft.gstRegistered,
+      gstFilingFrequency: draft.gstFilingFrequency,
+      hasEmploymentIncome: draft.hasEmploymentIncome,
+      hasSpouseOrPartner: draft.hasSpouseOrPartner,
+      phoneBusinessUsePct: draft.phoneBusinessUsePct,
+      internetBusinessUsePct: draft.internetBusinessUsePct,
+      vehicleBusinessUsePct: draft.vehicleBusinessUsePct,
+      homeOfficeUsePct: draft.homeOfficeUsePct,
+      notes: draft.notes,
+      taxTreatments: draft.taxTreatments,
+      corporateWithdrawalReviews: draft.corporateWithdrawalReviews,
+    });
+  }
+
   const reportSheets: ReportSheet[] = (() => {
     const expenseBuckets = new Map<string, number>();
     likelyBusinessExpenseTx.forEach((transaction) => {
@@ -494,6 +554,20 @@ export function CRAReviewSection({
       };
     });
 
+    const corporateWithdrawalRows = corporateWithdrawals.map(({ transaction, source, destination, review }) => ({
+      Date: transaction.date,
+      Description: transaction.description,
+      Amount: transaction.amount,
+      "From Account": source.name,
+      "To Account": destination?.name ?? "External / not recorded",
+      Classification: review?.classification ?? "Unclassified",
+      Status: review?.status ?? "Pending",
+      "Evidence Note": review?.evidenceNote ?? "",
+      "Document Reference": review?.documentReference ?? "",
+      "Confirmed At": review?.confirmedAt ?? "",
+      "Transaction ID": transaction.id,
+    }));
+
     return [
       {
         name: "Tax Working Papers",
@@ -535,6 +609,10 @@ export function CRAReviewSection({
           "Invoice HST To Remit": invoiceHSTToRemit,
           "Tax Payments Found": taxPaidTotal,
         }],
+      },
+      {
+        name: "Corporate Withdrawals",
+        rows: corporateWithdrawalRows.length ? corporateWithdrawalRows : [{ Status: "None detected" }],
       },
       { name: "Lenders", rows: lenderRows.length ? lenderRows : [{ Lender: "None" }] },
       { name: "Mortgages", rows: mortgageRows.length ? mortgageRows : [{ Mortgage: "None" }] },
@@ -675,22 +753,7 @@ export function CRAReviewSection({
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-            <Btn
-              onClick={() => hooks.updateCRAReviewProfile({
-                province: draft.province,
-                filingProfile: draft.filingProfile,
-                gstRegistered: draft.gstRegistered,
-                gstFilingFrequency: draft.gstFilingFrequency,
-                hasEmploymentIncome: draft.hasEmploymentIncome,
-                hasSpouseOrPartner: draft.hasSpouseOrPartner,
-                phoneBusinessUsePct: draft.phoneBusinessUsePct,
-                internetBusinessUsePct: draft.internetBusinessUsePct,
-                vehicleBusinessUsePct: draft.vehicleBusinessUsePct,
-                homeOfficeUsePct: draft.homeOfficeUsePct,
-                notes: draft.notes,
-                taxTreatments: draft.taxTreatments,
-              })}
-            >
+            <Btn onClick={saveCRAProfile}>
               Save CRA Inputs
             </Btn>
           </div>
@@ -749,6 +812,66 @@ export function CRAReviewSection({
             );})}
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 18, ...theme.cardStyle(unresolvedCorporateWithdrawals.length > 0 ? theme.colors.warning : theme.colors.success), padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 750, fontSize: 16, color: theme.colors.text }}>Corporate Withdrawal Review</div>
+            <div style={{ fontSize: 12, color: theme.colors.textSoft, marginTop: 4, maxWidth: 820 }}>
+              Business-account transfers to personal accounts and corporate withdrawals require a separate purpose review. Classification does not change the original ledger row or guarantee tax treatment.
+            </div>
+          </div>
+          <Pill color={unresolvedCorporateWithdrawals.length > 0 ? "amber" : "green"}>
+            {unresolvedCorporateWithdrawals.length > 0 ? `${unresolvedCorporateWithdrawals.length} unresolved` : "No unresolved withdrawals"}
+          </Pill>
+        </div>
+
+        {corporateWithdrawals.length === 0 ? (
+          <div style={{ fontSize: 13, color: theme.colors.textSoft }}>No business-to-personal transfers or corporate withdrawal rows were detected.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {corporateWithdrawals.map(({ transaction, source, destination, review }) => (
+              <div key={transaction.id} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: "12px 14px", background: theme.colors.surfaceAlt }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{transaction.description || "Corporate withdrawal"}</div>
+                    <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 3 }}>{transaction.date} · {source.name} to {destination?.name ?? "external / unrecorded destination"}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <strong style={{ color: theme.colors.danger }}>{fmtCAD(transaction.amount)}</strong>
+                    <div style={{ marginTop: 4 }}><Pill color={isCorporateWithdrawalResolved(review) ? "green" : "amber"}>{review?.status ?? "pending"}</Pill></div>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 8 }}>
+                  <Sel
+                    label="Classification"
+                    value={review?.classification ?? ""}
+                    onChange={(event) => updateCorporateWithdrawalReview(transaction.id, { classification: (event.target.value as CorporateWithdrawalClassification) || undefined, status: "pending", confirmedAt: undefined })}
+                    options={WITHDRAWAL_CLASSIFICATIONS}
+                  />
+                  <Sel
+                    label="Review Status"
+                    value={review?.status ?? "pending"}
+                    onChange={(event) => {
+                      const status = event.target.value as CorporateWithdrawalReview["status"];
+                      updateCorporateWithdrawalReview(transaction.id, { status, confirmedAt: status === "confirmed" ? new Date().toISOString() : undefined });
+                    }}
+                    options={[
+                      { value: "pending", label: "Pending review" },
+                      { value: "confirmed", label: "User confirmed" },
+                      { value: "accountant_review", label: "Accountant review" },
+                      { value: "excluded", label: "Not a corporate withdrawal" },
+                    ]}
+                  />
+                  <Inp label="Evidence / Review Note" value={review?.evidenceNote ?? ""} onChange={(event) => updateCorporateWithdrawalReview(transaction.id, { evidenceNote: event.target.value })} placeholder="Purpose, supporting evidence, or advisor note" />
+                  <Inp label="Document Reference" value={review?.documentReference ?? ""} onChange={(event) => updateCorporateWithdrawalReview(transaction.id, { documentReference: event.target.value })} placeholder="Resolution, payroll, receipt, or file reference" />
+                </div>
+              </div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}><Btn onClick={saveCRAProfile}>Save Withdrawal Reviews</Btn></div>
+          </div>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 1fr) minmax(320px, 1fr)", gap: 18, alignItems: "start", marginTop: 18 }}>

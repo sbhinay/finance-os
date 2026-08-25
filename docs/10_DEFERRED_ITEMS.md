@@ -14,6 +14,23 @@ Work normally proceeds in controlled visible slices. On July 22, 2026 the user e
 
 ## Recently Landed Foundations
 
+### August 2026 Planning, Analytics, and Corporate Withdrawal Review
+
+- Projection horizon controls support 30, 60, 90, and 120 days. All schedule,
+  what-if, card/LOC pressure, warning, and running-balance calculations use the
+  selected horizon.
+- Transaction History shows the top 15 spending categories by default, supports
+  Show All, displays row counts, and retains click-to-filter drilldown.
+- Corporate withdrawals are detected from canonical business-account cash
+  movement, but legal/tax purpose is stored separately in optional CRA review
+  metadata. Review decisions never rewrite the transaction or affect balances.
+- Unresolved business-to-personal transfers appear in Data Health and CRA
+  Review. Working-paper exports include classification, status, evidence, and
+  document references.
+- Effective-dated tax-rule metadata remains deferred until every rule can carry
+  an authoritative source, jurisdiction, effective window, version, and review
+  status. Example rates from planning notes are not production seed data.
+
 These items are implemented enough to serve as foundations, but some still need polish in the remaining slices below:
 
 - Canonical transaction persistence through `services/transactionPipeline.ts`.
@@ -95,6 +112,11 @@ These items are implemented enough to serve as foundations, but some still need 
 - Keep CRA mapping cautious and confidence-based.
 - Separate bookkeeping totals from user-confirmed tax treatment.
 - Include lender, debt, property, vehicle, business, and ledger summaries.
+- Future hardening: source-backed, effective-dated tax-rule metadata. Do not
+  hardcode unverified tax rates or infer final salary/dividend treatment.
+- Future hardening: optional document-package templates after legal/accounting
+  review. Generated output must remain a working paper, not a claim of legal
+  validity or filing completion.
 
 ### 10. Guarded Cloud History and Conflict Protection
 

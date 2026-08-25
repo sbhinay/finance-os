@@ -209,6 +209,37 @@ Real-user testing now shows that the remaining path must be handled as controlle
 Every slice must preserve ledger-first behavior, remain backward-compatible with current JSON exports, use accounting `date` rather than `createdAt`, pass automated checks, and stop for browser testing before the next slice begins.
 
 ## Current Implementation Status Summary
+
+## August 2026 Integrated Decision: Planning and Corporate Cash Review
+
+The selected design combines projection horizon expansion, spending drilldown,
+Data Health, CRA review, and exports without creating another transaction-write
+path. Corporate cash movements remain ledger facts; tax/legal classifications
+are review assertions linked by transaction ID.
+
+### Devil's advocate review
+
+Strong counter-arguments considered:
+
+- A compliance wizard can create more risk than it removes if users mistake a
+  dropdown selection for legal or tax validity.
+- Corporate-transfer detection can produce false positives when account types or
+  destinations are incomplete.
+- Tax rates change by effective date, jurisdiction, fiscal context, and taxpayer
+  circumstances; a generic rate table can produce precise-looking bad advice.
+- Generated corporate resolutions or payroll outputs may be invalid without
+  corporate records, director authority, payroll calculations, and professional
+  review.
+- Longer projections can imply certainty where recurring schedules and debt due
+  dates are incomplete.
+
+### Judgment
+
+Proceed with detection, transparent assumptions, separate review metadata,
+evidence capture, accountant-review status, and working-paper exports. Do not
+auto-convert transactions, seed unverified tax rates, claim legal sufficiency,
+or silently resolve warnings. Show longer projections as planning scenarios, not
+promises. This preserves the working ledger while adding useful guardrails.
 As of this version:
 
 - ledger-first transaction model is intact

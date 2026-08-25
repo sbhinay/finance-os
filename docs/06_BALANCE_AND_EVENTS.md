@@ -1,5 +1,14 @@
 # FinanceOS Technical Documentation
 
+## Selectable Projection Horizons
+
+The daily projection supports 30, 60, 90, and 120-day horizons. The selected
+horizon is passed to recurring event generation and card/LOC debt projection;
+what-if events and LOC exposure are constrained to the same end date. Longer
+horizons suppress quiet days in the visible list while retaining every event and
+low-balance warning. This is a presentation optimization only and does not omit
+days from running-balance calculation.
+
 ## 7. Balance Architecture and Events
 
 ### Balance Replay Logic

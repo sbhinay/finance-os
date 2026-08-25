@@ -569,7 +569,8 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const { transactions } = useTransactions();
   const { categories } = useCategories();
 
-  const [view, setView] = useState<"30day" | "monthly">("30day");
+  const [view, setView] = useState<"daily" | "monthly">("daily");
+  const [horizonDays, setHorizonDays] = useState<30 | 60 | 90 | 120>(30);
   const [threshold, setThreshold] = useState(0);
   const [whatIf, setWhatIf] = useState(false);
   const [whatIfScenarios, setWhatIfScenarios] = useState<WhatIfScenario[]>(() => [{
@@ -639,25 +640,23 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       : current.filter((scenario) => scenario.id !== id));
   }
 
-  // 30-day events
-  const events30 = useMemo(() => {
-    const end = new Date(today.getTime() + 30 * 86400000);
+  const horizonEvents = useMemo(() => {
+    const end = new Date(today.getTime() + horizonDays * 86400000);
     return [
-      ...buildEvents(30, vehicles, houseLoans, cards, fixedPayments, business, incomes, today),
+      ...buildEvents(horizonDays, vehicles, houseLoans, cards, fixedPayments, business, incomes, today),
       ...scenarioEvents.filter((event) => event.date >= today && event.date <= end),
     ].sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [vehicles, houseLoans, cards, fixedPayments, business, incomes, today, scenarioEvents]);
-  const debtProjection30 = useMemo(
-    () => buildDebtRepaymentProjection({ cards, fixedPayments, today, days: 30 }),
-    [cards, fixedPayments, today]
+  }, [vehicles, houseLoans, cards, fixedPayments, business, incomes, today, scenarioEvents, horizonDays]);
+  const debtProjection = useMemo(
+    () => buildDebtRepaymentProjection({ cards, fixedPayments, today, days: horizonDays }),
+    [cards, fixedPayments, today, horizonDays]
   );
 
-  // Build 30-day with running balance
-  const days30 = useMemo(() => {
-    const dailyFlows = Array.from({ length: 30 }, (_, i) => {
+  const horizonRows = useMemo(() => {
+    const dailyFlows = Array.from({ length: horizonDays }, (_, i) => {
       const d = new Date(today.getTime() + (i + 1) * 86400000);
       const dateStr = d.toISOString().split("T")[0];
-      const dayEvents = events30.filter((e) => e.date.toISOString().split("T")[0] === dateStr);
+      const dayEvents = horizonEvents.filter((e) => e.date.toISOString().split("T")[0] === dateStr);
       const flow = toFixed2(dayEvents.reduce((s, e) => s + e.amount, 0));
       return { date: d, dateStr, events: dayEvents, flow };
     });
@@ -668,18 +667,18 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       acc.push({ ...day, balance, warning: balance < threshold });
       return acc;
     }, []);
-  }, [events30, totalBankNow, threshold, today]);
+  }, [horizonEvents, horizonDays, totalBankNow, threshold, today]);
 
-  const projected30 = days30[29]?.balance ?? totalBankNow;
-  const scenarioLocDebt30 = toFixed2(whatIfScenarios
+  const projectedBalance = horizonRows.at(-1)?.balance ?? totalBankNow;
+  const scenarioLocDebt = toFixed2(whatIfScenarios
     .filter((scenario) => whatIf && scenario.type === "loc_draw" && scenario.amount > 0 && scenario.date)
     .filter((scenario) => {
       const date = new Date(`${scenario.date}T12:00:00`);
-      return date >= today && date <= new Date(today.getTime() + 30 * 86400000);
+      return date >= today && date <= new Date(today.getTime() + horizonDays * 86400000);
     })
     .reduce((sum, scenario) => sum + scenario.amount, 0));
-  const conservativeProjected30 = toFixed2(projected30 - debtProjection30.unplannedExposure - scenarioLocDebt30);
-  const lowDays = days30.filter((d) => d.warning).length;
+  const conservativeProjected = toFixed2(projectedBalance - debtProjection.unplannedExposure - scenarioLocDebt);
+  const lowDays = horizonRows.filter((d) => d.warning).length;
 
   // ── Monthly view ──────────────────────────────────────────────────────────
 
@@ -796,20 +795,20 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       {/* Summary stats */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <StatBox label="Current Balance" value={fmtCAD(totalBankNow)} color="#1a7f3c" />
-        <StatBox label="30-Day Scheduled" value={fmtCAD(projected30)} color={projected30 >= threshold ? "#1a7f3c" : "#a31515"} sub="dated income and payments" />
-        <StatBox label="After Debt Exposure" value={fmtCAD(conservativeProjected30)} color={conservativeProjected30 >= threshold ? "#1a7f3c" : "#a31515"} sub="scheduled less unresolved card/LOC owing" />
-        <StatBox label="Low Balance Days" value={String(lowDays)} color={lowDays > 0 ? "#a31515" : "#1a7f3c"} sub="next 30 days" />
-        <StatBox label="Dated Debt Pressure" value={fmtCAD(debtProjection30.repaymentPressure)} color={debtProjection30.repaymentPressure > 0 ? "#a31515" : "#1a7f3c"} sub="configured card/LOC repayment events" />
-        <StatBox label="Unresolved Debt Exposure" value={fmtCAD(debtProjection30.unplannedExposure)} color={debtProjection30.unplannedExposure > 0 ? "#a05c00" : "#1a7f3c"} sub="not yet covered by a repayment plan" />
+        <StatBox label={`${horizonDays}-Day Scheduled`} value={fmtCAD(projectedBalance)} color={projectedBalance >= threshold ? "#1a7f3c" : "#a31515"} sub="dated income and payments" />
+        <StatBox label="After Debt Exposure" value={fmtCAD(conservativeProjected)} color={conservativeProjected >= threshold ? "#1a7f3c" : "#a31515"} sub="scheduled less unresolved card/LOC owing" />
+        <StatBox label="Low Balance Days" value={String(lowDays)} color={lowDays > 0 ? "#a31515" : "#1a7f3c"} sub={`next ${horizonDays} days`} />
+        <StatBox label="Dated Debt Pressure" value={fmtCAD(debtProjection.repaymentPressure)} color={debtProjection.repaymentPressure > 0 ? "#a31515" : "#1a7f3c"} sub="configured card/LOC repayment events" />
+        <StatBox label="Unresolved Debt Exposure" value={fmtCAD(debtProjection.unplannedExposure)} color={debtProjection.unplannedExposure > 0 ? "#a05c00" : "#1a7f3c"} sub="not yet covered by a repayment plan" />
       </div>
 
-      {debtProjection30.warnings.length > 0 && (
+      {debtProjection.warnings.length > 0 && (
         <Card accent="#a05c00">
           <div style={{ fontWeight: 750, fontSize: 14, color: theme.colors.warning, marginBottom: 4 }}>Card / LOC repayment planning gaps</div>
           <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 8 }}>
             These amounts are excluded from dated events but deducted in After Debt Exposure so the forecast does not look falsely available.
           </div>
-          {debtProjection30.warnings.map((warning) => (
+          {debtProjection.warnings.map((warning) => (
             <div key={`${warning.cardId}-${warning.reason}`} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontSize: 12, padding: "5px 0", borderBottom: "1px solid #fed7aa" }}>
               <span>{warning.name}: {warning.reason === "missing_pay_from" ? "projection enabled but no linked pay-from account" : "owing balance has no repayment strategy"}</span>
               <strong style={{ color: "#a05c00" }}>{fmtCAD(warning.unplannedAmount)}</strong>
@@ -861,7 +860,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
                   style={{ width: 30, height: 30, borderRadius: 99, border: "1px solid #fecaca", background: "#fff", color: theme.colors.danger, cursor: "pointer", fontWeight: 800 }}>×</button>
               </div>
             ))}
-            {scenarioLocDebt30 > 0 && (
+            {scenarioLocDebt > 0 && (
               <div style={{ fontSize: 11, color: theme.colors.textSoft }}>
                 LOC withdrawals add cash to the scheduled projection and add the same amount to debt exposure.
               </div>
@@ -871,17 +870,21 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       </Card>
 
       {/* View tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        <Btn variant={view === "30day" ? "primary" : "secondary"} small onClick={() => setView("30day")}>30-Day Daily</Btn>
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <Btn variant={view === "daily" ? "primary" : "secondary"} small onClick={() => setView("daily")}>Daily Projection</Btn>
         <Btn variant={view === "monthly" ? "primary" : "secondary"} small onClick={() => setView("monthly")}>Monthly View</Btn>
+        {view === "daily" && <span style={{ width: 1, height: 24, background: theme.colors.border, margin: "0 3px" }} />}
+        {view === "daily" && ([30, 60, 90, 120] as const).map((days) => (
+          <Btn key={days} variant={horizonDays === days ? "primary" : "secondary"} small onClick={() => setHorizonDays(days)}>{days} Days</Btn>
+        ))}
       </div>
 
-      {/* 30-Day Daily */}
-      {view === "30day" && (
+      {view === "daily" && (
         <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
-          {days30.map((d) => {
+          {horizonRows.map((d) => {
             const hasEvents = d.events.length > 0;
             if (!hasEvents && !d.warning) {
+              if (horizonDays > 30) return null;
               return (
                 <div key={d.dateStr} style={{ display: "flex", justifyContent: "space-between", padding: "5px 12px", borderBottom: "1px solid #f3f4f6", opacity: 0.5 }}>
                   <span style={{ fontSize: 12, color: "#6b7280" }}>{d.date.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })}</span>

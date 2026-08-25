@@ -53,6 +53,23 @@ FinanceOS is a personal financial operating system for Canadian contractors, sal
   - `Planned Payments`
 
 ## 3. Current Implementation Notes
+
+### Planning horizons and category drilldown
+
+- Daily projections support 30, 60, 90, and 120 days using one parameterized
+  event/debt calculation path.
+- Transaction History ranks 15 categories by default, supports Show All, and
+  drills into the existing Expense and Category filters.
+
+### Corporate withdrawal review
+
+- `utils/corporateWithdrawals.ts` derives candidates from canonical transactions
+  and account types.
+- Optional reviews live under
+  `Business.craReviewProfile.corporateWithdrawalReviews`, keyed by transaction ID.
+- Data Health surfaces unresolved candidates; CRA Review owns classification and
+  evidence; Excel/PDF working papers include the review trail.
+- The review layer has no balance or transaction-write authority.
 - Internal money movement is standardized on `transfer`; credit card payoff is stored as `transfer` with `subType: "cc_payment"`.
 - LOC drawdowns are moving toward `transfer` with `subType: "loc_draw"` instead of being treated like income.
 - Accounts and credit cards support `balanceSnapshotAmount` and `balanceSnapshotDate`.

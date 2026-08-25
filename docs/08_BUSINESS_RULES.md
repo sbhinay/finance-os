@@ -113,6 +113,7 @@
 - Legacy reconciliation adjustment rows should not be used for new balance alignment and are skipped by replay.
 
 ### Reporting Rules
+
 - Only `expense` and `refund` are included in expense reporting; refunds subtract from their original category.
 - Only `income` and `dividend` are included in income reporting.
 - `transfer` rows, including `cc_payment`, are excluded from standard income/expense summaries unless explicitly included.
@@ -123,6 +124,24 @@
 - Subscription rows should default to `Subscriptions` category when that category exists in the dedicated subscription workflow.
 - Transaction History is explicitly paginated for usability; exports still operate on the full filtered result set rather than only the visible page.
 - List signs and colors use shared transaction semantics: refunds and loan receipts are positive, ordinary outflows are negative, and transfers remain neutral in generic history.
+
+### Corporate Withdrawal Review Rules
+
+- A cleared business-account transfer to a non-business bank account is a
+  corporate-withdrawal candidate. A cleared `withdrawal` from a business account
+  is also a candidate.
+- Business-to-business transfers, normal expenses, and pending transactions are not
+  candidates.
+- Detection is derived from canonical transactions and account types. Only the
+  user review is stored.
+- Classification never changes transaction type, amount, date, source,
+  destination, balance effect, or expense reporting.
+- Confirmed classification requires an explicit classification. Accountant
+  review and excluded outcomes also resolve the warning without asserting tax
+  treatment.
+- FinanceOS produces review-oriented working papers. It does not certify a
+  dividend, run payroll filing, create a legally sufficient resolution, or file
+  with CRA.
 
 ### Navigation Rules
 - Top-level navigation should prefer a small number of strong hubs over many sibling utility tabs.

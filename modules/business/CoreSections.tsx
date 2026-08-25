@@ -982,6 +982,7 @@ export function TransactionHistorySection() {
   const [recurringFilter, setRecurringFilter] = useState("");
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(1);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [editTx, setEditTx] = useState<TransactionFormInitial>(undefined);
   const [txFormOpen, setTxFormOpen] = useState(false);
 
@@ -1132,12 +1133,17 @@ export function TransactionHistorySection() {
   const pagedTransactions = filtered.slice(startIndex, endIndex);
 
   // Top categories bar chart
-  const catMap: Record<string, number> = {};
+  const catMap: Record<string, { amount: number; count: number }> = {};
   filtered.filter((t) => t.type === "expense" || t.type === "refund").forEach((t) => {
     const key = t.categoryId ?? "uncategorized";
-    catMap[key] = (catMap[key] ?? 0) + getExpenseReportEffect(t);
+    const current = catMap[key] ?? { amount: 0, count: 0 };
+    catMap[key] = {
+      amount: current.amount + getExpenseReportEffect(t),
+      count: current.count + 1,
+    };
   });
-  const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const rankedCategories = Object.entries(catMap).sort((a, b) => b[1].amount - a[1].amount);
+  const topCats = rankedCategories.slice(0, showAllCategories ? rankedCategories.length : 15);
 
   function drillIntoCategory(categoryId: string) {
     setCatFilter(categoryId === "uncategorized" ? "" : categoryId);
@@ -1294,21 +1300,30 @@ export function TransactionHistorySection() {
       {topCats.length > 0 && (
         <div style={{ ...theme.cardStyle(), padding: "16px 18px", marginBottom: 14, background: theme.colors.surface }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>Spending by Category</div>
-            <div style={{ fontSize: 11, color: theme.colors.textSoft }}>Tap a category to filter the list below.</div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>Spending by Category</div>
+              <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 2 }}>
+                {catFilter ? `Filtered to ${catName(catFilter)}. Clear filters to restore the full ranking.` : "Tap a category to filter the transaction list below."}
+              </div>
+            </div>
+            {rankedCategories.length > 15 && (
+              <Btn variant="secondary" small onClick={() => setShowAllCategories((current) => !current)}>
+                {showAllCategories ? "Show Top 15" : `Show All ${rankedCategories.length}`}
+              </Btn>
+            )}
           </div>
-          {topCats.map(([catId, amt]) => (
+          {topCats.map(([catId, summary]) => (
             <button
               key={catId}
               onClick={() => drillIntoCategory(catId)}
-              style={{ marginBottom: 8, width: "100%", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+              style={{ marginBottom: 8, width: "100%", background: catFilter === catId ? theme.colors.primarySoft : "transparent", border: "none", borderRadius: 7, padding: catFilter === catId ? "6px 8px" : 0, cursor: "pointer", textAlign: "left" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
-                <span>{catName(catId)}</span>
-                <span style={{ fontWeight: 600 }}>{fmtCAD(amt)}</span>
+                <span>{catName(catId)} <span style={{ color: theme.colors.textMuted }}>({summary.count})</span></span>
+                <span style={{ fontWeight: 600 }}>{fmtCAD(summary.amount)}</span>
               </div>
               <div style={{ height: 3, background: "#e5e7eb", borderRadius: 99 }}>
-                <div style={{ height: "100%", width: `${(amt / topCats[0][1]) * 100}%`, background: "#1a5fa8", borderRadius: 99 }} />
+                <div style={{ height: "100%", width: `${Math.max(0, (summary.amount / Math.max(1, topCats[0][1].amount)) * 100)}%`, background: "#1a5fa8", borderRadius: 99 }} />
               </div>
             </button>
           ))}

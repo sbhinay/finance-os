@@ -286,6 +286,25 @@ interface PropertyTaxPayment {
 ```
 
 ### Business
+
+`Business.craReviewProfile` contains optional review metadata that travels with
+JSON exports and guarded cloud snapshots. `corporateWithdrawalReviews` is keyed
+by canonical transaction ID. Each value stores:
+
+- classification: salary/payroll, dividend, shareholder loan, expense
+  reimbursement, internal transfer, or accountant review
+- status: pending, confirmed, accountant review, or excluded
+- evidence note and optional document reference
+- confirmation and update timestamps
+
+The linked transaction remains the source of amount, accounting date, source,
+destination, and balance effect. A review record cannot alter ledger replay.
+Older payloads without this optional map remain valid. Import validation removes
+only review records whose linked transaction no longer exists.
+
+Tax rates are not stored in this review map. A future tax registry must use
+effective date windows, jurisdiction, authoritative source metadata, versioning,
+and independent verification before calculations depend on it.
 - Stored as a single `Business` object in `finance_os_business`.
 - Contains invoices, contracts, HST remittances, corporate instalments, payroll remittances, arrears, and rate settings.
 - `craReviewProfile.taxTreatments` stores mapping-level status, optional confirmed amount, note, and update timestamp without changing ledger bookkeeping totals.

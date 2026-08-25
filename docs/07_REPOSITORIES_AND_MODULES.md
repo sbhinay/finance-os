@@ -1,5 +1,16 @@
 # FinanceOS Technical Documentation
 
+## Corporate Withdrawal Review Ownership
+
+- `utils/corporateWithdrawals.ts` is a pure detector and resolution-status
+  helper. It never writes transactions.
+- `CRAReviewSection` owns classification, evidence, document references, status,
+  and working-paper presentation.
+- `HealthReportSection` surfaces unresolved candidates and navigates to CRA
+  Review instead of creating a competing repair workflow.
+- `businessRepository` persists the optional review map as part of the existing
+  `Business` object, so JSON and guarded cloud snapshots remain aligned.
+
 ## 8. Repository Pattern and Modules
 
 ### Repository Pattern

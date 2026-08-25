@@ -27,6 +27,7 @@ export interface CRAReviewProfile {
   homeOfficeUsePct: number;
   notes?: string;
   taxTreatments?: Record<string, TaxTreatmentDecision>;
+  corporateWithdrawalReviews?: Record<string, CorporateWithdrawalReview>;
 }
 
 export type TaxTreatmentStatus = "proposed" | "confirmed" | "excluded" | "accountant_review";
@@ -36,6 +37,26 @@ export interface TaxTreatmentDecision {
   confirmedAmount?: number;
   note?: string;
   updatedAt?: string;
+}
+
+export type CorporateWithdrawalClassification =
+  | "salary_payroll"
+  | "dividend"
+  | "shareholder_loan"
+  | "expense_reimbursement"
+  | "internal_transfer"
+  | "accountant_review";
+
+export type CorporateWithdrawalReviewStatus = "pending" | "confirmed" | "accountant_review" | "excluded";
+
+export interface CorporateWithdrawalReview {
+  transactionId: string;
+  classification?: CorporateWithdrawalClassification;
+  status: CorporateWithdrawalReviewStatus;
+  evidenceNote?: string;
+  documentReference?: string;
+  confirmedAt?: string;
+  updatedAt: string;
 }
 
 export interface RateSettings {

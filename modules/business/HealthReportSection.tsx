@@ -18,6 +18,8 @@ import { toFixed2 } from "@/utils/finance";
 import { isFinanceOsEstimatedSplit } from "@/utils/debtAllocation";
 import { ActionButton, MetricCard, MetricGrid, PageHeader, StatusChip } from "@/components/ui";
 import { theme } from "@/lib/theme";
+import { useBusiness } from "./useBusiness";
+import { getCorporateWithdrawalCandidates, isCorporateWithdrawalResolved } from "@/utils/corporateWithdrawals";
 
 const DISMISSED_HEALTH_ISSUES_KEY = "finance_os_dismissed_health_issues";
 
@@ -34,6 +36,7 @@ type HealthIssue = {
   duplicateTransactions?: Transaction[];
   vehicleId?: string;
   houseLoanId?: string;
+  openCRAReview?: boolean;
 };
 
 function loadDismissedHealthIssues() {
@@ -83,9 +86,11 @@ function categoryOptions(categories: Category[], txType: Transaction["type"]) {
 export function HealthReportSection({
   onOpenVehicle,
   onOpenHouseLoan,
+  onOpenCRAReview,
 }: {
   onOpenVehicle?: (id: string) => void;
   onOpenHouseLoan?: (id: string) => void;
+  onOpenCRAReview?: () => void;
 }) {
   const { transactions, updateTransaction, reloadTransactions } = useTransactions();
   const { accounts } = useAccounts();
@@ -97,6 +102,7 @@ export function HealthReportSection({
   const { propertyTaxes } = usePropertyTax();
   const { fixedPayments } = useFixedPayments();
   const { liabilities } = useLiabilities();
+  const { business } = useBusiness();
   const [categoryFixes, setCategoryFixes] = useState<Record<string, string>>({});
   const [dismissedHealthIssues, setDismissedHealthIssues] = useState<string[]>(loadDismissedHealthIssues);
   const [editTransaction, setEditTransaction] = useState<Transaction | undefined>(undefined);
@@ -491,11 +497,25 @@ export function HealthReportSection({
       }
     });
 
+    const corporateWithdrawalReviews = business.craReviewProfile?.corporateWithdrawalReviews ?? {};
+    getCorporateWithdrawalCandidates(transactions, accounts, corporateWithdrawalReviews)
+      .filter((candidate) => !isCorporateWithdrawalResolved(candidate.review))
+      .forEach(({ transaction, source, destination }) => {
+        nextIssues.push({
+          id: `corporate-withdrawal-${transaction.id}`,
+          severity: "medium",
+          title: "Corporate withdrawal needs purpose review",
+          detail: `${transaction.date} - ${transaction.description || "Corporate withdrawal"} - ${transaction.amount.toFixed(2)} - ${source.name} to ${destination?.name ?? "external / unrecorded destination"}`,
+          hint: "Classify the legal/tax purpose separately in CRA Review. The original ledger transaction and balances will remain unchanged.",
+          openCRAReview: true,
+        });
+      });
+
     return nextIssues.filter((issue) => !dismissedHealthIssues.includes(issue.id)).sort((a, b) => {
       const rank: Record<HealthSeverity, number> = { high: 0, medium: 1, low: 2 };
       return rank[a.severity] - rank[b.severity] || a.title.localeCompare(b.title);
     });
-  }, [accounts, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, liabilities, properties, propertyTaxes, transactions, vehicles]);
+  }, [accounts, business.craReviewProfile?.corporateWithdrawalReviews, cards, categories, dismissedHealthIssues, fixedPayments, houseLoans, liabilities, properties, propertyTaxes, transactions, vehicles]);
 
   const highCount = issues.filter((issue) => issue.severity === "high").length;
   const uncategorizedCount = issues.filter((issue) => issue.title === "Uncategorized expense or income").length;
@@ -649,6 +669,11 @@ export function HealthReportSection({
               {issue.houseLoanId && onOpenHouseLoan && (
                 <div style={{ marginTop: 10 }}>
                   <FixButton onClick={() => onOpenHouseLoan(issue.houseLoanId!)}>Open Mortgage</FixButton>
+                </div>
+              )}
+              {issue.openCRAReview && onOpenCRAReview && (
+                <div style={{ marginTop: 10 }}>
+                  <FixButton onClick={onOpenCRAReview}>Open CRA Review</FixButton>
                 </div>
               )}
             </div>

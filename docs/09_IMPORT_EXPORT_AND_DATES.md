@@ -1,5 +1,13 @@
 # FinanceOS Technical Documentation
 
+## Corporate Withdrawal Review Compatibility
+
+Corporate withdrawal reviews are optional nested business metadata keyed by
+transaction ID. Older exports require no migration. During import, review rows
+whose canonical transaction no longer exists are removed with a warning; valid
+reviews retain their evidence and status. Review dates are audit timestamps,
+while the linked transaction's `date` remains the accounting date.
+
 ## 10. Import, Export, and Date Standards
 
 ### Export Format

@@ -10,6 +10,11 @@ const source = fs.readFileSync("modules/business/DashboardProjectionSections.tsx
   "visibleMonthTx",
   "monthlyVisibility[transactionProjectionVisibility(transaction)]",
   "isPast",
+  "horizonDays",
+  "setHorizonDays",
+  "[30, 60, 90, 120]",
+  "buildEvents(horizonDays",
+  "days: horizonDays",
 ].forEach((fragment) => {
   if (!source.includes(fragment)) {
     throw new Error(`Monthly projection visibility is missing: ${fragment}`);

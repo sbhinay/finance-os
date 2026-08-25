@@ -346,11 +346,31 @@ export function validateImportPayload(payload: ImportPayload): ReferenceCheckRes
     };
   });
 
+  const transactionIds = new Set(resolvedTransactions.map((transaction) => transaction.id));
+  const corporateWithdrawalReviews = payload.business.craReviewProfile?.corporateWithdrawalReviews ?? {};
+  const resolvedCorporateWithdrawalReviews = Object.fromEntries(
+    Object.entries(corporateWithdrawalReviews).filter(([transactionId]) => {
+      if (transactionIds.has(transactionId)) return true;
+      warnings.push(`Corporate withdrawal review ${transactionId}: linked transaction was not found and the stale review was removed.`);
+      return false;
+    })
+  );
+  const resolvedBusiness: Business = payload.business.craReviewProfile
+    ? {
+        ...payload.business,
+        craReviewProfile: {
+          ...payload.business.craReviewProfile,
+          corporateWithdrawalReviews: resolvedCorporateWithdrawalReviews,
+        },
+      }
+    : payload.business;
+
   return {
     errors,
     warnings,
     normalized: {
       ...payload,
+      business: resolvedBusiness,
       transactions: resolvedTransactions,
       vehicles: resolvedVehicles,
       properties: resolvedProperties,

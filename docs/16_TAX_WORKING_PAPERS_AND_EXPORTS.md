@@ -44,4 +44,25 @@ Both Excel and PDF exports include:
 - tax-relevant ledger rows
 - review notes explaining limitations
 
+## Corporate Withdrawal Working Paper
+
+FinanceOS detects business-account transfers to personal bank accounts and
+business-account withdrawals. The original transaction remains unchanged. A
+separate review can record classification, status, evidence, document reference,
+and confirmation timestamp.
+
+The export includes a `Corporate Withdrawals` sheet. Unclassified rows remain
+visible as pending. This is a review aid for the user and accountant, not proof
+that a dividend, salary, shareholder loan, reimbursement, or corporate document
+is legally or fiscally valid.
+
+## Future Effective-Dated Rules
+
+A future rules registry may support date-effective federal and provincial
+metrics, but every production rule must include jurisdiction, effective window,
+authoritative source, publication/retrieval date, version, and verification
+status. Corporate fiscal periods and calendar-year payroll limits must remain
+distinct. Personal dividend outcomes must not be estimated from a static rate
+without the required personal-income context.
+
 Excel uses a real multi-sheet `.xlsx` workbook. PDF uses one landscape report section per page group. Binary generation is regression tested in memory.
