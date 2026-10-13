@@ -1,26 +1,13 @@
 import type { CreditCard } from "../types/creditCard.ts";
-import type { FixedPayment, PaymentSchedule } from "../types/domain.ts";
+import type { FixedPayment } from "../types/domain.ts";
+import { addDaysIso, dayOfMonth, isoToLocalNoon, localIsoDate, nextScheduleOccurrence, upcomingOccurrences } from "./scheduleDates.ts";
+
+function isoOf(date: Date): string {
+  return localIsoDate(date);
+}
 
 function toFixed2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function scheduleDays(schedule: PaymentSchedule): number {
-  switch (schedule) {
-    case "Weekly":
-      return 7;
-    case "Bi-weekly":
-      return 14;
-    case "Semi-monthly":
-      return 15;
-    case "Annual":
-      return 365;
-    case "One-time":
-      return 0;
-    case "Monthly":
-    default:
-      return 30;
-  }
 }
 
 function cardPaymentOccurrences(card: CreditCard, fixedPayments: FixedPayment[], today: Date, end: Date) {
@@ -33,25 +20,12 @@ function cardPaymentOccurrences(card: CreditCard, fixedPayments: FixedPayment[],
       && payment.destinationId === card.id
     )
     .forEach((payment) => {
-      const firstDate = new Date(`${payment.date}T12:00:00`);
-      if (payment.endDate && new Date(`${payment.endDate}T12:00:00`) < today) return;
-
-      if (payment.schedule === "One-time") {
-        if (firstDate >= today && firstDate <= end) {
-          occurrences.push({ date: firstDate, amount: toFixed2(payment.amount), name: payment.name, source: payment.source });
-        }
-        return;
-      }
-
-      const interval = scheduleDays(payment.schedule);
-      let current = firstDate;
-      while (current < today) {
-        current = new Date(current.getTime() + interval * 86400000);
-      }
-      while (current <= end && (!payment.endDate || current <= new Date(`${payment.endDate}T12:00:00`))) {
-        occurrences.push({ date: new Date(current), amount: toFixed2(payment.amount), name: payment.name, source: payment.source });
-        current = new Date(current.getTime() + interval * 86400000);
-      }
+      upcomingOccurrences(payment.date, payment.schedule, isoOf(today), isoOf(end), {
+        until: payment.endDate,
+        preferredDay: dayOfMonth(payment.startDate),
+      }).forEach((iso) => {
+        occurrences.push({ date: isoToLocalNoon(iso), amount: toFixed2(payment.amount), name: payment.name, source: payment.source });
+      });
     });
   return occurrences;
 }
@@ -111,7 +85,7 @@ export function buildDebtRepaymentProjection({
   today: Date;
   days: number;
 }): DebtProjectionSummary {
-  const end = new Date(today.getTime() + days * 86400000);
+  const end = isoToLocalNoon(addDaysIso(isoOf(today), days));
   const events: DebtProjectionEvent[] = [];
   const warnings: DebtProjectionWarning[] = [];
   let repaymentPressure = 0;
@@ -160,9 +134,15 @@ export function buildDebtRepaymentProjection({
       const pressure = toFixed2(Math.max(0, target - existingAmount));
       if (pressure <= 0) return;
 
-      const date = card.repaymentDueDate
-        ? new Date(`${card.repaymentDueDate}T12:00:00`)
-        : new Date(today.getTime() + 21 * 86400000);
+      // A due date already behind us rolls forward to this month's/next month's same day.
+      const dueIso = card.repaymentDueDate
+        ? (card.repaymentDueDate >= isoOf(today)
+          ? card.repaymentDueDate
+          : nextScheduleOccurrence(card.repaymentDueDate, "Monthly", isoOf(today), { inclusive: true }))
+        : null;
+      const date = dueIso
+        ? isoToLocalNoon(dueIso)
+        : isoToLocalNoon(addDaysIso(isoOf(today), 21));
       if (date < today || date > end) return;
 
       repaymentPressure = toFixed2(repaymentPressure + pressure);
@@ -182,4 +162,17 @@ export function buildDebtRepaymentProjection({
     unplannedExposure,
     plannedExistingPayments,
   };
+}
+
+/**
+ * Date a line-of-credit draw is projected to be repaid: the first LOC payment
+ * date strictly after the draw (and not before the stored next payment date),
+ * following the LOC's monthly Next Payment Date.
+ * Returns null when the LOC has no payment date set.
+ */
+export function locDrawRepaymentDate(loc: Pick<CreditCard, "repaymentDueDate">, drawIso: string): string | null {
+  if (!loc.repaymentDueDate) return null;
+  // The stored date is the next unpaid payment, so never repay before it.
+  if (loc.repaymentDueDate > drawIso) return loc.repaymentDueDate;
+  return nextScheduleOccurrence(loc.repaymentDueDate, "Monthly", drawIso);
 }

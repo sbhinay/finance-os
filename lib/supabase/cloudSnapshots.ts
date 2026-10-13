@@ -3,6 +3,7 @@ import { businessRepository } from "@/repositories/businessRepository";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
+import { projectionScenarioRepository } from "@/repositories/projectionScenarioRepository";
 import { transactionRepository } from "@/repositories/transactionRepository";
 import {
   vehicleRepository,
@@ -32,6 +33,7 @@ export interface CloudExportPayload {
   propertyTaxes: ReturnType<typeof propertyTaxRepository.getAll>;
   liabilities: ReturnType<typeof liabilityRepository.getAll>;
   futurePayments: ReturnType<typeof fixedPaymentRepository.getAll>;
+  projectionScenarios?: ReturnType<typeof projectionScenarioRepository.getAll>;
 }
 
 export interface CloudSnapshot {
@@ -69,6 +71,7 @@ export function buildCloudExportPayload(): CloudExportPayload {
     propertyTaxes: propertyTaxRepository.getAll(),
     liabilities: liabilityRepository.getAll(),
     futurePayments: fixedPaymentRepository.getAll(),
+    projectionScenarios: projectionScenarioRepository.getAll(),
   };
 }
 

@@ -28,9 +28,13 @@ import {
 import {
     uid,
     toFixed2,
-    advanceOneInterval,
-    shiftOneInterval
+    advanceOneInterval
 } from "@/utils/finance";
+import {
+    dayOfMonth,
+    localIsoDate,
+    scheduleOccurrencesBetween
+} from "@/utils/scheduleDates";
 import {
     Transaction,
     TransactionType,
@@ -53,29 +57,24 @@ type PaymentSourceWithSchedule = {
     schedule: PaymentSchedule;
 };
 
-const SCHED_DAYS: Partial < Record < PaymentSchedule, number >> = {
-    Weekly: 7,
-    "Bi-weekly": 14,
-    "Semi-monthly": 15,
-    Monthly: 30,
-    Annual: 365,
-};
-
 function getOccurrencesBetween(
     anchorDateStr: string,
     schedule: PaymentSchedule,
     windowStart: Date,
-    windowEnd: Date
+    windowEnd: Date,
+    preferredDay ? : number
 ): string[] {
     if (!anchorDateStr || schedule === "One-time") return [];
-    const results: string[] = [];
-    let d = new Date(anchorDateStr + "T12:00:00");
-    while (d < windowStart) d = shiftDateBySchedule(d, schedule, 1);
-    while (d <= windowEnd) {
-        results.push(d.toISOString().slice(0, 10));
-        d = shiftDateBySchedule(d, schedule, 1);
-    }
-    return results;
+    // The anchor is the next due date: never yield occurrences before it.
+    const anchor = anchorDateStr.slice(0, 10);
+    const start = localIsoDate(windowStart);
+    return scheduleOccurrencesBetween(
+        anchor,
+        schedule,
+        anchor > start ? anchor : start,
+        localIsoDate(windowEnd),
+        { preferredDay }
+    );
 }
 
 function getPendingPurpose(
@@ -143,42 +142,9 @@ export function calculateBackfillDates(
     endDate ? : string
 ): string[] {
     if (!startDate || schedule === "One-time") return [];
-    const interval = SCHED_DAYS[schedule];
-    if (!interval) return [];
-
-    const today = new Date();
-    today.setHours(23, 59, 59, 0);
-    const end = endDate ? new Date(Math.min(new Date(endDate + "T12:00:00").getTime(), today.getTime())) : today;
-
-    const dates: string[] = [];
-    let d = new Date(startDate + "T12:00:00");
-
-    if (schedule === "Monthly") {
-        while (d <= end) {
-            dates.push(d.toISOString().slice(0, 10));
-            d = new Date(d);
-            d.setMonth(d.getMonth() + 1);
-        }
-    } else if (schedule === "Annual") {
-        while (d <= end) {
-            dates.push(d.toISOString().slice(0, 10));
-            d = new Date(d);
-            d.setFullYear(d.getFullYear() + 1);
-        }
-    } else {
-        while (d <= end) {
-            dates.push(d.toISOString().slice(0, 10));
-            d = new Date(d.getTime() + interval * 86400000);
-        }
-    }
-
-    return dates;
-}
-
-function shiftDateBySchedule(date: Date, schedule: PaymentSchedule, direction: 1 | -1): Date {
-    return new Date(
-        shiftOneInterval(date.toISOString().slice(0, 10), schedule, direction) + "T12:00:00"
-    );
+    const today = localIsoDate();
+    const last = endDate && endDate < today ? endDate : today;
+    return scheduleOccurrencesBetween(startDate, schedule, startDate.slice(0, 10), last);
 }
 
 export function calculateBackfillDatesFromAnchor(
@@ -188,26 +154,11 @@ export function calculateBackfillDatesFromAnchor(
     endDate ? : string
 ): string[] {
     if (!anchorDate || schedule === "One-time") return [];
-
-    const today = new Date();
-    today.setHours(23, 59, 59, 0);
-    const start = startDate ? new Date(startDate + "T12:00:00") : null;
-    const end = endDate ? new Date(Math.min(new Date(endDate + "T12:00:00").getTime(), today.getTime())) : today;
-    const dates = new Set<string>();
-
-    let d = new Date(anchorDate + "T12:00:00");
-    while (d <= end) {
-        if (!start || d >= start) dates.add(d.toISOString().slice(0, 10));
-        d = shiftDateBySchedule(d, schedule, 1);
-    }
-
-    d = shiftDateBySchedule(new Date(anchorDate + "T12:00:00"), schedule, -1);
-    while ((!start || d >= start) && d <= end) {
-        dates.add(d.toISOString().slice(0, 10));
-        d = shiftDateBySchedule(d, schedule, -1);
-    }
-
-    return Array.from(dates).sort();
+    const today = localIsoDate();
+    const last = endDate && endDate < today ? endDate : today;
+    // Without a start date, history begins at the anchor (no unbounded backward walk).
+    const from = startDate || anchorDate;
+    return scheduleOccurrencesBetween(anchorDate, schedule, from.slice(0, 10), last);
 }
 
 // ─── Pending generation ───────────────────────────────────────────────────────
@@ -272,7 +223,7 @@ export function generatePendingTransactions(
     fixedPayments.forEach((p) => {
         if (p.archived || !p.amount || !p.date) return;
         if (p.endDate && new Date(p.endDate + "T12:00:00") < windowStart) return;
-        const dates = getOccurrencesBetween(p.date, p.schedule, windowStart, today);
+        const dates = getOccurrencesBetween(p.date, p.schedule, windowStart, today, dayOfMonth(p.startDate));
         dates.forEach((dateStr) => {
             addIfNew(`fp_${p.id}_${dateStr}`, {
                 sourceType: "fixed",
@@ -626,7 +577,7 @@ export function useFixedPayments() {
 
         const inserted = persistCanonicalTransactions(candidates, { skipSemanticDuplicates: true }).length;
         if (inserted > 0) {
-            const nextDate = advanceOneInterval(dates[dates.length - 1], fp.schedule);
+            const nextDate = advanceOneInterval(dates[dates.length - 1], fp.schedule, dayOfMonth(fp.startDate));
             fixedPaymentRepository.saveAll(
                 fixedPaymentRepository.getAll().map((payment) =>
                     payment.id === fp.id ? { ...payment, date: nextDate } : payment
@@ -673,7 +624,7 @@ export function useFixedPayments() {
             fixedPaymentRepository.saveAll(all.map((f) =>
                 f.id === fp.id ? {
                     ...f,
-                    date: advanceOneInterval(date, f.schedule)
+                    date: advanceOneInterval(date, f.schedule, dayOfMonth(f.startDate) ?? dayOfMonth(f.date))
                 } : f
             ));
         }
@@ -727,7 +678,7 @@ export function useFixedPayments() {
                 fixedPaymentRepository.saveAll(all.map((f) =>
                     f.id === fp.id ? {
                         ...f,
-                        date: advanceOneInterval(p.dueDate, f.schedule)
+                        date: advanceOneInterval(p.dueDate, f.schedule, dayOfMonth(f.startDate))
                     } : f
                 ));
             }

@@ -11,6 +11,7 @@ import { businessRepository } from "@/repositories/businessRepository";
 import { categoryRepository } from "@/repositories/categoryRepository";
 import { creditCardRepository } from "@/repositories/creditCardRepository";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
+import { projectionScenarioRepository } from "@/repositories/projectionScenarioRepository";
 import { replaceCanonicalTransactions } from "@/services/transactionPipeline";
 import { notifyDataChanged } from "@/utils/events";
 import { clearLocalFinanceData } from "@/utils/localFinanceData";
@@ -27,6 +28,7 @@ export function applyCloudPayloadToLocal(payload: CloudExportPayload) {
   propertyTaxRepository.saveAll(payload.propertyTaxes ?? []);
   liabilityRepository.saveAll(payload.liabilities ?? []);
   fixedPaymentRepository.saveAll(payload.futurePayments ?? []);
+  projectionScenarioRepository.saveAll(payload.projectionScenarios ?? []);
   replaceCanonicalTransactions(payload.transactions ?? []);
   notifyDataChanged("cloud-bootstrap");
 }

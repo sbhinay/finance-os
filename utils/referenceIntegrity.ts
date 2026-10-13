@@ -6,6 +6,7 @@ import type { FixedPayment, HouseLoan, Liability, Property, PropertyTax, Vehicle
 import type { Business } from "@/types/business";
 import { normalizeTransactionShape } from "@/utils/transactionNormalization";
 import { isSemanticDuplicate } from "@/utils/transactionSemantics";
+import type { ProjectionScenario } from "@/utils/projectionScenarios";
 
 export interface ReferenceCheckResult {
   errors: string[];
@@ -24,6 +25,8 @@ export interface ImportPayload {
   propertyTaxes: PropertyTax[];
   liabilities: Liability[];
   futurePayments: FixedPayment[];
+  /** Projection-only what-if scenarios; absent in older exports. */
+  projectionScenarios: ProjectionScenario[];
 }
 
 export function getTransactionReferencesForEntity(id: string, transactions: Transaction[]) {

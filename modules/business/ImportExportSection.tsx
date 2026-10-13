@@ -14,6 +14,8 @@ import { categoryRepository } from "@/repositories/categoryRepository";
 import { businessRepository } from "@/repositories/businessRepository";
 import { ImportPayload, validateImportPayload } from "@/utils/referenceIntegrity";
 import { fixedPaymentRepository } from "@/repositories/fixedPaymentRepository";
+import { projectionScenarioRepository } from "@/repositories/projectionScenarioRepository";
+import { normalizeProjectionScenarios } from "@/utils/projectionScenarios";
 import { vehicleRepository, propertyRepository, houseLoanRepository, liabilityRepository, propertyTaxRepository } from "@/repositories/assetRepositories";
 import { DATA_CHANGED_EVENT, notifyDataChanged } from "@/utils/events";
 import {
@@ -110,6 +112,7 @@ function loadExportResult(raw: RawObject): ImportPayload {
     propertyTaxes: asArray(raw.propertyTaxes) as PropertyTax[],
     liabilities: asArray(raw.liabilities) as Liability[],
     futurePayments: asArray(raw.futurePayments) as FixedPayment[],
+    projectionScenarios: normalizeProjectionScenarios(raw.projectionScenarios),
   };
 }
 
@@ -135,6 +138,7 @@ function normalizeImportResult(result: ImportResult): ImportPayload {
     propertyTaxes: [],
     liabilities: [],
     futurePayments: [],
+    projectionScenarios: [],
   };
 }
 
@@ -254,6 +258,7 @@ export function ImportExportSection() {
       "Property Taxes": migratedResult.propertyTaxes.length,
       Liabilities: migratedResult.liabilities.length,
       "Fixed Payments": migratedResult.futurePayments.length,
+      "Projection Scenarios": (migratedResult.projectionScenarios ?? []).length,
     });
     setPendingData(validation.normalized);
     setStatus(null);
@@ -389,6 +394,7 @@ export function ImportExportSection() {
       propertyTaxRepository.saveAll(result.propertyTaxes);
       liabilityRepository.saveAll(result.liabilities);
       fixedPaymentRepository.saveAll(result.futurePayments);
+      projectionScenarioRepository.saveAll(result.projectionScenarios ?? []);
 
       notifyDataChanged("import");
 

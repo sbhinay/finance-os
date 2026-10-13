@@ -1,13 +1,48 @@
 # FinanceOS Technical Documentation
 
-## Selectable Projection Horizons
+## Month-End Projection Horizons
 
-The daily projection supports 30, 60, 90, and 120-day horizons. The selected
-horizon is passed to recurring event generation and card/LOC debt projection;
-what-if events and LOC exposure are constrained to the same end date. Longer
-horizons suppress quiet days in the visible list while retaining every event and
-low-balance warning. This is a presentation optimization only and does not omit
-days from running-balance calculation.
+The daily projection runs from today through a month end: End of Next Month, or
+the end of the 3rd, 6th, or 9th month after the current month (for example, from
+October 13: November 30, January 31, April 30, July 31). Today is included, so
+items still scheduled for today affect the balance. The monthly view offers six
+past and nine future months. Horizons longer than about two months hide quiet
+days in the visible list and add month headers; every day is still in the
+running balance.
+
+## Calendar Schedule Dates
+
+Recurring dates come from `utils/scheduleDates.ts`, never from fixed 30-day or
+365-day steps:
+
+- Monthly and annual occurrences are computed from the anchor (the next due
+  date), not from the previous occurrence, so short months cannot drift later
+  dates. A payment on the 30th falls on February 28 and returns to March 30.
+- When a recurring payment has a `startDate`, its day of month is the preferred
+  day. This also applies when a payment is logged early or late: the next due
+  date stays on the scheduled day instead of moving to the logged day.
+- An anchor on the last day of its month with no start date keeps landing on
+  month ends, which matches how stored next-payment dates already advanced.
+- Weekly and bi-weekly schedules step by calendar days, so daylight-saving
+  changes cannot shift a date. Semi-monthly still uses 15-day steps until
+  semi-monthly anchor days are modelled.
+- Nothing is projected before an item's stored next due date.
+
+## Borrowing and What-If Scenarios
+
+- LOC draws are **borrowing**, not income. They raise the projected bank balance
+  because the cash arrives, but they are shown in orange and totalled separately
+  as Borrowed. Daily rows and monthly summaries show In, Out, Borrowed, and Net.
+- A what-if LOC withdrawal is repaid in full on the LOC's first Next Payment
+  Date strictly after the draw, and never before the stored next payment date.
+  A draw before the payment date in the same month is repaid that month; a draw
+  on or after it is repaid the following month. The repayment comes from the
+  LOC's linked account. If the LOC has no Next Payment Date, a warning is shown
+  and the draw stays in After Debt Exposure.
+- Up to five named scenarios are saved in `finance_os_projection_scenarios`.
+  They are part of cloud snapshots and JSON export/import, edits autosave, and
+  "None" shows scheduled items only. Scenarios are projection-only: they never
+  create transactions or change balances.
 
 ## 7. Balance Architecture and Events
 
