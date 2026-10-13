@@ -9,6 +9,7 @@ import { useProperties, useVehicles, useHouseLoans } from "./useAssets";
 import { advanceOneInterval, fmtCAD, fmtDate, getNextOccurrence, toFixed2, toMonthly } from "@/utils/finance";
 import { Transaction } from "@/types/transaction";
 import { calculateBackfillDates, calculateBackfillDatesFromAnchor } from "./useFixedPayments";
+import { nextScheduleOccurrence } from "@/utils/scheduleDates";
 import { theme } from "@/lib/theme";
 import { buildCanonicalTransaction, persistCanonicalTransactions } from "@/services/transactionPipeline";
 import { getExpenseReportEffect } from "@/utils/transactionSemantics";
@@ -137,11 +138,7 @@ function todayIsoLocal() {
 
 function nextOccurrenceAfter(anchorDate: string | undefined, schedule: PaymentSchedule, afterDate = todayIsoLocal()) {
   if (!anchorDate) return undefined;
-  let next = anchorDate;
-  while (next <= afterDate) {
-    next = advanceOneInterval(next, schedule);
-  }
-  return next;
+  return nextScheduleOccurrence(anchorDate, schedule, afterDate) ?? undefined;
 }
 
 // Mileage projection (mirrors prototype exactly)

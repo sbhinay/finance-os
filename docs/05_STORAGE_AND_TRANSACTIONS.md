@@ -14,6 +14,7 @@
 | `finance_os_house_loans` | HouseLoan[] | Mortgage/loan assets |
 | `finance_os_property_taxes` | PropertyTax[] | Property tax schedules |
 | `finance_os_fixed_payments` | FixedPayment[] | Recurring payment definitions |
+| `finance_os_projection_scenarios` | ProjectionScenario[] | Up to five saved what-if projection scenarios (projection-only) |
 | `finance_os_dismissed_pending` | string[] | Dismissed pending notification keys |
 
 ### Transaction System

@@ -15,6 +15,7 @@ const durableDomains = [
   "propertyTaxes",
   "liabilities",
   "futurePayments",
+  "projectionScenarios",
 ];
 
 const cloudSnapshotSource = fs.readFileSync(

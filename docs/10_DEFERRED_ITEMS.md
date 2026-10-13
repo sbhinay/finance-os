@@ -14,11 +14,26 @@ Work normally proceeds in controlled visible slices. On July 22, 2026 the user e
 
 ## Recently Landed Foundations
 
+### October 2026 Projection Accuracy and Saved Scenarios
+
+- Projection horizons are month ends: End of Next Month and 3, 6, and 9 months.
+  The monthly view covers six past and nine future months.
+- Recurring dates use calendar math everywhere (projection, account upcoming
+  obligations, card/LOC planned payments, recurring backfill, and next-date
+  advancement), which fixes 30-day drift and daylight-saving date shifts.
+- LOC draws are orange Borrowing, not income. What-if LOC withdrawals get an
+  automatic full repayment on the LOC's next payment date after the draw.
+- Daily and monthly rows show In, Out, Borrowed, and Net.
+- Up to five named what-if scenarios persist through cloud save and JSON
+  export/import.
+- Still open: semi-monthly anchor days (15-day steps remain), a regular income
+  source model, repeating card/LOC repayment across long horizons, and
+  current-month totals that combine actuals with the remaining projection.
+
 ### August 2026 Planning, Analytics, and Corporate Withdrawal Review
 
-- Projection horizon controls support 30, 60, 90, and 120 days. All schedule,
-  what-if, card/LOC pressure, warning, and running-balance calculations use the
-  selected horizon.
+- Projection horizon controls supported 30, 60, 90, and 120 days (replaced by
+  month-end horizons in October 2026).
 - Transaction History shows the top 15 spending categories by default, supports
   Show All, displays row counts, and retains click-to-filter drilldown.
 - Corporate withdrawals are detected from canonical business-account cash
@@ -74,8 +89,8 @@ These items are implemented enough to serve as foundations, but some still need 
 ### 4. Projection Logic for CC and LOC Repayments
 
 - Projection hardening landed: configured strategies create dated repayment events, while unresolved card/LOC owing is deducted in a separate conservative `After Debt Exposure` balance instead of being hidden behind a warning.
-- Multi-condition what-if scenarios support dated extra income, extra expense, and LOC withdrawals. LOC draws improve scheduled liquidity while increasing conservative debt exposure by the same amount.
-- Monthly projection filters default to Income, Expenses, and Debt. Tax and internal transfers are opt-in display layers; hiding rows never changes projected totals. Bank-to-bank transfers are aggregate cash-neutral, while CC/LOC payments and LOC draws retain their correct cash direction.
+- Multi-condition what-if scenarios support dated extra income, extra expense, and LOC withdrawals. LOC draws are borrowing with a projected full repayment on the LOC's next payment date; only draws whose repayment is not projected inside the horizon remain in conservative debt exposure.
+- Monthly projection filters default to Income, Expenses, LOC Borrowing, and Debt. Tax and internal transfers are opt-in display layers; hiding rows never changes projected totals. Bank-to-bank transfers are aggregate cash-neutral, while CC/LOC payments and LOC draws retain their correct cash direction.
 - Include expected credit-card repayment pressure.
 - Include expected LOC repayment pressure.
 - Separate planned payments already logged from unplanned repayment exposure.

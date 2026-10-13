@@ -19,6 +19,7 @@ import { SUB_TYPE_LABELS, TYPE_LABELS, Transaction, getSubTypeLabel } from "@/ty
 import { getExpenseReportEffect, getTransactionEffect, getTransactionListEffect } from "@/utils/transactionSemantics";
 import { buildCanonicalTransaction, persistCanonicalTransaction } from "@/services/transactionPipeline";
 import { theme } from "@/lib/theme";
+import { addDaysIso, dayOfMonth, isoToLocalNoon, localIsoDate, upcomingOccurrences } from "@/utils/scheduleDates";
 import { MetricCard, PageHeader, StatusChip } from "@/components/ui";
 type TransactionFormInitial = React.ComponentProps<typeof TransactionForm>["initial"];
 
@@ -329,24 +330,20 @@ export function BankAccountsSection() {
         if (d >= today && d <= end) items.push({ label: p.name, amount: p.amount, date: d });
         return;
       }
-      const schedDays: Record<string, number> = { Weekly: 7, "Bi-weekly": 14, "Semi-monthly": 15, Monthly: 30, Annual: 365, "One-time": 0 };
-      const interval = schedDays[p.schedule] ?? 30;
-      let d = new Date(p.date + "T12:00:00");
-      while (d <= end) { if (d >= today) items.push({ label: p.name, amount: p.amount, date: new Date(d) }); d = new Date(d.getTime() + interval * 86400000); }
+      upcomingOccurrences(p.date, p.schedule, localIsoDate(today), addDaysIso(localIsoDate(today), days), { until: p.endDate, preferredDay: dayOfMonth(p.startDate) })
+        .forEach((iso) => items.push({ label: p.name, amount: p.amount, date: isoToLocalNoon(iso) }));
     });
 
     vehicles.filter((v) => v.source === accountId || v.source === acct.name).forEach((v) => {
       if (!v.nextPaymentDate) return;
-      const interval = ({ Weekly: 7, "Bi-weekly": 14, "Semi-monthly": 15, Monthly: 30, Annual: 365 } as Record<string,number>)[v.schedule] ?? 30;
-      let d = new Date(v.nextPaymentDate + "T12:00:00");
-      while (d <= end) { if (d >= today) items.push({ label: v.name, amount: v.payment, date: new Date(d) }); d = new Date(d.getTime() + interval * 86400000); }
+      upcomingOccurrences(v.nextPaymentDate, v.schedule, localIsoDate(today), addDaysIso(localIsoDate(today), days))
+        .forEach((iso) => items.push({ label: v.name, amount: v.payment, date: isoToLocalNoon(iso) }));
     });
 
     houseLoans.filter((l) => l.source === accountId || l.source === acct.name).forEach((l) => {
       if (!l.nextPaymentDate) return;
-      const interval = ({ Weekly: 7, "Bi-weekly": 14, "Semi-monthly": 15, Monthly: 30, Annual: 365 } as Record<string,number>)[l.schedule] ?? 30;
-      let d = new Date(l.nextPaymentDate + "T12:00:00");
-      while (d <= end) { if (d >= today) items.push({ label: l.name, amount: l.payment, date: new Date(d) }); d = new Date(d.getTime() + interval * 86400000); }
+      upcomingOccurrences(l.nextPaymentDate, l.schedule, localIsoDate(today), addDaysIso(localIsoDate(today), days))
+        .forEach((iso) => items.push({ label: l.name, amount: l.payment, date: isoToLocalNoon(iso) }));
     });
 
     return items.sort((a, b) => a.date.getTime() - b.date.getTime());
