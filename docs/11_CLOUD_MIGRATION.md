@@ -43,6 +43,7 @@
 - `lib/supabase/client.ts` provides the shared browser client entry point.
 - `supabase/01_phase1_schema.sql` defines the first user-owned schema and RLS policies.
 - `supabase/02_guarded_snapshots.sql` defines read-only snapshot tables, append-only history, and the optimistic-lock save RPC.
+- `supabase/03_snapshot_history_retention.sql` bounds that history per user: the 20 most recent revisions, the last revision of each day (America/Toronto) for 30 days, and `Before ...` restore points for 30 days. Older history is deleted by an after-insert trigger; the live snapshot is untouched.
 - `supabase/README.md` captures the initial setup sequence for local development.
 
 ### Table Design Notes
