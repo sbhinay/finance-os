@@ -952,6 +952,16 @@ export function CreditCardsSection() {
 // TRANSACTION HISTORY SECTION
 // -------------------------------------------------------------------------------
 
+/** Rows shown by Transaction History's "Recently Added" view, newest creation time first. */
+const RECENTLY_ADDED_LIMIT = 100;
+
+function fmtAddedAt(createdAt?: string): string {
+  if (!createdAt) return "";
+  const added = new Date(createdAt);
+  if (Number.isNaN(added.getTime())) return "";
+  return added.toLocaleString("en-CA", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 export function TransactionHistorySection() {
   const { transactions, reloadTransactions } = useTransactions();
   const { accounts, reloadAccounts } = useAccounts();
@@ -977,6 +987,7 @@ export function TransactionHistorySection() {
   const [linkedFilter, setLinkedFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [recurringFilter, setRecurringFilter] = useState("");
+  const [recentOnly, setRecentOnly] = useState(false);
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(1);
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -1034,9 +1045,10 @@ export function TransactionHistorySection() {
   ].sort((a, b) => a.label.localeCompare(b.label)), [accounts, cards]);
 
   const filtered = useMemo(() => {
-    return transactions.filter((t) => {
+    const matches = transactions.filter((t) => {
       const d = t.date;
-      if (d < dateFrom || d > dateTo) return false;
+      // Recently Added ignores the accounting-date range; every other filter still applies.
+      if (!recentOnly && (d < dateFrom || d > dateTo)) return false;
       if (
         filter !== "all"
         && !(
@@ -1074,11 +1086,17 @@ export function TransactionHistorySection() {
         if (!haystack.includes(search.toLowerCase())) return false;
       }
       return true;
-    }).sort((a, b) => {
+    });
+    if (recentOnly) {
+      return matches
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.date.localeCompare(a.date))
+        .slice(0, RECENTLY_ADDED_LIMIT);
+    }
+    return matches.sort((a, b) => {
       const dateCompare = b.date.localeCompare(a.date);
       return dateCompare || b.createdAt.localeCompare(a.createdAt);
     });
-  }, [transactions, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, tagFilter, recurringFilter, search, acctName, catName, linkedLabel]);
+  }, [transactions, recentOnly, dateFrom, dateTo, filter, accountFilter, catFilter, subTypeFilter, linkedFilter, tagFilter, recurringFilter, search, acctName, catName, linkedLabel]);
 
   const activityEffects = filtered
     .map(getTransactionListEffect)
@@ -1174,7 +1192,7 @@ export function TransactionHistorySection() {
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url;
-    a.download = `Transactions_${dateFrom}_${dateTo}.csv`; a.click();
+    a.download = recentOnly ? `Transactions_Recently_Added_${new Date().toISOString().slice(0, 10)}.csv` : `Transactions_${dateFrom}_${dateTo}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -1184,10 +1202,27 @@ export function TransactionHistorySection() {
 
       {/* Filters */}
       <div style={{ ...theme.cardStyle(theme.colors.primary), padding: "16px 18px", marginBottom: 14, background: "linear-gradient(180deg, #ffffff, #f8fbff)" }}>
-        <Grid2>
-          <Inp label="From Date" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
-          <Inp label="To Date" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
-        </Grid2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+          <Btn variant={recentOnly ? "primary" : "secondary"} small onClick={() => {
+            // Show all recently added rows on one page when switching the view on.
+            if (!recentOnly) setPageSize(RECENTLY_ADDED_LIMIT);
+            setRecentOnly(!recentOnly);
+            setPage(1);
+          }}>
+            {recentOnly ? `Showing Last ${RECENTLY_ADDED_LIMIT} Added` : `Recently Added (last ${RECENTLY_ADDED_LIMIT})`}
+          </Btn>
+          <span style={{ fontSize: 11, color: theme.colors.textSoft }}>
+            {recentOnly
+              ? "Newest entries by when they were created, any transaction date. Other filters still apply; edits do not change the added time."
+              : "Switch to see the latest entries you created, whatever their transaction date."}
+          </span>
+        </div>
+        {!recentOnly && (
+          <Grid2>
+            <Inp label="From Date" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
+            <Inp label="To Date" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+          </Grid2>
+        )}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
           {(["all", "income", "expense", "transfer", "loan_payment", "tax_payment"] as const).map((v) => (
             <Btn key={v} variant={filter === v ? "primary" : "secondary"} small onClick={() => { setFilter(v); setPage(1); }}>
@@ -1364,6 +1399,7 @@ export function TransactionHistorySection() {
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.text }}>{t.description || catName(t.categoryId) || "--"}</div>
                 <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span>{t.date}</span>
+                  {recentOnly && fmtAddedAt(t.createdAt) && <span style={{ color: theme.colors.primary, fontWeight: 600 }}>- Added {fmtAddedAt(t.createdAt)}</span>}
                   {catName(t.categoryId) && <span>- {catName(t.categoryId)}</span>}
                   {t.subType && <span>- {getSubTypeLabel(t.type, t.subType)}</span>}
                   {t.mode && <span>- {t.mode}</span>}
