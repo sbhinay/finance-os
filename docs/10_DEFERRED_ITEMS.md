@@ -14,6 +14,13 @@ Work normally proceeds in controlled visible slices. On July 22, 2026 the user e
 
 ## Recently Landed Foundations
 
+### October 2026 Recently Added View
+
+- Transaction History has a "Recently Added (last 100)" toggle. It lists the
+  100 newest rows by `createdAt` (newest first), ignores the accounting-date
+  range, keeps every other filter, and shows each row's added time. `createdAt`
+  is used here only as creation metadata; accounting views still use `date`.
+
 ### October 2026 Projection Accuracy and Saved Scenarios
 
 - Projection horizons are month ends: End of Next Month and 3, 6, and 9 months.
