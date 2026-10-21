@@ -143,7 +143,8 @@ export function MetricCard({
       >
         {label}
       </div>
-      <div style={{ fontWeight: 760, fontSize: 22, color: color ?? toneStyle.color }}>{value}</div>
+      {/* Tone colours are fill/text pairs; this card is light, so primary uses its fill colour as text. */}
+      <div style={{ fontWeight: 760, fontSize: 22, color: color ?? (tone === "primary" ? theme.colors.primary : toneStyle.color) }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>{sub}</div>}
     </SurfaceCard>
   );
