@@ -28,6 +28,8 @@ export interface ProjectionEvent {
   amount: number;
   type: ProjectionEventType;
   account?: string;
+  /** Receiving bank account of a cash-neutral transfer between own accounts. */
+  toAccount?: string;
   displayAmount?: number;
 }
 
@@ -39,6 +41,8 @@ export interface WhatIfEntry {
   amount: number;
   date: string;
   locId: string;
+  /** Optional bank account for extra income/expense, used by per-account balances. */
+  accountId?: string;
 }
 
 export interface ProjectionScenario {
@@ -102,6 +106,7 @@ export function buildWhatIfEvents(
           label: entry.type === "income" ? "What-if: Extra income" : "What-if: Extra expense",
           amount: entry.type === "income" ? amount : -amount,
           type: "scenario",
+          account: entry.accountId || undefined,
         });
         return;
       }
@@ -204,6 +209,7 @@ export function normalizeProjectionScenarios(raw: unknown): ProjectionScenario[]
             amount: Math.max(0, Number(entry.amount) || 0),
             date: isIsoDate(entry.date) ? (entry.date as string).slice(0, 10) : "",
             locId: typeof entry.locId === "string" ? entry.locId : "",
+            ...(typeof entry.accountId === "string" && entry.accountId ? { accountId: entry.accountId } : {}),
           })),
       };
     })

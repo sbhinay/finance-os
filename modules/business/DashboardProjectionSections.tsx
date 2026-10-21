@@ -37,6 +37,7 @@ import {
   type WhatIfType,
 } from "@/utils/projectionScenarios";
 import { projectionScenarioRepository } from "@/repositories/projectionScenarioRepository";
+import { buildAccountTimelines, createAccountResolver } from "@/utils/accountProjection";
 import { notifyDataChanged } from "@/utils/events";
 import type { PaymentSchedule } from "@/types/domain";
 import { ActionButton, DataPanel, MetricCard, PageHeader } from "@/components/ui";
@@ -183,6 +184,7 @@ function buildEvents(
         displayAmount: isNeutralTransfer ? p.amount : undefined,
         type: projectedType,
         account: isLocDraw ? p.destinationId : p.source,
+        toAccount: isNeutralTransfer ? p.destinationId : undefined,
       });
     });
   });
@@ -534,7 +536,9 @@ function DayTotals({ totals }: { totals: FlowSummary }) {
       {totals.in > 0 && <span style={{ color: "#1a7f3c" }}>In {fmtCAD(totals.in)}</span>}
       {totals.out > 0 && <span style={{ color: "#a31515" }}>Out {fmtCAD(totals.out)}</span>}
       {totals.borrowed > 0 && <span style={{ color: TYPE_COLORS.borrow }}>Borrowed {fmtCAD(totals.borrowed)}</span>}
-      <span style={{ color: totals.net >= 0 ? "#1a7f3c" : "#a31515" }}>Net {totals.net > 0 ? "+" : ""}{fmtCAD(totals.net)}</span>
+      {[totals.in, totals.out, totals.borrowed].filter((value) => value > 0).length > 1 && (
+        <span style={{ color: totals.net >= 0 ? "#1a7f3c" : "#a31515" }}>Net {totals.net > 0 ? "+" : ""}{fmtCAD(totals.net)}</span>
+      )}
     </span>
   );
 }
@@ -552,6 +556,7 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const [view, setView] = useState<"daily" | "monthly">("daily");
   const [horizonMonths, setHorizonMonths] = useState<HorizonMonths>(1);
   const [threshold, setThreshold] = useState(0);
+  const [accountView, setAccountView] = useState("");
   const todayIso = useMemo(() => localIsoDate(), []);
 
   // ── Saved what-if scenarios ────────────────────────────────────────────────
@@ -708,13 +713,40 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
     return rows;
   }, [horizonEvents, horizonDayCount, totalBankNow, threshold, todayIso]);
 
+  // ── Per-account balances ───────────────────────────────────────────────────
+  const resolver = useMemo(() => createAccountResolver(accounts, cards), [accounts, cards]);
+  const timelines = useMemo(
+    () => buildAccountTimelines(accounts, horizonRows, resolver),
+    [accounts, horizonRows, resolver]
+  );
+  const viewedAccount = accounts.find((account) => account.id === accountView) ?? null;
+  const displayRows = useMemo(() => {
+    if (!viewedAccount) return horizonRows;
+    const timeline = timelines.byAccount.get(viewedAccount.id) ?? [];
+    return horizonRows.map((row, index) => {
+      const day = timeline[index];
+      const legs = day?.legs ?? [];
+      const balance = day?.balance ?? toFixed2(viewedAccount.openingBalance);
+      return {
+        ...row,
+        events: legs.map((leg) => leg.event),
+        totals: summarizeFlows(legs.map((leg) => ({ amount: leg.amount, borrow: leg.event.type === "borrow" }))),
+        balance,
+        warning: balance < threshold,
+      };
+    });
+  }, [viewedAccount, horizonRows, timelines, threshold]);
+  const viewedLowest = viewedAccount
+    ? displayRows.reduce((low, row) => (row.balance < low.balance ? row : low), { balance: toFixed2(viewedAccount.openingBalance), dateStr: todayIso } as { balance: number; dateStr: string })
+    : null;
+
   const projectedBalance = horizonRows.at(-1)?.balance ?? totalBankNow;
   const horizonTotals = useMemo(
     () => summarizeFlows(horizonEvents.map((event) => ({ amount: event.amount, borrow: event.type === "borrow" }))),
     [horizonEvents]
   );
   const conservativeProjected = toFixed2(projectedBalance - debtProjection.unplannedExposure - horizonWhatIf.unrepaidDraws);
-  const lowDays = horizonRows.filter((d) => d.warning).length;
+  const lowDays = displayRows.filter((d) => d.warning).length;
   const showQuietDays = horizonDayCount <= 62;
 
   // ── Monthly view ──────────────────────────────────────────────────────────
@@ -831,7 +863,9 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
   const atScenarioLimit = scenarios.length >= MAX_PROJECTION_SCENARIOS;
 
   const eventLine = (e: ProjectionEvent, key: string | number, fontSize: number) => {
-    const name = accountName(e.account);
+    const name = e.toAccount
+      ? `${accountName(e.account) ?? "?"} → ${accountName(e.toAccount) ?? "?"}`
+      : accountName(e.account);
     return (
       <div key={key} style={{ fontSize, color: TYPE_COLORS[e.type] ?? "#6b7280", marginLeft: 8, marginBottom: 2, fontWeight: e.type === "borrow" ? 650 : undefined }}>
         {e.type === "transfer" ? "↔" : e.amount > 0 ? "↑" : "↓"} {e.label}: <strong>{fmtCAD(e.displayAmount ?? Math.abs(e.amount))}</strong>
@@ -853,7 +887,16 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
       )}
 
       {/* Summary stats */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+      {viewedAccount && view === "daily" && viewedLowest && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          <StatBox label={`${viewedAccount.name} Today`} value={fmtCAD(viewedAccount.openingBalance)} color={viewedAccount.openingBalance >= 0 ? "#1a7f3c" : "#a31515"} />
+          <StatBox label={`Balance on ${fmtDate(horizonEndIso)}`} value={fmtCAD(displayRows.at(-1)?.balance ?? viewedAccount.openingBalance)} color={(displayRows.at(-1)?.balance ?? 0) >= threshold ? "#1a7f3c" : "#a31515"} sub="this account only" />
+          <StatBox label="Lowest Balance" value={fmtCAD(viewedLowest.balance)} color={viewedLowest.balance >= threshold ? "#1a7f3c" : "#a31515"} sub={`on ${fmtDate(viewedLowest.dateStr)}`} />
+          <StatBox label="Low Balance Days" value={String(lowDays)} color={lowDays > 0 ? "#a31515" : "#1a7f3c"} sub={`through ${fmtDate(horizonEndIso)}`} />
+        </div>
+      )}
+
+      {(!viewedAccount || view !== "daily") && <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <StatBox label="Current Balance" value={fmtCAD(totalBankNow)} color="#1a7f3c" />
         <StatBox label={`Balance on ${fmtDate(horizonEndIso)}`} value={fmtCAD(projectedBalance)} color={projectedBalance >= threshold ? "#1a7f3c" : "#a31515"} sub={activeScenario ? `includes scenario "${activeScenario.name}"` : "dated income and payments"} />
         <StatBox label="After Debt Exposure" value={fmtCAD(conservativeProjected)} color={conservativeProjected >= threshold ? "#1a7f3c" : "#a31515"} sub="less card/LOC owing with no projected repayment" />
@@ -861,7 +904,34 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
         <StatBox label="Low Balance Days" value={String(lowDays)} color={lowDays > 0 ? "#a31515" : "#1a7f3c"} sub={`through ${fmtDate(horizonEndIso)}`} />
         <StatBox label="Dated Debt Pressure" value={fmtCAD(debtProjection.repaymentPressure)} color={debtProjection.repaymentPressure > 0 ? "#a31515" : "#1a7f3c"} sub="configured card/LOC repayment events" />
         <StatBox label="Unresolved Debt Exposure" value={fmtCAD(debtProjection.unplannedExposure)} color={debtProjection.unplannedExposure > 0 ? "#a05c00" : "#1a7f3c"} sub="not yet covered by a repayment plan" />
-      </div>
+      </div>}
+
+      {timelines.shortfalls.length > 0 && (
+        <Card accent="#a31515">
+          <div style={{ fontWeight: 750, fontSize: 14, color: "#a31515", marginBottom: 4 }}>Accounts that go below $0</div>
+          <div style={{ fontSize: 12, color: theme.colors.textSoft, marginBottom: 8 }}>
+            The combined balance can look fine while one account runs short. Move money in before these dates.
+          </div>
+          {timelines.shortfalls.map((shortfall) => (
+            <div key={shortfall.accountId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #fecaca" }}>
+              <span>
+                <strong>{shortfall.name}</strong>
+                {shortfall.firstDate === todayIso && shortfall.startBalance < 0
+                  ? ` is already below $0 (${fmtCAD(shortfall.startBalance)})`
+                  : ` goes to ${fmtCAD(shortfall.firstBalance)} on ${fmtDate(shortfall.firstDate)}`}
+                {shortfall.causes.length > 0 && ` (${shortfall.causes.map((cause) => `${cause.label} ${fmtCAD(cause.amount)}`).join(", ")})`}
+                {shortfall.lowestDate !== shortfall.firstDate && `; lowest ${fmtCAD(shortfall.lowestBalance)} on ${fmtDate(shortfall.lowestDate)}`}
+              </span>
+              <Btn variant="secondary" small onClick={() => { setView("daily"); setAccountView(shortfall.accountId); }}>View account</Btn>
+            </div>
+          ))}
+          {timelines.unassignedCount > 0 && (
+            <div style={{ fontSize: 11, color: theme.colors.textSoft, marginTop: 8 }}>
+              {timelines.unassignedCount} projected item{timelines.unassignedCount === 1 ? " has" : "s have"} no account (for example CRA payments, expected invoices, or what-if rows without an account) and only affect{timelines.unassignedCount === 1 ? "s" : ""} the combined balance.
+            </div>
+          )}
+        </Card>
+      )}
 
       {debtProjection.warnings.length > 0 && (
         <Card accent="#a05c00">
@@ -939,7 +1009,13 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
                     <option value="">Select LOC</option>
                     {locCards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
                   </select>
-                ) : <span style={{ fontSize: 11, color: theme.colors.textSoft }}>Projection only</span>}
+                ) : (
+                  <select value={entry.accountId ?? ""} onChange={(e) => updateEntry(entry.id, { accountId: e.target.value || undefined })}
+                    aria-label={`Condition ${index + 1} account`} style={{ padding: "7px 9px", border: `1px solid ${theme.colors.border}`, borderRadius: 7, fontSize: 12, background: "#fff" }}>
+                    <option value="">No account (combined only)</option>
+                    {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                  </select>
+                )}
                 <button type="button" onClick={() => removeEntry(entry.id)} aria-label={`Remove condition ${index + 1}`}
                   style={{ width: 30, height: 30, borderRadius: 99, border: "1px solid #fecaca", background: "#fff", color: theme.colors.danger, cursor: "pointer", fontWeight: 800 }}>×</button>
               </div>
@@ -965,12 +1041,27 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
           <Btn key={option.months} variant={horizonMonths === option.months ? "primary" : "secondary"} small onClick={() => setHorizonMonths(option.months)}>{option.label}</Btn>
         ))}
         {view === "daily" && <span style={{ fontSize: 11, color: theme.colors.textSoft }}>through {fmtDate(horizonEndIso)}</span>}
+        {view === "daily" && (
+          <select value={viewedAccount ? viewedAccount.id : ""} onChange={(e) => setAccountView(e.target.value)}
+            aria-label="Account shown in daily projection"
+            style={{ marginLeft: "auto", padding: "6px 10px", border: `1px solid ${theme.colors.border}`, borderRadius: 8, fontSize: 12, fontWeight: 600, background: "#fff" }}>
+            <option value="">All accounts (combined)</option>
+            {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+          </select>
+        )}
       </div>
+
+      {view === "daily" && viewedAccount && (
+        <div style={{ fontSize: 11, color: theme.colors.textSoft, margin: "-8px 0 12px" }}>
+          Showing {viewedAccount.name} only. Card-paid items are left out (cash leaves the bank when the card is paid), as are items with no account set, such as CRA payments and expected invoices.
+        </div>
+      )}
 
       {view === "daily" && (
         <div style={{ background: "#fff", border: "1px solid #e2e4e8", borderRadius: 10, overflow: "hidden" }}>
-          {horizonRows.map((d) => {
-            const hasEvents = d.events.length > 0;
+          {displayRows.map((d) => {
+            const crossings = viewedAccount ? [] : timelines.crossings.get(d.dateStr) ?? [];
+            const hasEvents = d.events.length > 0 || crossings.length > 0;
             const dayLabel = d.date.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" });
             const showsMonth = d.dateStr.endsWith("-01") || d.dateStr === todayIso;
             const monthHeader = showsMonth && horizonDayCount > 40 ? (
@@ -1005,6 +1096,11 @@ function ProjectionPanel({ hideHeader = false }: { hideHeader?: boolean }) {
                       <span style={{ fontSize: 13, fontWeight: 700, color: d.warning ? "#a31515" : "#1a1a1a" }}>{fmtCAD(d.balance)}</span>
                     </div>
                   </div>
+                  {crossings.map((crossing) => (
+                    <div key={crossing.accountId} style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "2px 0 4px 8px", padding: "2px 8px", borderRadius: 99, background: "#fdecea", color: "#a31515", fontSize: 11, fontWeight: 700 }}>
+                      ⚠ {crossing.name} goes below $0: {fmtCAD(crossing.balance)}
+                    </div>
+                  ))}
                   {d.events.map((e, j) => eventLine(e, j, 11))}
                 </div>
               </div>

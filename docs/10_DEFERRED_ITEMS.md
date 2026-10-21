@@ -14,6 +14,15 @@ Work normally proceeds in controlled visible slices. On July 22, 2026 the user e
 
 ## Recently Landed Foundations
 
+### October 2026 Per-Account Shortfalls
+
+- The daily projection warns when any single bank account goes below $0, even
+  if the combined balance stays positive, and offers a per-account view.
+- What-if income/expense rows can name an account.
+- Still open: card-paid recurring items reduce the combined bank balance on the
+  purchase date (they should hit the card and be paid on its due date), and
+  whether business accounts belong in the combined personal balance.
+
 ### October 2026 Recently Added View
 
 - Transaction History has a "Recently Added (last 100)" toggle. It lists the

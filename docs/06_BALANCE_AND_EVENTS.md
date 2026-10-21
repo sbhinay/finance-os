@@ -28,6 +28,23 @@ Recurring dates come from `utils/scheduleDates.ts`, never from fixed 30-day or
   semi-monthly anchor days are modelled.
 - Nothing is projected before an item's stored next due date.
 
+## Per-Account Balances and Shortfalls
+
+The combined projection pools every bank account. `utils/accountProjection.ts`
+also runs each bank account's own balance from its current balance:
+
+- Each event moves the bank account it names (by id or legacy account name).
+  Bank-to-bank transfers move both accounts. Card-paid items move no bank
+  account, because cash leaves the bank only when the card is paid.
+- Items with no account (CRA payments, expected invoices, what-if income or
+  expense with no account picked) affect the combined balance only.
+- Any account that goes below $0 within the horizon is listed in "Accounts that
+  go below $0" with the date, balance, causing payments, and lowest point, and
+  the day it crosses is marked in the combined daily list.
+- The daily view has an account picker. Choosing an account shows only that
+  account's movements and running balance; the monthly view stays combined.
+- What-if extra income and expense rows have an optional account.
+
 ## Borrowing and What-If Scenarios
 
 - LOC draws are **borrowing**, not income. They raise the projected bank balance
